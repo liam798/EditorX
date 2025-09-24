@@ -7,23 +7,96 @@ import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
 import java.nio.file.Files
 import javax.swing.*
 
-class Editor(private val mainWindow: MainWindow) : JTabbedPane() {
+class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val fileToTab = mutableMapOf<File, Int>()
     private val tabToFile = mutableMapOf<Int, File>()
+    private val tabbedPane = JTabbedPane()
 
     init {
-        tabPlacement = JTabbedPane.TOP
-        tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
+        // 设置JPanel的布局
+        layout = java.awt.BorderLayout()
+        
+        // 配置内部的JTabbedPane
+        tabbedPane.apply {
+            tabPlacement = JTabbedPane.TOP
+            tabLayoutPolicy = JTabbedPane.WRAP_TAB_LAYOUT
+            
+            // 设置标签页左对齐 - 使用自定义UI
+            setUI(object : javax.swing.plaf.basic.BasicTabbedPaneUI() {
+                override fun getTabRunCount(tabPane: javax.swing.JTabbedPane): Int {
+                    return 1 // 强制单行显示
+                }
+                
+                override fun getTabRunOverlay(placement: Int): Int {
+                    return 0 // 无重叠
+                }
+                
+                override fun getTabInsets(placement: Int, tabIndex: Int): java.awt.Insets {
+                    return java.awt.Insets(3, 6, 3, 6) // 调整标签页内边距
+                }
+                
+                override fun getTabAreaInsets(placement: Int): java.awt.Insets {
+                    return java.awt.Insets(0, 0, 0, 0) // 移除标签区域边距
+                }
+            })
+        }
+        
+        // 将JTabbedPane添加到JPanel中
+        add(tabbedPane, java.awt.BorderLayout.CENTER)
+        
+        // 设置拖放支持 - 确保整个Editor区域都支持拖放
+        enableDropTarget()
+        
+        // 设置TransferHandler来处理拖放
+        transferHandler = object : javax.swing.TransferHandler() {
+            override fun canImport(support: javax.swing.TransferHandler.TransferSupport): Boolean {
+                return support.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.javaFileListFlavor)
+            }
+            
+            override fun importData(support: javax.swing.TransferHandler.TransferSupport): Boolean {
+                if (!canImport(support)) {
+                    return false
+                }
+                
+                try {
+                    val transferable = support.transferable
+                    val dataFlavor = java.awt.datatransfer.DataFlavor.javaFileListFlavor
+                    
+                    if (transferable.isDataFlavorSupported(dataFlavor)) {
+                        @Suppress("UNCHECKED_CAST")
+                        val fileList = transferable.getTransferData(dataFlavor) as List<File>
+                        
+                        // 打开所有拖入的文件
+                        for (file in fileList) {
+                            if (file.isFile && file.canRead()) {
+                                openFile(file)
+                            }
+                        }
+                        
+                        return true
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                
+                return false
+            }
+        }
     }
 
     fun openFile(file: File) {
-        if (fileToTab.containsKey(file)) { selectedIndex = fileToTab[file]!!; return }
+        if (fileToTab.containsKey(file)) { 
+            tabbedPane.selectedIndex = fileToTab[file]!!
+            return 
+        }
         val textArea = RSyntaxTextArea().apply {
             syntaxEditingStyle = detectSyntax(file)
             font = Font("Consolas", Font.PLAIN, 14)
@@ -37,18 +110,21 @@ class Editor(private val mainWindow: MainWindow) : JTabbedPane() {
         }
         val scroll = RTextScrollPane(textArea)
         val title = file.name
-        addTab(title, null, scroll, null)
-        val index = tabCount - 1
+        tabbedPane.addTab(title, null, scroll, null)
+        val index = tabbedPane.tabCount - 1
         fileToTab[file] = index
         tabToFile[index] = file
         val closeButton = createCloseButton(file, index)
-        setTabComponentAt(index, closeButton)
-        selectedIndex = index
+        tabbedPane.setTabComponentAt(index, closeButton)
+        tabbedPane.selectedIndex = index
     }
 
     private fun createCloseButton(file: File, index: Int): JPanel = JPanel().apply {
         layout = java.awt.BorderLayout(); isOpaque = false
-        val label = JLabel(file.name).apply { border = BorderFactory.createEmptyBorder(0, 0, 0, 5) }
+        val label = JLabel(file.name).apply { 
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 5)
+            horizontalAlignment = JLabel.LEFT
+        }
         add(label, java.awt.BorderLayout.CENTER)
         val closeLabel = JLabel("×").apply {
             font = font.deriveFont(Font.BOLD, 14f)
@@ -66,14 +142,14 @@ class Editor(private val mainWindow: MainWindow) : JTabbedPane() {
     }
 
     private fun closeTab(index: Int) {
-        if (index >= 0 && index < tabCount) {
+        if (index >= 0 && index < tabbedPane.tabCount) {
             val file = tabToFile[index]
-            removeTabAt(index)
+            tabbedPane.removeTabAt(index)
             file?.let { fileToTab.remove(it) }
             tabToFile.remove(index)
             val newTabToFile = mutableMapOf<Int, File>()
             val newFileToTab = mutableMapOf<File, Int>()
-            for (i in 0 until tabCount) {
+            for (i in 0 until tabbedPane.tabCount) {
                 val f = tabToFile[i]
                 if (f != null) { newTabToFile[i] = f; newFileToTab[f] = i }
             }
@@ -94,6 +170,98 @@ class Editor(private val mainWindow: MainWindow) : JTabbedPane() {
         else -> SyntaxConstants.SYNTAX_STYLE_NONE
     }
 
-    fun getCurrentFile(): File? = if (selectedIndex >= 0) tabToFile[selectedIndex] else null
+    fun getCurrentFile(): File? = if (tabbedPane.selectedIndex >= 0) tabToFile[tabbedPane.selectedIndex] else null
     fun hasUnsavedChanges(): Boolean = false
+
+    private fun enableDropTarget() {
+        // 为整个Editor组件设置拖放支持
+        DropTarget(this, object : DropTargetListener {
+            override fun dragEnter(dtde: DropTargetDragEvent) {
+                if (isDragAcceptable(dtde)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                } else {
+                    dtde.rejectDrag()
+                }
+            }
+
+            override fun dragOver(dtde: DropTargetDragEvent) {
+                if (isDragAcceptable(dtde)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                } else {
+                    dtde.rejectDrag()
+                }
+            }
+
+            override fun dropActionChanged(dtde: DropTargetDragEvent) {
+                if (isDragAcceptable(dtde)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                } else {
+                    dtde.rejectDrag()
+                }
+            }
+
+            override fun dragExit(dtde: DropTargetEvent) {
+                // 拖放退出，无需特殊处理
+            }
+
+            override fun drop(dtde: DropTargetDropEvent) {
+                if (!isDragAcceptable(dtde)) {
+                    dtde.rejectDrop()
+                    return
+                }
+
+                dtde.acceptDrop(DnDConstants.ACTION_COPY)
+
+                try {
+                    val transferable = dtde.transferable
+                    val dataFlavors = transferable.transferDataFlavors
+
+                    for (dataFlavor in dataFlavors) {
+                        if (dataFlavor.isFlavorJavaFileListType) {
+                            @Suppress("UNCHECKED_CAST")
+                            val fileList = transferable.getTransferData(dataFlavor) as List<File>
+
+                            for (file in fileList) {
+                                if (file.isFile && file.canRead()) {
+                                    openFile(file)
+                                }
+                            }
+
+                            dtde.dropComplete(true)
+                            return
+                        }
+                    }
+
+                    dtde.dropComplete(false)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    dtde.dropComplete(false)
+                }
+            }
+        })
+    }
+
+    private fun isDragAcceptable(event: DropTargetDragEvent): Boolean {
+        val transferable = event.transferable
+        val dataFlavors = transferable.transferDataFlavors
+
+        for (dataFlavor in dataFlavors) {
+            if (dataFlavor.isFlavorJavaFileListType) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isDragAcceptable(event: DropTargetDropEvent): Boolean {
+        val transferable = event.transferable
+        val dataFlavors = transferable.transferDataFlavors
+
+        for (dataFlavor in dataFlavors) {
+            if (dataFlavor.isFlavorJavaFileListType) {
+                return true
+            }
+        }
+        return false
+    }
 }
