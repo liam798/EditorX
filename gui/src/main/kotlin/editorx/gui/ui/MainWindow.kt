@@ -28,7 +28,7 @@ class MainWindow : JFrame() {
 
     private val horizontalSplit by lazy {
         JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideBar, editor).apply {
-            dividerLocation = 250
+            dividerLocation = 0  // 初始时隐藏SideBar
             isOneTouchExpandable = false
             dividerSize = 8
         }

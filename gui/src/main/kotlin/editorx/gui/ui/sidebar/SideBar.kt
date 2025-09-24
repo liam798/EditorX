@@ -11,33 +11,18 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
     private val views = mutableMapOf<String, JComponent>()
     private var currentViewId: String? = null
     private var defaultViewId: String? = null
+    private var isVisible = false
 
     init { setupSideBar() }
 
     private fun setupSideBar() {
         layout = cardLayout
-        preferredSize = Dimension(300, 0)
-        minimumSize = Dimension(200, 0)
         background = Color.WHITE
         border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        createDefaultView()
-    }
-
-    private fun createDefaultView() {
-        val defaultView = JPanel().apply {
-            layout = java.awt.BorderLayout()
-            background = Color.WHITE
-            val label = JLabel("欢迎使用 EditorX").apply {
-                horizontalAlignment = JLabel.CENTER
-                verticalAlignment = JLabel.CENTER
-                font = font.deriveFont(java.awt.Font.BOLD, 16f)
-                foreground = Color.GRAY
-            }
-            add(label, java.awt.BorderLayout.CENTER)
-        }
-        registerView("default", defaultView)
-        defaultViewId = "default"
-        showView("default")
+        // 初始时隐藏SideBar
+        isVisible = false
+        // 初始化时隐藏SideBar
+        updateVisibility()
     }
 
     fun registerView(id: String, component: JComponent) {
@@ -50,6 +35,11 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
         if (views.containsKey(id)) {
             cardLayout.show(this, id)
             currentViewId = id
+            // 只有当显示非默认视图时才显示SideBar
+            if (id != "default" && !isVisible) {
+                isVisible = true
+                updateVisibility()
+            }
             revalidate(); repaint()
         } else {
             defaultViewId?.let { showView(it) }
@@ -63,7 +53,18 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
         views[id]?.let { component ->
             remove(component)
             views.remove(id)
-            if (currentViewId == id) defaultViewId?.let { showView(it) }
+            if (currentViewId == id) {
+                // 检查是否还有其他非默认视图
+                val hasNonDefaultViews = views.keys.any { it != "default" }
+                if (hasNonDefaultViews) {
+                    // 显示下一个可用的视图
+                    val nextView = views.keys.firstOrNull { it != "default" }
+                    nextView?.let { showView(it) }
+                } else {
+                    // 没有其他视图，隐藏SideBar
+                    hideSideBar()
+                }
+            }
             revalidate(); repaint()
         }
     }
@@ -71,8 +72,47 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
     fun clearViews() {
         val keysToRemove = views.keys.filter { it != "default" }
         keysToRemove.forEach { removeView(it) }
+        // 清除所有视图后隐藏SideBar
+        hideSideBar()
+    }
+
+    private fun hideSideBar() {
+        isVisible = false
+        updateVisibility()
+    }
+
+    private fun updateVisibility() {
+        // 通过设置visible属性和调整JSplitPane的dividerLocation来控制SideBar的显示/隐藏
+        if (isVisible) {
+            isVisible = true
+            preferredSize = Dimension(300, 0)
+            minimumSize = Dimension(200, 0)
+            // 显示SideBar时，设置dividerLocation为300
+            updateDividerLocation(300)
+        } else {
+            isVisible = false
+            preferredSize = Dimension(0, 0)
+            minimumSize = Dimension(0, 0)
+            // 隐藏SideBar时，设置dividerLocation为0
+            updateDividerLocation(0)
+        }
+        // 通知父容器重新布局
+        parent?.revalidate()
+    }
+    
+    private fun updateDividerLocation(location: Int) {
+        // 查找包含SideBar的JSplitPane并更新其dividerLocation
+        var current = parent
+        while (current != null) {
+            if (current is javax.swing.JSplitPane) {
+                current.dividerLocation = location
+                break
+            }
+            current = current.parent
+        }
     }
 
     fun hasView(id: String): Boolean = views.containsKey(id)
     fun getView(id: String): JComponent? = views[id]
+    fun isSideBarVisible(): Boolean = isVisible
 }
