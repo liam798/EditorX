@@ -37,7 +37,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         background = backgroundColor
     }
 
-    fun registerItem(id: String, icon: Icon, tooltip: String, viewProvider: ViewProvider) {
+    fun addItem(id: String, tooltip: String, icon: Icon, viewProvider: ViewProvider) {
         val btn = createActivityButton(icon, tooltip, id)
         buttonGroup.add(btn)
         buttonMap[id] = btn

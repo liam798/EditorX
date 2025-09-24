@@ -2,9 +2,6 @@ plugins {
     id("buildsrc.convention.kotlin-jvm")
 }
 
-group = "com.xiaomao.tools"
-version = "1.0.0"
-
 repositories {
     mavenCentral()
 }
@@ -13,11 +10,6 @@ dependencies {
     implementation(project(":core"))
 }
 
-kotlin {
-    jvmToolchain(21)
-}
-
-// 配置标准jar任务
 afterEvaluate {
     tasks.jar {
         archiveBaseName.set("explorer")
@@ -25,9 +17,9 @@ afterEvaluate {
 
         manifest {
             attributes(
+                "Plugin-Id" to "explorer",
                 "Plugin-Name" to "Explorer",
-                "Plugin-Desc" to "文件浏览器插件",
-                "Plugin-Version" to "1.0.0",
+                "Plugin-Version" to archiveVersion,
                 "Main-Class" to "editorx.plugins.explorer.ExplorerPlugin"
             )
         }

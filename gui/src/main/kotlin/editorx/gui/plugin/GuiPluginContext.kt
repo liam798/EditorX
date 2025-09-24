@@ -26,24 +26,18 @@ class GuiPluginContext(
         return loadedPlugin
     }
 
-    override fun addActivityBarItem(id: String, iconPath: String, tooltip: String, viewProvider: ViewProvider) {
+    override fun addActivityBarItem(iconPath: String, viewProvider: ViewProvider) {
         try {
             val icon = loadIcon(iconPath)
-            // 为每个插件创建唯一的ID，避免冲突
-            val uniqueId = "${loadedPlugin.name}_$id"
-            mainWindow.activityBar.registerItem(uniqueId, icon ?: ImageIcon(), tooltip, viewProvider)
-            logger.info("插件[${loadedPlugin.name}] 布局提供器注册成功: $id -> $uniqueId")
+            mainWindow.activityBar.addItem(loadedPlugin.id, loadedPlugin.name, icon ?: ImageIcon(), viewProvider)
         } catch (e: Exception) {
-            logger.warning("插件[${loadedPlugin.name}] 注册布局提供器失败: $id, 错误: ${e.message}")
-            val uniqueId = "${loadedPlugin.name}_$id"
-            mainWindow.activityBar.registerItem(uniqueId, ImageIcon(), tooltip, viewProvider)
+            mainWindow.activityBar.addItem(loadedPlugin.id, loadedPlugin.name, ImageIcon(), viewProvider)
         }
     }
 
     override fun openFile(file: File) {
         try {
             mainWindow.editor.openFile(file)
-            logger.info("插件[${loadedPlugin.name}] 文件已打开: ${file.name}")
         } catch (e: Exception) {
             logger.warning("打开文件失败: ${file.name}, 错误: ${e.message}")
         }

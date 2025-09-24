@@ -2,7 +2,6 @@ package editorx.plugins.explorer
 
 import editorx.gui.CachedViewProvider
 import editorx.gui.ViewArea
-import editorx.gui.ViewProvider
 import editorx.plugin.Plugin
 import editorx.plugin.PluginContext
 import java.awt.BorderLayout
@@ -35,9 +34,7 @@ class ExplorerPlugin : Plugin {
         this.context = context
 
         context.addActivityBarItem(
-            "explorer",
             "icons/explorer.svg",
-            context.getLoadedPlugin().name,
             object : CachedViewProvider() {
                 override fun createView(): JComponent {
                     return createExplorerView()

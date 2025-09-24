@@ -1,7 +1,11 @@
 package editorx.gui
 
-import editorx.gui.plugin.GuiPluginInitializer
+import editorx.gui.plugin.GuiPluginContext
 import editorx.gui.ui.MainWindow
+import editorx.plugin.LoadedPlugin
+import editorx.plugin.PluginContext
+import editorx.plugin.PluginContextFactory
+import editorx.plugin.PluginManager
 import java.util.logging.Level
 import java.util.logging.Logger
 import javax.swing.SwingUtilities
@@ -44,10 +48,17 @@ private fun initializeApplication() {
 }
 
 private fun initializeMainWindow() {
-    // 显示主窗口
     val mv = MainWindow()
+
+    // 显示主窗口
     mv.isVisible = true
 
     // 初始化插件
-    GuiPluginInitializer.initialize(mv)
+    val contextFactory = object : PluginContextFactory {
+        override fun createPluginContext(loadedPlugin: LoadedPlugin): PluginContext {
+            return GuiPluginContext(mv, loadedPlugin)
+        }
+    }
+    val pluginManager = PluginManager(contextFactory)
+    pluginManager.loadPlugins()
 }

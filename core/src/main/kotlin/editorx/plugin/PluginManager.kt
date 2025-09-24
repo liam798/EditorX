@@ -56,9 +56,9 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
             val packagesToScan = listOf(
                 "editorx",
             )
-            
+
             val allPluginClasses = mutableSetOf<Class<*>>()
-            
+
             for (packageName in packagesToScan) {
                 logger.info("扫描包: $packageName")
                 val pluginClasses = ClassScanner.findSubclasses(packageName, Plugin::class.java)
@@ -68,7 +68,7 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
                 }
                 allPluginClasses.addAll(pluginClasses)
             }
-            
+
             // 加载所有发现的插件
             allPluginClasses.forEach { pluginClass ->
                 // 检查是否已经加载过同名插件
@@ -77,11 +77,11 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
                     logger.info("插件 $simpleName 已存在，跳过加载")
                     return@forEach
                 }
-                
+
                 logger.info("发现插件类: ${pluginClass.name}")
                 loadSourcePluginClass(pluginClass)
             }
-            
+
             logger.info("源码插件扫描完成，共发现 ${allPluginClasses.size} 个插件类")
         } catch (e: Exception) {
             logger.warning("扫描源码插件时出错: ${e.message}")
@@ -94,17 +94,12 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
     private fun loadSourcePluginClass(pluginClass: Class<*>) {
         try {
             val plugin = pluginClass.getDeclaredConstructor().newInstance() as Plugin
-            val pluginName = pluginClass.simpleName
-            val pluginVersion = "dev" // 源码插件使用dev版本
-            val pluginDesc = "源码插件: $pluginName"
 
             val loadedPlugin = LoadedPlugin(
                 plugin = plugin,
-                name = pluginName,
-                version = pluginVersion,
-                description = pluginDesc,
-                jarFile = null, // 源码插件没有JAR文件
-                loader = null // 使用当前类加载器
+                id = pluginClass.name,
+                name = pluginClass.simpleName,
+                version = "dev",
             )
 
             val context = contextFactory.createPluginContext(loadedPlugin)
@@ -131,10 +126,22 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
             // 读取 Manifest 获取主类与元信息
             val manifest = JarFile(jarFile).use { it.manifest }
             val attrs = manifest?.mainAttributes
+            val idFromMf = attrs?.getValue("Plugin-Id")
             val nameFromMf = attrs?.getValue("Plugin-Name")
-            val descFromMf = attrs?.getValue("Plugin-Description") ?: attrs?.getValue("Plugin-Desc")
             val versionFromMf = attrs?.getValue("Plugin-Version")
-            val mainClassName = attrs?.getValue("Main-Class") ?: "PluginMain"
+            val mainClassName = attrs?.getValue("Main-Class")
+
+            // 检查元信息是否缺失
+            val missingAttributes = mutableListOf<String>()
+            if (idFromMf.isNullOrBlank()) missingAttributes.add("Plugin-Id")
+            if (nameFromMf.isNullOrBlank()) missingAttributes.add("Plugin-Name")
+            if (versionFromMf.isNullOrBlank()) missingAttributes.add("Plugin-Version")
+            if (mainClassName.isNullOrBlank()) missingAttributes.add("Main-Class")
+
+            if (missingAttributes.isNotEmpty()) {
+                logger.warning("插件 ${jarFile.name} 缺少必要的元信息: ${missingAttributes.joinToString(", ")}")
+                return
+            }
 
             // 加载主类
             val pluginClass = try {
@@ -145,15 +152,12 @@ class PluginManager(private val contextFactory: PluginContextFactory) {
             }
 
             val plugin = pluginClass.getDeclaredConstructor().newInstance() as Plugin
-            val pluginName = nameFromMf ?: pluginClass.simpleName
-            val pluginVersion = versionFromMf ?: "1.0.0"
-            val pluginDesc = descFromMf ?: ""
 
             val loadedPlugin = LoadedPlugin(
                 plugin = plugin,
-                name = pluginName,
-                version = pluginVersion,
-                description = pluginDesc,
+                id = idFromMf!!,
+                name = nameFromMf!!,
+                version = versionFromMf!!,
                 jarFile = jarFile,
                 loader = loader
             )

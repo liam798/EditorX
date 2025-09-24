@@ -5,9 +5,9 @@ import java.net.URLClassLoader
 
 data class LoadedPlugin(
     val plugin: Plugin,
+    val id: String,
     val name: String,
     val version: String,
-    val description: String,
-    val jarFile: File?, // 可以为null，支持源码插件
-    val loader: URLClassLoader?
+    val jarFile: File? = null,
+    val loader: URLClassLoader? = null
 )
