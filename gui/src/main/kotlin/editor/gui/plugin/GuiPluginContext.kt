@@ -1,7 +1,7 @@
 package editor.gui.plugin
 
 import editor.gui.ViewProvider
-import editor.gui.ui.SvgIcon
+import editor.gui.widget.SvgIcon
 import editor.gui.ui.activitybar.ActivityBar
 import editor.gui.ui.editor.Editor
 import editor.plugin.PluginContext
@@ -14,11 +14,11 @@ import javax.swing.ImageIcon
 /**
  * GUI 实现的插件上下文
  */
-class PluginContextImpl(
+class GuiPluginContext(
     private val activityBar: ActivityBar,
     private val editor: Editor
 ) : PluginContext {
-    private val logger = Logger.getLogger(PluginContextImpl::class.java.name)
+    private val logger = Logger.getLogger(GuiPluginContext::class.java.name)
 
     override fun addActivityBarItem(id: String, iconPath: String, tooltip: String, viewProvider: ViewProvider) {
         try {

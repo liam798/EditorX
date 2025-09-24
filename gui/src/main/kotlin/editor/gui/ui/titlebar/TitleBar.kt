@@ -1,6 +1,6 @@
 package editor.gui.ui.titlebar
 
-import editor.gui.MainFrame
+import editor.gui.ui.MainWindow
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import javax.swing.*
@@ -75,7 +75,7 @@ class TitleBar(_owner: JFrame) : JMenuBar() {
         val fileChooser = JFileChooser().apply { fileFilter = FileNameExtensionFilter("APK Files", "apk"); dialogTitle = "选择APK文件" }
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selectedFile = fileChooser.selectedFile
-            MainFrame.instance.statusBar.setMessage("已加载: ${selectedFile.name}")
+            MainWindow.instance.statusBar.setMessage("已加载: ${selectedFile.name}")
         }
     }
 
@@ -83,14 +83,14 @@ class TitleBar(_owner: JFrame) : JMenuBar() {
         val fileChooser = JFileChooser().apply { fileSelectionMode = JFileChooser.DIRECTORIES_ONLY; dialogTitle = "选择文件夹" }
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selectedFolder = fileChooser.selectedFile
-            MainFrame.instance.statusBar.setMessage("已打开文件夹: ${selectedFolder.name}")
+            MainWindow.instance.statusBar.setMessage("已打开文件夹: ${selectedFolder.name}")
         }
     }
 
     private fun showFindDialog() { JOptionPane.showMessageDialog(this, "查找功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE) }
     private fun showReplaceDialog() { JOptionPane.showMessageDialog(this, "替换功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE) }
-    private fun toggleSidebar() { val sidebar = MainFrame.instance.sideBar; sidebar.isVisible = !sidebar.isVisible }
-    private fun toggleBottomPanel() { val panel = MainFrame.instance.panel; panel.isVisible = !panel.isVisible }
+    private fun toggleSidebar() { val sidebar = MainWindow.instance.sideBar; sidebar.isVisible = !sidebar.isVisible }
+    private fun toggleBottomPanel() { val panel = MainWindow.instance.panel; panel.isVisible = !panel.isVisible }
     private fun showPluginManager() { JOptionPane.showMessageDialog(this, "插件管理器待实现", "提示", JOptionPane.INFORMATION_MESSAGE) }
     private fun showSettings() { JOptionPane.showMessageDialog(this, "设置界面待实现", "提示", JOptionPane.INFORMATION_MESSAGE) }
     private fun showAbout() {

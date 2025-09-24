@@ -1,4 +1,4 @@
-package editor.gui.ui
+package editor.gui.widget
 
 import java.awt.*
 import java.awt.geom.*

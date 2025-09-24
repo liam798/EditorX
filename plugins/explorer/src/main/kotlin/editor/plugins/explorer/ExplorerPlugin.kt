@@ -1,10 +1,10 @@
 package editor.plugins.explorer
 
+import editor.gui.CachedViewProvider
 import editor.gui.ViewArea
 import editor.gui.ViewProvider
 import editor.plugin.Plugin
 import editor.plugin.PluginContext
-import editor.plugin.PluginInfo
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dimension
@@ -29,13 +29,7 @@ class ExplorerPlugin : Plugin {
     private var currentApkFile: File? = null
     private var context: PluginContext? = null
 
-    override fun getPluginInfo(): PluginInfo {
-        return PluginInfo(
-            name = "Explorer",
-            description = "文件浏览器插件，提供APK内容浏览和文件管理功能",
-            editorMinVersion = 0,
-        )
-    }
+    // 插件信息改由 JAR Manifest 提供（Plugin-Name、Plugin-Description 等）
 
     override fun activate(context: PluginContext) {
         this.context = context
@@ -44,7 +38,7 @@ class ExplorerPlugin : Plugin {
             "explorer",
             "icons/explorer.svg",
             "文件浏览器",
-            object : ViewProvider {
+            object : CachedViewProvider() {
                 override fun createView(): JComponent {
                     return createExplorerView()
                 }
@@ -261,4 +255,3 @@ class FileTreeCellRenderer : javax.swing.tree.DefaultTreeCellRenderer() {
         return UIManager.getIcon("FileView.fileIcon")
     }
 }
-

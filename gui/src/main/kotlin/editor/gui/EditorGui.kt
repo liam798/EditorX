@@ -1,12 +1,13 @@
 package editor.gui
 
+import editor.gui.ui.MainWindow
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import java.util.logging.Logger
 import java.util.logging.Level
 
 /**
- * APK Editor 主入口点
+ * Editor GUI 主入口点
  */
 fun main() {
     Logger.getLogger("").level = Level.INFO
@@ -42,9 +43,7 @@ private fun initializeApplication() {
 }
 
 private fun startMainWindow() {
-    val mainFrame = MainFrame.instance
-    mainFrame.isVisible = true
-
-    Logger.getLogger("").info("APK Editor 主窗口已启动")
+    val mv = MainWindow.instance
+    mv.init()
 }
 

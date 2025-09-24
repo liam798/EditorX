@@ -24,6 +24,6 @@ tasks.test {
 }
 
 application {
-    mainClass.set("AppKt")
+    mainClass.set("editor.gui.EditorGuiKt")
 }
 

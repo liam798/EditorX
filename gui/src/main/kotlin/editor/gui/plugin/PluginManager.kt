@@ -1,10 +1,11 @@
 package editor.gui.plugin
 
-import editor.gui.MainFrame
+import editor.gui.ui.MainWindow
 import editor.plugin.Plugin
 import java.io.File
 import java.net.URLClassLoader
 import java.util.concurrent.ConcurrentHashMap
+import java.util.jar.JarFile
 import java.util.logging.Logger
 
 /**
@@ -12,10 +13,10 @@ import java.util.logging.Logger
  */
 object PluginManager {
     private val logger = Logger.getLogger(PluginManager::class.java.name)
-    private val plugins = ConcurrentHashMap<String, PluginInfo>()
+    private val plugins = ConcurrentHashMap<String, LoadedPlugin>()
     private val pluginLoaders = ConcurrentHashMap<String, URLClassLoader>()
 
-    data class PluginInfo(
+    data class LoadedPlugin(
         val plugin: Plugin,
         val name: String,
         val version: String,
@@ -46,62 +47,54 @@ object PluginManager {
         try {
             logger.info("正在加载插件: ${jarFile.name}")
 
-            val loader = URLClassLoader(arrayOf(jarFile.toURI().toURL()))
+            // 为插件创建独立类加载器，设置父加载器为应用类加载器
+            val loader = URLClassLoader(arrayOf(jarFile.toURI().toURL()), this::class.java.classLoader)
 
+            // 读取 Manifest 获取主类与元信息
+            val manifest = JarFile(jarFile).use { it.manifest }
+            val attrs = manifest?.mainAttributes
+            val nameFromMf = attrs?.getValue("Plugin-Name")
+            val descFromMf = attrs?.getValue("Plugin-Description") ?: attrs?.getValue("Plugin-Desc")
+            val versionFromMf = attrs?.getValue("Plugin-Version")
+            val mainClassName = attrs?.getValue("Main-Class") ?: "PluginMain"
+
+            // 加载主类
             val pluginClass = try {
-                loader.loadClass("PluginMain")
+                loader.loadClass(mainClassName)
             } catch (e: ClassNotFoundException) {
-                logger.warning("插件 ${jarFile.name} 中未找到 PluginMain 类")
+                logger.warning("插件 ${jarFile.name} 中未找到主类: $mainClassName")
                 return
             }
 
             val plugin = pluginClass.getDeclaredConstructor().newInstance() as Plugin
+            val pluginName = nameFromMf ?: pluginClass.simpleName
+            val pluginVersion = versionFromMf ?: "1.0.0"
+            val pluginDesc = descFromMf ?: ""
 
-            val pluginInfo = PluginInfo(
+            val loaded = LoadedPlugin(
                 plugin = plugin,
-                name = getPluginName(pluginClass),
-                version = getPluginVersion(pluginClass),
-                description = getPluginDescription(pluginClass),
+                name = pluginName,
+                version = pluginVersion,
+                description = pluginDesc,
                 jarFile = jarFile,
                 loader = loader
             )
 
-            val context = PluginContextImpl(
-                MainFrame.instance.activityBar,
-                MainFrame.instance.editor
+            val context = GuiPluginContext(
+                MainWindow.instance.activityBar,
+                MainWindow.instance.editor
             )
 
             plugin.activate(context)
-            plugins[pluginInfo.name] = pluginInfo
-            pluginLoaders[pluginInfo.name] = loader
+            plugins[loaded.name] = loaded
+            pluginLoaders[loaded.name] = loader
 
-            logger.info("插件加载成功: ${pluginInfo.name} v${pluginInfo.version}")
+            logger.info("插件加载成功: ${loaded.name} v${loaded.version}")
         } catch (e: Exception) {
             logger.severe("加载插件失败: ${jarFile.name}, 错误: ${e.message}")
             e.printStackTrace()
         }
     }
-
-    private fun getPluginName(pluginClass: Class<*>): String =
-        try {
-            pluginClass.getDeclaredField("PLUGIN_NAME").get(null) as String
-        } catch (_: Exception) {
-            pluginClass.simpleName
-        }
-
-    private fun getPluginVersion(pluginClass: Class<*>): String =
-        try {
-            pluginClass.getDeclaredField("PLUGIN_VERSION").get(null) as String
-        } catch (_: Exception) {
-            "1.0.0"
-        }
-
-    private fun getPluginDescription(pluginClass: Class<*>): String =
-        try {
-            pluginClass.getDeclaredField("PLUGIN_DESCRIPTION").get(null) as String
-        } catch (_: Exception) {
-            "无描述"
-        }
 
     fun unloadPlugin(pluginName: String) {
         plugins[pluginName]?.let { pluginInfo ->
@@ -116,4 +109,3 @@ object PluginManager {
         }
     }
 }
-

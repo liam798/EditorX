@@ -87,11 +87,11 @@ class ActivityBar(_owner: JFrame) : JPanel() {
     private fun showView(id: String, viewProvider: ViewProvider) {
         when (viewProvider.area()) {
             ViewArea.SIDEBAR -> {
-                sideBar?.registerView(id, viewProvider.createView()); sideBar?.showView(id)
+                sideBar?.registerView(id, viewProvider.getView()); sideBar?.showView(id)
             }
 
             ViewArea.PANEL -> {
-                panel?.registerView(id, null, viewProvider.createView()); panel?.showView(id)
+                panel?.registerView(id, null, viewProvider.getView()); panel?.showView(id)
             }
         }
     }

@@ -21,16 +21,15 @@ kotlin {
 tasks.register<Jar>("pluginJar") {
     archiveBaseName.set("explorer-plugin")
     archiveVersion.set("1.0.0")
-    
+
     from(sourceSets.main.get().output)
-    
+
     manifest {
         attributes(
             "Plugin-Name" to "Explorer",
+            "Plugin-Desc" to "文件浏览器插件",
             "Plugin-Version" to "1.0.0",
-            "Plugin-Description" to "文件浏览器插件",
-            "Plugin-Author" to "XiaMao Tools",
-            "Main-Class" to "PluginMain"
+            "Main-Class" to "editor.plugins.explorer.ExplorerPlugin"
         )
     }
 }
