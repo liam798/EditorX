@@ -66,10 +66,8 @@ object PluginManager {
                 loader = loader
             )
 
-            val context = GuiPluginContext(
+            val context = PluginContextImpl(
                 MainFrame.instance.activityBar,
-                MainFrame.instance.sideBar,
-                MainFrame.instance.panel,
                 MainFrame.instance.editor
             )
 
