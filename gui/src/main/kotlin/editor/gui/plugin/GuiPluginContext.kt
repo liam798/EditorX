@@ -2,8 +2,7 @@ package editor.gui.plugin
 
 import editor.gui.ViewProvider
 import editor.gui.widget.SvgIcon
-import editor.gui.ui.activitybar.ActivityBar
-import editor.gui.ui.editor.Editor
+import editor.gui.ui.MainWindow
 import editor.plugin.PluginContext
 import java.awt.*
 import java.io.File
@@ -15,25 +14,24 @@ import javax.swing.ImageIcon
  * GUI 实现的插件上下文
  */
 class GuiPluginContext(
-    private val activityBar: ActivityBar,
-    private val editor: Editor
+    private val mainWindow: MainWindow
 ) : PluginContext {
     private val logger = Logger.getLogger(GuiPluginContext::class.java.name)
 
     override fun addActivityBarItem(id: String, iconPath: String, tooltip: String, viewProvider: ViewProvider) {
         try {
             val icon = loadIcon(iconPath)
-            activityBar.registerItem(id, icon ?: ImageIcon(), tooltip, viewProvider)
+            mainWindow.activityBar.registerItem(id, icon ?: ImageIcon(), tooltip, viewProvider)
             logger.info("布局提供器注册成功: $id")
         } catch (e: Exception) {
             logger.warning("注册布局提供器失败: $id, 错误: ${e.message}")
-            activityBar.registerItem(id, ImageIcon(), tooltip, viewProvider)
+            mainWindow.activityBar.registerItem(id, ImageIcon(), tooltip, viewProvider)
         }
     }
 
     override fun openFile(file: File) {
         try {
-            editor.openFile(file)
+            mainWindow.editor.openFile(file)
             logger.info("文件已打开: ${file.name}")
         } catch (e: Exception) {
             logger.warning("打开文件失败: ${file.name}, 错误: ${e.message}")

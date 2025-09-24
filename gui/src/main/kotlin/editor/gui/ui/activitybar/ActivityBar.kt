@@ -2,6 +2,7 @@ package editor.gui.ui.activitybar
 
 import editor.gui.ViewArea
 import editor.gui.ViewProvider
+import editor.gui.ui.MainWindow
 import editor.gui.ui.panel.Panel
 import editor.gui.ui.sidebar.SideBar
 import java.awt.Color
@@ -9,7 +10,7 @@ import java.awt.Dimension
 import java.awt.Insets
 import javax.swing.*
 
-class ActivityBar(_owner: JFrame) : JPanel() {
+class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
     var sideBar: SideBar? = null
     var panel: Panel? = null
     private val buttonGroup = ButtonGroup()

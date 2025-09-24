@@ -1,12 +1,13 @@
 package editor.gui.ui.statusbar
 
 import java.awt.Color
+import editor.gui.ui.MainWindow
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
 import javax.swing.*
 
-class StatusBar(_owner: JFrame) : JPanel() {
+class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     private val statusLabel = JLabel("就绪")
     private val fileInfoLabel = JLabel("")
     private val progressBar = JProgressBar()

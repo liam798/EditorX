@@ -1,10 +1,11 @@
 package editor.gui.ui.panel
 
+import editor.gui.ui.MainWindow
 import java.awt.BorderLayout
 import java.awt.Color
 import javax.swing.*
 
-class Panel(_owner: JFrame) : JPanel() {
+class Panel(private val mainWindow: MainWindow) : JPanel() {
     private val tabbedPane = JTabbedPane()
     private val viewMap = mutableMapOf<String, JComponent>()
 

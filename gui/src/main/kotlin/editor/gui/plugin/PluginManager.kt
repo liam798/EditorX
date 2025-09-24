@@ -1,6 +1,5 @@
 package editor.gui.plugin
 
-import editor.gui.ui.MainWindow
 import editor.plugin.Plugin
 import java.io.File
 import java.net.URLClassLoader
@@ -9,9 +8,10 @@ import java.util.jar.JarFile
 import java.util.logging.Logger
 
 /**
- * 插件管理器（GUI层，负责接入UI与插件）
+ * 插件管理器
+ * 负责插件的加载、卸载和生命周期管理
  */
-object PluginManager {
+class PluginManager(private val contextFactory: PluginContextFactory) {
     private val logger = Logger.getLogger(PluginManager::class.java.name)
     private val plugins = ConcurrentHashMap<String, LoadedPlugin>()
     private val pluginLoaders = ConcurrentHashMap<String, URLClassLoader>()
@@ -80,10 +80,7 @@ object PluginManager {
                 loader = loader
             )
 
-            val context = GuiPluginContext(
-                MainWindow.instance.activityBar,
-                MainWindow.instance.editor
-            )
+            val context = contextFactory.createPluginContext()
 
             plugin.activate(context)
             plugins[loaded.name] = loaded

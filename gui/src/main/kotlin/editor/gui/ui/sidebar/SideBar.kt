@@ -1,11 +1,12 @@
 package editor.gui.ui.sidebar
 
+import editor.gui.ui.MainWindow
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Dimension
 import javax.swing.*
 
-class SideBar(_owner: JFrame) : JPanel() {
+class SideBar(private val mainWindow: MainWindow) : JPanel() {
     private val cardLayout = CardLayout()
     private val views = mutableMapOf<String, JComponent>()
     private var currentViewId: String? = null

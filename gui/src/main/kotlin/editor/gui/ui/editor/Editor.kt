@@ -1,5 +1,6 @@
 package editor.gui.ui.editor
 
+import editor.gui.ui.MainWindow
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants
 import org.fife.ui.rtextarea.RTextScrollPane
@@ -12,7 +13,7 @@ import java.io.File
 import java.nio.file.Files
 import javax.swing.*
 
-class Editor(_owner: JFrame) : JTabbedPane() {
+class Editor(private val mainWindow: MainWindow) : JTabbedPane() {
     private val fileToTab = mutableMapOf<File, Int>()
     private val tabToFile = mutableMapOf<Int, File>()
 

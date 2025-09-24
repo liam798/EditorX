@@ -1,6 +1,5 @@
 package editor.gui.ui
 
-import editor.gui.plugin.PluginManager
 import editor.gui.ui.activitybar.ActivityBar
 import editor.gui.ui.editor.Editor
 import editor.gui.ui.panel.Panel
@@ -17,8 +16,7 @@ import javax.swing.JSplitPane
  * - 解耦 UI 构建与插件加载
  * - 提供显式的 showWindow()/loadPluginsSafely()
  */
-object MainWindow : JFrame() {
-    val instance: MainWindow get() = this
+class MainWindow : JFrame() {
 
     // UI 组件
     val titleBar by lazy { TitleBar(this) }
@@ -44,46 +42,33 @@ object MainWindow : JFrame() {
         }
     }
 
-    private var initialized = false
+    init {
+        setupWindow()
+        setupLayout()
+        connectComponents()
+    }
 
-    private fun initIfNeeded() {
-        if (initialized) return
+    private fun setupWindow() {
         // 窗口属性
         title = "APK Editor"
         defaultCloseOperation = JFrame.EXIT_ON_CLOSE
         size = Dimension(1400, 900)
         setLocationRelativeTo(null)
         minimumSize = Dimension(800, 600)
+    }
 
+    private fun setupLayout() {
         // 布局
         layout = BorderLayout()
         add(titleBar, BorderLayout.NORTH)
         add(activityBar, BorderLayout.WEST)
         add(verticalSplit, BorderLayout.CENTER)
         add(statusBar, BorderLayout.SOUTH)
+    }
 
+    private fun connectComponents() {
         // 组件连接
         activityBar.sideBar = sideBar
         activityBar.panel = panel
-
-        initialized = true
-    }
-
-    /** 显示窗口（只构建一次） */
-    fun init() {
-        initIfNeeded()
-        if (!isVisible) {
-            isVisible = true
-        }
-    }
-
-    /** 安全加载插件，并在状态栏反馈 */
-    fun loadPluginsSafely() {
-        try {
-            PluginManager.loadPlugins()
-            statusBar.setMessage("插件系统已启动")
-        } catch (e: Exception) {
-            statusBar.setMessage("插件加载失败: ${e.message}")
-        }
     }
 }
