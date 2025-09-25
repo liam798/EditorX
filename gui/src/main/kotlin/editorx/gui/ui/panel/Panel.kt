@@ -81,7 +81,7 @@ class Panel(private val mainWindow: MainWindow) : JPanel() {
         if (isVisible) {
             updateDividerLocation(700) // 显示Panel时设置合适的位置
         } else {
-            updateDividerLocation(0) // 隐藏Panel时完全隐藏
+            updateDividerLocation(Int.MAX_VALUE) // 隐藏Panel时完全隐藏
         }
         // 通知父容器重新布局
         parent?.revalidate()
