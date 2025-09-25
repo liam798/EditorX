@@ -1,5 +1,6 @@
 package editorx.gui.ui
 
+import editorx.gui.plugin.PluginManager
 import editorx.gui.services.GuiServices
 import editorx.gui.ui.activitybar.ActivityBar
 import editorx.gui.ui.editor.Editor
@@ -7,7 +8,6 @@ import editorx.gui.ui.panel.Panel
 import editorx.gui.ui.sidebar.SideBar
 import editorx.gui.ui.statusbar.StatusBar
 import editorx.gui.ui.titlebar.TitleBar
-import editorx.plugin.PluginManager
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File

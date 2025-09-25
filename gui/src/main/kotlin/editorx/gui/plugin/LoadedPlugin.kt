@@ -1,5 +1,6 @@
-package editorx.plugin
+package editorx.gui.plugin
 
+import editorx.plugin.Plugin
 import java.io.File
 import java.net.URLClassLoader
 

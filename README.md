@@ -21,7 +21,7 @@ EditorX 是一个基于 Kotlin/JVM 的可扩展桌面编辑器，采用模块化
   - 多标签 + 拖入文件打开
   - 修改痕迹标记（*）与保存/另存为
   - 状态栏行列显示与文件信息
-- UI 容器契约：ActivityBar 控制视图，内容展示在 SideBar/Panel
+- UI 容器契约：ActivityBar 控制视图，内容展示在 SideBar（不再支持 ViewArea/Panel 指定）
 - 插件管理对话框：查看已加载插件列表
 
 ## 模块

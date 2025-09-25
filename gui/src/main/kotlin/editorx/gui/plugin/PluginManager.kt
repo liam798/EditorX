@@ -1,8 +1,9 @@
-package editorx.plugin
+package editorx.gui.plugin
 
 import editorx.event.EventBus
 import editorx.event.PluginLoaded
 import editorx.event.PluginUnloaded
+import editorx.plugin.Plugin
 import editorx.util.ClassScanner
 import java.io.File
 import java.net.URLClassLoader

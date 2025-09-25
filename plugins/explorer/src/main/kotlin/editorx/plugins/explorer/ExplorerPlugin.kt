@@ -1,7 +1,6 @@
 package editorx.plugins.explorer
 
-import editorx.gui.CachedViewProvider
-import editorx.gui.ViewArea
+import editorx.gui.CachedSideBarViewProvider
 import editorx.plugin.Plugin
 import editorx.plugin.PluginContext
 import java.awt.BorderLayout
@@ -35,12 +34,10 @@ class ExplorerPlugin : Plugin {
 
         context.addActivityBarItem(
             "icons/explorer.svg",
-            object : CachedViewProvider() {
+            object : CachedSideBarViewProvider() {
                 override fun createView(): JComponent {
                     return createExplorerView()
                 }
-
-                override fun area(): ViewArea = ViewArea.PANEL
             }
         )
         println("Explorer插件已启动")

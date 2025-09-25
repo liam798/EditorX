@@ -1,15 +1,14 @@
 package editorx.gui.plugin
-import editorx.gui.ViewProvider
-import editorx.gui.ui.MainWindow
-import editorx.gui.widget.SvgIcon
+
 import editorx.command.CommandRegistry
 import editorx.event.EventBus
-import editorx.plugin.LoadedPlugin
+import editorx.gui.SideBarViewProvider
+import editorx.gui.ui.MainWindow
+import editorx.gui.widget.SvgIcon
 import editorx.plugin.PluginContext
 import editorx.settings.SettingsStore
 import editorx.workspace.WorkspaceManager
 import java.awt.*
-import java.awt.image.BufferedImage
 import java.io.File
 import java.util.logging.Logger
 import javax.swing.Icon
@@ -31,11 +30,7 @@ class GuiPluginContext(
     private val logger =
         Logger.getLogger("${GuiPluginContext::class.java.name}[${loadedPlugin.name}-${loadedPlugin.version}]")
 
-    override fun getLoadedPlugin(): LoadedPlugin {
-        return loadedPlugin
-    }
-
-    override fun addActivityBarItem(iconPath: String, viewProvider: ViewProvider) {
+    override fun addActivityBarItem(iconPath: String, viewProvider: SideBarViewProvider) {
         val icon = loadIcon(iconPath)
         mainWindow.activityBar.addItem(loadedPlugin.id, loadedPlugin.name, icon, viewProvider)
     }

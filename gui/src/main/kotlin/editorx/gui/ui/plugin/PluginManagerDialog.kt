@@ -1,6 +1,6 @@
 package editorx.gui.ui.plugin
 
-import editorx.plugin.PluginManager
+import editorx.gui.plugin.PluginManager
 import java.awt.BorderLayout
 import javax.swing.*
 

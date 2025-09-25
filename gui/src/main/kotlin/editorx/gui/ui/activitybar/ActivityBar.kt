@@ -1,8 +1,7 @@
 package editorx.gui.ui.activitybar
 
 import editorx.gui.theme.ThemeManager
-import editorx.gui.ViewArea
-import editorx.gui.ViewProvider
+import editorx.gui.SideBarViewProvider
 import editorx.gui.ui.MainWindow
 import editorx.gui.ui.panel.Panel
 import editorx.gui.ui.sidebar.SideBar
@@ -15,7 +14,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
     var panel: Panel? = null
     private val buttonGroup = ButtonGroup()
     private val buttonMap = mutableMapOf<String, JButton>()
-    private val viewProviderMap = mutableMapOf<String, ViewProvider>()
+    private val viewProviderMap = mutableMapOf<String, SideBarViewProvider>()
     private var activeId: String? = null
 
     private val backgroundColor = ThemeManager.activityBarBackground
@@ -40,7 +39,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         background = backgroundColor
     }
 
-    fun addItem(id: String, tooltip: String, icon: Icon, viewProvider: ViewProvider) {
+    fun addItem(id: String, tooltip: String, icon: Icon, viewProvider: SideBarViewProvider) {
         val btn = createActivityButton(icon, tooltip, id)
         buttonGroup.add(btn)
         buttonMap[id] = btn
@@ -106,7 +105,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     // 不再支持 ActivityBar 直接展示到底部 Panel
-    private fun showView(id: String, viewProvider: ViewProvider) { sideBar?.showView(id, viewProvider.getView()) }
+    private fun showView(id: String, viewProvider: SideBarViewProvider) { sideBar?.showView(id, viewProvider.getView()) }
     private fun hideView(id: String) { if (sideBar?.getCurrentViewId() == id) sideBar?.hideSideBar() }
 
     private fun updateAllButtonStates() {

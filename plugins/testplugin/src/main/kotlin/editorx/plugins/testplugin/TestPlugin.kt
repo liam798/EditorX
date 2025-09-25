@@ -1,7 +1,6 @@
 package editorx.plugins.testplugin
 
-import editorx.gui.CachedViewProvider
-import editorx.gui.ViewArea
+import editorx.gui.CachedSideBarViewProvider
 import editorx.plugin.Plugin
 import editorx.plugin.PluginContext
 import java.awt.BorderLayout
@@ -14,7 +13,7 @@ class TestPlugin : Plugin {
         // Register a simple panel view
         context.addActivityBarItem(
             iconPath = "icons/explorer.svg", // reuse existing icon from explorer for demo
-            viewProvider = object : CachedViewProvider() {
+            viewProvider = object : CachedSideBarViewProvider() {
                 override fun createView(): javax.swing.JComponent {
                     val panel = JPanel(BorderLayout())
                     val label = JLabel("Hello from TestPlugin!")
@@ -25,8 +24,6 @@ class TestPlugin : Plugin {
                     panel.add(btn, BorderLayout.SOUTH)
                     return panel
                 }
-
-                override fun area(): ViewArea = ViewArea.SIDEBAR
             }
         )
 

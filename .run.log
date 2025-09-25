@@ -240,3 +240,6 @@ Explorer插件已启动
 信息: 源码插件扫描完成，共发现 2 个插件类
 9月 25, 2025 6:52:50 下午 editorx.plugin.PluginManager loadPlugins
 信息: 插件加载完成，共加载 2 个插件
+
+BUILD SUCCESSFUL in 15m 22s
+19 actionable tasks: 2 executed, 17 up-to-date

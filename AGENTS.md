@@ -37,18 +37,16 @@
     - `Main-Class` 指向实现了 `Plugin` 接口的类，例如：`editorx.plugins.explorer.ExplorerPlugin`
 - 插件上下文与交互：
   - 接口：`editorx.plugin.PluginContext`
-  - 视图契约：`editorx.gui.ViewProvider` 与 `editorx.gui.ViewArea`
+  - 视图契约：`editorx.gui.SideBarViewProvider`（不再支持 `ViewArea`）
   - GUI 侧实现：`editorx.gui.plugin.GuiPluginContext`
 
 ## UI 布局约定（重要）
 
 以下规则用于指导 UI 插件的放置与交互：
 
-1. `SideBar` 与 `Panel` 都是容器。
+1. `SideBar` 与 `Panel` 都是容器，但 ActivityBar 仅控制 `SideBar`。
 2. `ActivityBar` 与 `TitleBar` 用于控制插件内容的打开/关闭。
-3. 插件自行决定显示位置与控制按钮：
-   - 可在 `ActivityBar` 注册入口按钮；
-   - 点击后，其内容可显示在 `Panel` 或 `SideBar`（二者皆可）。
+3. 插件在 `ActivityBar` 注册入口按钮；点击后内容显示在 `SideBar`。
 
 请在实现与评审时共同遵循以上统一约定。
 

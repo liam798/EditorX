@@ -1,4 +1,6 @@
-package editorx.plugin
+package editorx.gui.plugin
+
+import editorx.plugin.PluginContext
 
 /**
  * 插件上下文工厂接口

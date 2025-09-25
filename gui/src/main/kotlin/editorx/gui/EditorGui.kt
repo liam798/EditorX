@@ -3,19 +3,18 @@ package editorx.gui
 import com.formdev.flatlaf.FlatLightLaf
 import editorx.command.CommandMeta
 import editorx.gui.plugin.GuiPluginContext
-import editorx.gui.theme.ThemeManager
+import editorx.gui.plugin.LoadedPlugin
+import editorx.gui.plugin.PluginContextFactory
+import editorx.gui.plugin.PluginManager
 import editorx.gui.services.GuiServices
+import editorx.gui.theme.ThemeManager
 import editorx.gui.ui.MainWindow
 import editorx.gui.ui.command.CommandPalette
-import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContext
-import editorx.plugin.PluginContextFactory
-import editorx.plugin.PluginManager
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger
 import javax.swing.SwingUtilities
-import javax.swing.UIManager
 
 /**
  * Editor GUI 主入口点
@@ -67,12 +66,12 @@ private fun initializeMainWindow() {
     mv.isVisible = true
 
     // 初始化插件
-    val contextFactory = object : PluginContextFactory {
+    val pluginContextFactory = object : PluginContextFactory {
         override fun createPluginContext(loadedPlugin: LoadedPlugin): PluginContext {
             return GuiPluginContext(mv, loadedPlugin)
         }
     }
-    val pluginManager = PluginManager(contextFactory, services.eventBus)
+    val pluginManager = PluginManager(pluginContextFactory, services.eventBus)
     mv.pluginManager = pluginManager
     pluginManager.loadPlugins()
 
@@ -82,7 +81,12 @@ private fun initializeMainWindow() {
         CommandPalette.show(mv, services.commands)
     }
     commands.register(CommandMeta("app.about", "关于 EditorX")) {
-        javax.swing.JOptionPane.showMessageDialog(mv, "EditorX – 可扩展插件化编辑器", "关于", javax.swing.JOptionPane.INFORMATION_MESSAGE)
+        javax.swing.JOptionPane.showMessageDialog(
+            mv,
+            "EditorX – 可扩展插件化编辑器",
+            "关于",
+            javax.swing.JOptionPane.INFORMATION_MESSAGE
+        )
     }
     commands.register(CommandMeta("view.toggleSidebar", "切换侧边栏")) { mv.sideBar.isVisible = !mv.sideBar.isVisible }
     commands.register(CommandMeta("view.togglePanel", "切换底部面板")) { mv.panel.isVisible = !mv.panel.isVisible }
