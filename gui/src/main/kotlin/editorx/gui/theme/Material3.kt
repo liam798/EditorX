@@ -79,4 +79,13 @@ object ThemeManager {
     val activityBarBackground: Color get() = Color(0xF2, 0xF2, 0xF2)
     val activityBarItemSelected: Color get() = palette.primaryContainer
     val activityBarItemHover: Color get() = Color(0, 0, 0, 20) // very light overlay
+
+    // Editor tabs
+    val editorTabSelectedUnderline: Color get() = palette.primary
+    val editorTabSelectedForeground: Color get() = palette.onSurface
+    val editorTabForeground: Color get() = palette.onSurfaceVariant
+    val editorTabHoverBackground: Color get() = Color(0, 0, 0, 15)
+    val editorTabCloseDefault: Color get() = Color(0x8A, 0x8A, 0x8A)
+    val editorTabCloseSelected: Color get() = palette.onSurface
+    val editorTabCloseHoverBackground: Color get() = Color(0, 0, 0, 24)
 }

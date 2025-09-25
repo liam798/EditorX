@@ -17,6 +17,7 @@ import java.awt.event.MouseEvent
 import java.io.File
 import java.nio.file.Files
 import javax.swing.*
+import editorx.gui.theme.ThemeManager
 
 class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val fileToTab = mutableMapOf<File, Int>()
@@ -33,7 +34,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         // 配置内部的JTabbedPane
         tabbedPane.apply {
             tabPlacement = JTabbedPane.TOP
-            tabLayoutPolicy = JTabbedPane.WRAP_TAB_LAYOUT
+            // 单行展示，超出宽度时可滚动
+            tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
             border = javax.swing.BorderFactory.createEmptyBorder()
 
             // 设置标签页左对齐 & 移除内容区边框
@@ -68,6 +70,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             val file = getCurrentFile()
             mainWindow.statusBar.setFileInfo(file?.name ?: "", file?.let { it.length().toString() + " B" })
             mainWindow.services.eventBus.publish(ActiveFileChanged(file?.absolutePath))
+            updateTabHeaderStyles()
         }
         
         // 设置拖放支持 - 确保整个Editor区域都支持拖放
@@ -160,32 +163,101 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         fileToTab[file] = index
         tabToFile[index] = file
         tabTextAreas[index] = textArea
-        val closeButton = createCloseButton(file, index)
+        val closeButton = createTabHeader(file)
         tabbedPane.setTabComponentAt(index, closeButton)
         tabbedPane.selectedIndex = index
         dirtyTabs.remove(index)
+        updateTabHeaderStyles()
     }
 
-    private fun createCloseButton(file: File, index: Int): JPanel = JPanel().apply {
-        layout = java.awt.BorderLayout(); isOpaque = false
-        val label = JLabel(file.name).apply { 
-            border = BorderFactory.createEmptyBorder(0, 0, 0, 5)
+    private fun createTabHeader(file: File): JPanel = JPanel().apply {
+        layout = java.awt.BorderLayout(); isOpaque = true; background = Color.WHITE
+        val titleLabel = JLabel(file.name).apply {
+            border = BorderFactory.createEmptyBorder(0, 8, 0, 6)
             horizontalAlignment = JLabel.LEFT
         }
-        add(label, java.awt.BorderLayout.CENTER)
+        add(titleLabel, java.awt.BorderLayout.CENTER)
         val closeLabel = JLabel("×").apply {
-            font = font.deriveFont(Font.BOLD, 14f)
-            foreground = Color.GRAY
-            preferredSize = Dimension(16, 16)
+            font = font.deriveFont(Font.PLAIN, 13f)
+            foreground = ThemeManager.editorTabCloseDefault
+            preferredSize = Dimension(18, 18)
             horizontalAlignment = JLabel.CENTER
             verticalAlignment = JLabel.CENTER
+            isOpaque = false
+            isVisible = false // 默认未选中时不显示
             addMouseListener(object : MouseAdapter() {
-                override fun mouseEntered(e: MouseEvent) { foreground = Color.RED; cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR) }
-                override fun mouseExited(e: MouseEvent) { foreground = Color.GRAY; cursor = java.awt.Cursor.getDefaultCursor() }
-                override fun mouseClicked(e: MouseEvent) { closeTab(index) }
+                override fun mouseEntered(e: MouseEvent) {
+                    isOpaque = true
+                    background = ThemeManager.editorTabCloseHoverBackground
+                    foreground = ThemeManager.editorTabCloseSelected
+                    cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                }
+                override fun mouseExited(e: MouseEvent) {
+                    isOpaque = false
+                    background = null
+                    // 根据是否选中决定颜色
+                    val idx = tabbedPane.indexOfTabComponent(this@apply)
+                    foreground = if (idx == tabbedPane.selectedIndex) ThemeManager.editorTabCloseSelected else ThemeManager.editorTabCloseDefault
+                    cursor = java.awt.Cursor.getDefaultCursor()
+                }
+                override fun mouseClicked(e: MouseEvent) {
+                    val idx = tabbedPane.indexOfTabComponent(this@apply)
+                    if (idx >= 0) closeTab(idx)
+                }
             })
         }
         add(closeLabel, java.awt.BorderLayout.EAST)
+
+        // 保存控件引用以便更新样式
+        putClientProperty("titleLabel", titleLabel)
+        putClientProperty("closeLabel", closeLabel)
+
+        // hover 时，仅未选中标签显示关闭按钮
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) {
+                val idx = tabbedPane.indexOfTabComponent(this@apply)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    closeLabel.isVisible = true
+                }
+            }
+            override fun mouseExited(e: MouseEvent) {
+                val idx = tabbedPane.indexOfTabComponent(this@apply)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    closeLabel.isVisible = false
+                }
+            }
+        })
+    }
+
+    private fun updateTabHeaderStyles() {
+        for (i in 0 until tabbedPane.tabCount) {
+            val comp = tabbedPane.getTabComponentAt(i) as? JPanel ?: continue
+            val isSelected = (i == tabbedPane.selectedIndex)
+            comp.isOpaque = true
+            comp.background = Color.WHITE
+
+            // 文本颜色区分选中与未选中
+            val label = comp.getClientProperty("titleLabel") as? JLabel
+            label?.foreground = if (isSelected) ThemeManager.editorTabSelectedForeground else ThemeManager.editorTabForeground
+            label?.font = (label?.font ?: Font("Dialog", Font.PLAIN, 12)).deriveFont(if (isSelected) Font.BOLD else Font.PLAIN)
+
+            // 关闭按钮可见性
+            val close = comp.getClientProperty("closeLabel") as? JLabel
+            if (close != null) {
+                close.isVisible = isSelected // 选中显示，未选中默认隐藏
+                close.foreground = if (isSelected) ThemeManager.editorTabCloseSelected else ThemeManager.editorTabCloseDefault
+                close.isOpaque = false
+                close.background = null
+            }
+
+            // 选中下划线指示
+            val border = if (isSelected) {
+                BorderFactory.createMatteBorder(0, 0, 2, 0, ThemeManager.editorTabSelectedUnderline)
+            } else {
+                BorderFactory.createEmptyBorder(0, 0, 2, 0)
+            }
+            comp.border = border
+        }
     }
 
     private fun closeTab(index: Int) {
