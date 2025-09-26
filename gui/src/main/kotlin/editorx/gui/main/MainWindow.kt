@@ -2,6 +2,7 @@ package editorx.gui.main
 
 import editorx.gui.CachedViewProvider
 import editorx.gui.GuiControl
+import editorx.gui.Constants
 import editorx.gui.ui.widget.NoLineSplitPaneUI
 import editorx.gui.main.activitybar.ActivityBar
 import editorx.gui.main.editor.Editor
@@ -68,6 +69,22 @@ class MainWindow(val guiControl: GuiControl) : JFrame() {
         horizontalSplit.border = javax.swing.BorderFactory.createEmptyBorder()
         // 启用连续布局，减少布局跳动
         horizontalSplit.isContinuousLayout = true
+
+        // 当用户手动拖动分割条把 SideBar 拉出时，若尚未有激活视图，则激活默认项
+        horizontalSplit.addPropertyChangeListener(javax.swing.JSplitPane.DIVIDER_LOCATION_PROPERTY) { _ ->
+            val visible = horizontalSplit.dividerLocation > 0
+            if (visible && sideBar.getCurrentViewId() == null) {
+                sideBar.preserveNextDividerOnShow()
+                activityBar.activateItem(Constants.ACTIVITY_BAR_DEFAULT_ID, userInitiated = false)
+            } else if (visible && sideBar.getCurrentViewId() != null) {
+                // 用户手动拖拽显示：仅同步按钮高亮，不再触发切换逻辑，避免误判为已显示而反向关闭
+                activityBar.highlightOnly(sideBar.getCurrentViewId()!!)
+            } else if (!visible) {
+                activityBar.clearActive()
+                // 同步SideBar内部状态为隐藏，避免点击按钮时被误判为已可见
+                sideBar.hideSideBar()
+            }
+        }
     }
 
     private fun setupActivityBarDefaultItems() {
@@ -77,7 +94,7 @@ class MainWindow(val guiControl: GuiControl) : JFrame() {
             "Explorer",
             "icons/explorer.svg",
             object : CachedViewProvider() {
-                override fun createView() = Explorer()
+                override fun createView() = Explorer(this@MainWindow)
             }
         )
     }

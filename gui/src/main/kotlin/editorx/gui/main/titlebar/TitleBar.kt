@@ -1,6 +1,7 @@
 package editorx.gui.main.titlebar
 
 import editorx.gui.main.MainWindow
+import editorx.gui.main.explorer.Explorer
 import editorx.gui.ui.dialog.PluginManagerDialog
 import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
@@ -153,7 +154,10 @@ class TitleBar(private val mainWindow: MainWindow) : JMenuBar() {
             }
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selectedFolder = fileChooser.selectedFile
+            // 更新工作区并刷新 Explorer
+            mainWindow.guiControl.workspace.openWorkspace(selectedFolder)
             mainWindow.statusBar.setMessage("已打开文件夹: ${selectedFolder.name}")
+            (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
         }
     }
 

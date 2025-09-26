@@ -178,7 +178,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         val viewProvider = viewProviderMap[id] ?: return
         // VSCode 模式：ActivityBar 仅控制 SideBar
         val isCurrentlyDisplayed =
-            mainWindow.sideBar.getCurrentViewId() == id && mainWindow.sideBar.isSideBarVisible() == true
+            mainWindow.sideBar.getCurrentViewId() == id && mainWindow.sideBar.isActuallyVisible() == true
         if (isCurrentlyDisplayed) {
             mainWindow.sideBar.hideSideBar(); activeId = null
             // 用户触发隐藏时，视为用户决定
@@ -190,13 +190,36 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         }
     }
 
-    // 不再支持 ActivityBar 直接展示到底部 Panel
-    private fun showView(id: String, viewProvider: ViewProvider) {
-        mainWindow.sideBar.showView(id, viewProvider.getView())
+    /**
+     * 供外部在分割条被手动拖动等场景下同步按钮状态。
+     */
+    fun activateItem(id: String, userInitiated: Boolean = false) {
+        if (!viewProviderMap.containsKey(id)) return
+        if (activeId == id && mainWindow.sideBar.isActuallyVisible()) {
+            updateAllButtonStates(); return
+        }
+        handleButtonClick(id, userInitiated)
+        updateAllButtonStates()
     }
 
-    private fun hideView(id: String) {
-        if (mainWindow.sideBar.getCurrentViewId() == id) mainWindow.sideBar.hideSideBar()
+    /**
+     * 清除当前激活态（例如用户手动拖拽分割条隐藏 SideBar 时）。
+     */
+    fun clearActive() {
+        activeId = null
+        autoSelected = false
+        updateAllButtonStates()
+    }
+
+    /**
+     * 仅同步高亮状态，不触发展示/隐藏逻辑。
+     * 用于用户拖拽分割条打开 SideBar 时与当前视图保持一致。
+     */
+    fun highlightOnly(id: String) {
+        if (!buttonMap.containsKey(id)) return
+        activeId = id
+        autoSelected = false
+        updateAllButtonStates()
     }
 
     private fun updateAllButtonStates() {
