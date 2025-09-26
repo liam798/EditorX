@@ -21,6 +21,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val tabbedPane = JTabbedPane()
     private val tabTextAreas = mutableMapOf<Int, TextArea>()
     private val dirtyTabs = mutableSetOf<Int>()
+    private val originalTextByIndex = mutableMapOf<Int, String>()
 
     init {
         // 设置JPanel的布局
@@ -72,6 +73,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         enableDropTarget()
         // 同时在 tabbedPane 表面也安装 DropTarget，避免已有文件时事件落到子组件而丢失
         installFileDropTarget(tabbedPane)
+
+        // 标签页右键菜单
+        installTabContextMenu()
 
         // 设置TransferHandler来处理拖放
         transferHandler = object : javax.swing.TransferHandler() {
@@ -309,21 +313,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 mainWindow.statusBar.setLineColumn(line, col)
             }
             document.addDocumentListener(object : javax.swing.event.DocumentListener {
-                override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = markDirty(true)
-                override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = markDirty(true)
-                override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = markDirty(true)
-                private fun markDirty(d: Boolean) {
+                override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                private fun recomputeDirty() {
+                    if (getClientProperty("suppressDirty") == true) return
                     val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
                     val index = tabbedPane.indexOfComponent(scrollComp)
                     if (index < 0) return
-                    if (index >= 0) {
-                        if (d) dirtyTabs.add(index) else dirtyTabs.remove(index)
-                        updateTabTitle(index)
-                    }
+                    val original = originalTextByIndex[index]
+                    val isDirty = original != this@apply.text
+                    if (isDirty) dirtyTabs.add(index) else dirtyTabs.remove(index)
+                    updateTabTitle(index)
+                    updateTabHeaderStyles()
                 }
             })
         }
         try {
+            // 在装载初始文件内容时静默，不触发脏标记
+            textArea.putClientProperty("suppressDirty", true)
             textArea.text = Files.readString(file.toPath())
             textArea.discardAllEdits()
             mainWindow.statusBar.setFileInfo(file.name, Files.size(file.toPath()).toString() + " B")
@@ -354,7 +362,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val closeButton = createVSCodeTabHeader(file)
         tabbedPane.setTabComponentAt(index, closeButton)
         tabbedPane.selectedIndex = index
+        // 记录原始内容，清除脏标记并开启后续脏检测
+        originalTextByIndex[index] = textArea.text
         dirtyTabs.remove(index)
+        textArea.putClientProperty("suppressDirty", false)
         updateTabHeaderStyles()
     }
 
@@ -501,16 +512,19 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             val newTabToFile = mutableMapOf<Int, File>()
             val newFileToTab = mutableMapOf<File, Int>()
             val newTabTextAreas = mutableMapOf<Int, TextArea>()
+            val newOriginal = mutableMapOf<Int, String>()
             for (i in 0 until tabbedPane.tabCount) {
                 val f = tabToFile[i]
                 if (f != null) {
                     newTabToFile[i] = f; newFileToTab[f] = i
                 }
                 tabTextAreas[i]?.let { newTabTextAreas[i] = it }
+                originalTextByIndex[i]?.let { newOriginal[i] = it }
             }
             tabToFile.clear(); tabToFile.putAll(newTabToFile)
             fileToTab.clear(); fileToTab.putAll(newFileToTab)
             tabTextAreas.clear(); tabTextAreas.putAll(newTabTextAreas)
+            originalTextByIndex.clear(); originalTextByIndex.putAll(newOriginal)
         }
     }
 
@@ -526,6 +540,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         if (ta != null && file != null && file.canWrite()) {
             runCatching { Files.writeString(file.toPath(), ta.text) }
             dirtyTabs.remove(idx)
+            originalTextByIndex[idx] = ta.text
             updateTabTitle(idx)
             mainWindow.statusBar.showSuccess("已保存: ${file.name}")
         } else {
@@ -547,6 +562,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             fileToTab[file] = idx
             updateTabTitle(idx)
             dirtyTabs.remove(idx)
+            originalTextByIndex[idx] = ta.text
             mainWindow.guiControl.workspace.addRecentFile(file)
             mainWindow.statusBar.showSuccess("已保存: ${file.name}")
         }
@@ -569,6 +585,53 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val caretPos = area.caretPosition
         val line = area.getLineOfOffset(caretPos)
         return area.getLineStartOffset(line)
+    }
+
+    private fun installTabContextMenu() {
+        fun showMenu(e: java.awt.event.MouseEvent) {
+            val idx = tabbedPane.indexAtLocation(e.x, e.y)
+            if (idx < 0) return
+            tabbedPane.selectedIndex = idx
+            val menu = JPopupMenu()
+            menu.add(JMenuItem("关闭").apply { addActionListener { closeTab(idx) } })
+            menu.add(JMenuItem("关闭其他标签").apply { addActionListener { closeOthers(idx) } })
+            menu.add(JMenuItem("关闭所有标签").apply { addActionListener { closeAll() } })
+            menu.addSeparator()
+            menu.add(JMenuItem("关闭左侧标签").apply { addActionListener { closeLeftOf(idx) } })
+            menu.add(JMenuItem("关闭右侧标签").apply { addActionListener { closeRightOf(idx) } })
+            menu.addSeparator()
+            menu.add(JMenuItem("关闭未修改标签").apply { addActionListener { closeUnmodified() } })
+            menu.show(tabbedPane, e.x, e.y)
+        }
+        tabbedPane.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) { if (e.isPopupTrigger) showMenu(e) }
+            override fun mouseReleased(e: MouseEvent) { if (e.isPopupTrigger) showMenu(e) }
+        })
+    }
+
+    private fun closeOthers(keepIndex: Int) {
+        val toClose = (0 until tabbedPane.tabCount).filter { it != keepIndex }.sortedDescending()
+        toClose.forEach { closeTab(it) }
+    }
+
+    private fun closeAll() {
+        val toClose = (0 until tabbedPane.tabCount).sortedDescending()
+        toClose.forEach { closeTab(it) }
+    }
+
+    private fun closeLeftOf(index: Int) {
+        val toClose = (0 until index).sortedDescending()
+        toClose.forEach { closeTab(it) }
+    }
+
+    private fun closeRightOf(index: Int) {
+        val toClose = (index + 1 until tabbedPane.tabCount).sortedDescending()
+        toClose.forEach { closeTab(it) }
+    }
+
+    private fun closeUnmodified() {
+        val toClose = (0 until tabbedPane.tabCount).filter { it !in dirtyTabs }.sortedDescending()
+        toClose.forEach { closeTab(it) }
     }
 
     private fun enableDropTarget() {

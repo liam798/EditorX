@@ -21,6 +21,7 @@ class TitleBar(private val mainWindow: MainWindow) : JMenuBar() {
     }
 
     private fun createFileMenu(): JMenu {
+        val shortcut = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
         return JMenu("文件").apply {
             mnemonic = KeyEvent.VK_F
 
@@ -65,16 +66,11 @@ class TitleBar(private val mainWindow: MainWindow) : JMenuBar() {
 
             add(JMenuItem("保存").apply {
                 mnemonic = KeyEvent.VK_S
-                accelerator =
-                    KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK)
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_S, shortcut)
                 addActionListener { mainWindow.editor.saveCurrent() }
             })
             add(JMenuItem("另存为...").apply {
-                accelerator =
-                    KeyStroke.getKeyStroke(
-                        KeyEvent.VK_S,
-                        InputEvent.CTRL_DOWN_MASK or InputEvent.SHIFT_DOWN_MASK
-                    )
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_S, shortcut or InputEvent.SHIFT_DOWN_MASK)
                 addActionListener { mainWindow.editor.saveCurrentAs() }
             })
 
