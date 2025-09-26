@@ -1,9 +1,8 @@
 package editorx.gui
 
-import GuiPluginContextFactory
+import editorx.gui.plugin.GuiPluginContextFactory
 import com.formdev.flatlaf.FlatLightLaf
 import editorx.command.CommandMeta
-import editorx.gui.plugin.GuiPluginContext
 import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContextFactory
 import editorx.plugin.PluginManager
