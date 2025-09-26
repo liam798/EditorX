@@ -15,7 +15,7 @@ import java.io.File
 interface PluginContext {
 
     /**
-     * 在 ActivityBar 注册一个入口按钮，并指定其 SideBar 视图提供器
+     * 在 ActivityBar 注册一个入口按钮，并指定视图提供器
      */
     fun addActivityBarItem(iconPath: String, viewProvider: ViewProvider)
 

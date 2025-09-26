@@ -1,5 +1,6 @@
 package editorx.gui
 
+import GuiPluginContextFactory
 import com.formdev.flatlaf.FlatLightLaf
 import editorx.command.CommandMeta
 import editorx.gui.plugin.GuiPluginContext
@@ -66,11 +67,7 @@ private fun initializeMainWindow() {
     mv.isVisible = true
 
     // 初始化插件
-    val pluginContextFactory = object : PluginContextFactory {
-        override fun createPluginContext(loadedPlugin: LoadedPlugin): PluginContext {
-            return GuiPluginContext(mv, loadedPlugin)
-        }
-    }
+    val pluginContextFactory = GuiPluginContextFactory(mv)
     val pluginManager = PluginManager(pluginContextFactory, services.eventBus)
     mv.pluginManager = pluginManager
     pluginManager.loadPlugins()
