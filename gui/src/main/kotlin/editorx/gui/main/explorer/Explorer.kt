@@ -24,6 +24,7 @@ import javax.swing.event.TreeWillExpandListener
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
+import javax.swing.border.EmptyBorder
 
 class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
@@ -42,16 +43,32 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     private fun buildUI() {
-        val topBar = JPanel(BorderLayout(6, 0)).apply {
-            add(JLabel("搜索:"), BorderLayout.WEST)
-            add(searchField, BorderLayout.CENTER)
-            val right = JPanel().apply {
-                add(showHiddenCheck)
-                add(refreshBtn)
-            }
-            add(right, BorderLayout.EAST)
+        // Compact toolbar-like header
+        val toolBar = JToolBar().apply {
+            isFloatable = false
+            border = EmptyBorder(4, 4, 4, 0)
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
         }
-        add(topBar, BorderLayout.NORTH)
+
+        // Search field with placeholder; stretch horizontally
+        searchField.columns = 16
+        searchField.putClientProperty("JTextField.placeholderText", "搜索...")
+        searchField.maximumSize = java.awt.Dimension(Int.MAX_VALUE, searchField.preferredSize.height)
+        toolBar.add(searchField)
+        toolBar.add(Box.createHorizontalGlue())
+
+        toolBar.add(Box.createHorizontalStrut(4))
+        toolBar.addSeparator()
+        toolBar.add(Box.createHorizontalStrut(4))
+
+        // Right side: options + refresh
+        showHiddenCheck.text = "显示隐藏文件"
+        toolBar.add(showHiddenCheck)
+        refreshBtn.isFocusable = false
+        refreshBtn.margin = java.awt.Insets(2, 10, 2, 10)
+        toolBar.add(refreshBtn)
+
+        add(toolBar, BorderLayout.NORTH)
 
         tree.isRootVisible = true
         tree.showsRootHandles = true
