@@ -7,6 +7,7 @@ import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Rectangle
 import java.awt.dnd.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -362,6 +363,15 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val closeButton = createVSCodeTabHeader(file)
         tabbedPane.setTabComponentAt(index, closeButton)
         tabbedPane.selectedIndex = index
+        // 打开后默认滚动到左上角，光标置于文件开头
+        SwingUtilities.invokeLater {
+            runCatching {
+                textArea.caretPosition = 0
+                textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                scroll.verticalScrollBar.value = 0
+                scroll.horizontalScrollBar.value = 0
+            }
+        }
         // 记录原始内容，清除脏标记并开启后续脏检测
         originalTextByIndex[index] = textArea.text
         dirtyTabs.remove(index)
