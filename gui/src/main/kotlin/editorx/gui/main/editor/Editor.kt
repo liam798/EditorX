@@ -362,6 +362,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         tabTextAreas[index] = textArea
         val closeButton = createVSCodeTabHeader(file)
         tabbedPane.setTabComponentAt(index, closeButton)
+        attachPopupToHeader(closeButton)
         tabbedPane.selectedIndex = index
         // 打开后默认滚动到左上角，光标置于文件开头
         SwingUtilities.invokeLater {
@@ -598,25 +599,54 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     }
 
     private fun installTabContextMenu() {
-        fun showMenu(e: java.awt.event.MouseEvent) {
-            val idx = tabbedPane.indexAtLocation(e.x, e.y)
-            if (idx < 0) return
-            tabbedPane.selectedIndex = idx
+        fun showMenuAt(invoker: java.awt.Component, index: Int, x: Int, y: Int) {
             val menu = JPopupMenu()
-            menu.add(JMenuItem("关闭").apply { addActionListener { closeTab(idx) } })
-            menu.add(JMenuItem("关闭其他标签").apply { addActionListener { closeOthers(idx) } })
+            menu.add(JMenuItem("关闭").apply { addActionListener { closeTab(index) } })
+            menu.add(JMenuItem("关闭其他标签").apply { addActionListener { closeOthers(index) } })
             menu.add(JMenuItem("关闭所有标签").apply { addActionListener { closeAll() } })
             menu.addSeparator()
-            menu.add(JMenuItem("关闭左侧标签").apply { addActionListener { closeLeftOf(idx) } })
-            menu.add(JMenuItem("关闭右侧标签").apply { addActionListener { closeRightOf(idx) } })
+            menu.add(JMenuItem("关闭左侧标签").apply { addActionListener { closeLeftOf(index) } })
+            menu.add(JMenuItem("关闭右侧标签").apply { addActionListener { closeRightOf(index) } })
             menu.addSeparator()
             menu.add(JMenuItem("关闭未修改标签").apply { addActionListener { closeUnmodified() } })
-            menu.show(tabbedPane, e.x, e.y)
+            menu.show(invoker, x, y)
         }
         tabbedPane.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) { if (e.isPopupTrigger) showMenu(e) }
-            override fun mouseReleased(e: MouseEvent) { if (e.isPopupTrigger) showMenu(e) }
+            override fun mousePressed(e: MouseEvent) { if (e.isPopupTrigger) trigger(e) }
+            override fun mouseReleased(e: MouseEvent) { if (e.isPopupTrigger) trigger(e) }
+            private fun trigger(e: MouseEvent) {
+                val idx = tabbedPane.indexAtLocation(e.x, e.y)
+                if (idx < 0) return
+                tabbedPane.selectedIndex = idx
+                showMenuAt(tabbedPane, idx, e.x, e.y)
+            }
         })
+    }
+
+    // 在任意 Tab Header 组件（含关闭按钮/标题）上安装右键菜单触发
+    private fun attachPopupToHeader(header: JComponent) {
+        val l = object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) { if (e.isPopupTrigger) trigger(e) }
+            override fun mouseReleased(e: MouseEvent) { if (e.isPopupTrigger) trigger(e) }
+            private fun trigger(e: MouseEvent) {
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx < 0) return
+                tabbedPane.selectedIndex = idx
+                val inv = e.component as? java.awt.Component ?: header
+                val menu = JPopupMenu()
+                menu.add(JMenuItem("关闭").apply { addActionListener { closeTab(idx) } })
+                menu.add(JMenuItem("关闭其他标签").apply { addActionListener { closeOthers(idx) } })
+                menu.add(JMenuItem("关闭所有标签").apply { addActionListener { closeAll() } })
+                menu.addSeparator()
+                menu.add(JMenuItem("关闭左侧标签").apply { addActionListener { closeLeftOf(idx) } })
+                menu.add(JMenuItem("关闭右侧标签").apply { addActionListener { closeRightOf(idx) } })
+                menu.addSeparator()
+                menu.add(JMenuItem("关闭未修改标签").apply { addActionListener { closeUnmodified() } })
+                menu.show(inv, e.x, e.y)
+            }
+        }
+        header.addMouseListener(l)
+        header.components.forEach { it.addMouseListener(l) }
     }
 
     private fun closeOthers(keepIndex: Int) {
