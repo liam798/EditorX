@@ -28,7 +28,8 @@ class GuiServices(private val appDir: File) {
         val builtins = listOf(
             CommandMeta("app.about", "关于 EditorX"),
             CommandMeta("view.toggleSidebar", "切换侧边栏"),
-            CommandMeta("view.togglePanel", "切换底部面板"),
+            // 暂时注释掉panel相关命令
+            // CommandMeta("view.togglePanel", "切换底部面板"),
             CommandMeta("file.open", "打开文件"),
             CommandMeta("file.save", "保存文件"),
             CommandMeta("file.saveAs", "另存为..."),

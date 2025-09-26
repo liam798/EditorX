@@ -89,7 +89,7 @@ private fun initializeMainWindow() {
         )
     }
     commands.register(CommandMeta("view.toggleSidebar", "切换侧边栏")) { mv.sideBar.isVisible = !mv.sideBar.isVisible }
-    commands.register(CommandMeta("view.togglePanel", "切换底部面板")) { mv.panel.isVisible = !mv.panel.isVisible }
+//    commands.register(CommandMeta("view.togglePanel", "切换底部面板")) { mv.panel.isVisible = !mv.panel.isVisible }
     commands.register(CommandMeta("file.open", "打开文件")) { mv.openFileChooserAndOpen() }
     commands.register(CommandMeta("file.save", "保存文件")) { mv.editor.saveCurrent() }
     commands.register(CommandMeta("file.saveAs", "另存为...")) { mv.editor.saveCurrentAs() }

@@ -82,8 +82,9 @@ class TitleBar(private val mainWindow: MainWindow) : JMenuBar() {
     private fun createViewMenu(): JMenu {
         val viewMenu = JMenu("视图").apply { mnemonic = KeyEvent.VK_V }
         val toggleSidebarItem = JMenuItem("切换侧边栏").apply { mnemonic = KeyEvent.VK_B; accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_B, InputEvent.CTRL_DOWN_MASK); addActionListener { toggleSidebar() } }
-        val togglePanelItem = JMenuItem("切换底部面板").apply { mnemonic = KeyEvent.VK_P; accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK); addActionListener { toggleBottomPanel() } }
-        viewMenu.add(toggleSidebarItem); viewMenu.add(togglePanelItem)
+        // 暂时注释掉panel相关菜单项
+        // val togglePanelItem = JMenuItem("切换底部面板").apply { mnemonic = KeyEvent.VK_P; accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK); addActionListener { toggleBottomPanel() } }
+        viewMenu.add(toggleSidebarItem); // viewMenu.add(togglePanelItem)
         return viewMenu
     }
 
@@ -129,10 +130,11 @@ class TitleBar(private val mainWindow: MainWindow) : JMenuBar() {
         val sidebar = mainWindow.sideBar
         if (sidebar.isSideBarVisible()) sidebar.hideSideBar() else sidebar.getCurrentViewId()?.let { sidebar.showView(it) }
     }
-    private fun toggleBottomPanel() {
-        val panel = mainWindow.panel
-        if (panel.isPanelVisible()) panel.hidePanel() else panel.getCurrentViewId()?.let { panel.showView(it) }
-    }
+    // 暂时注释掉panel相关方法
+    // private fun toggleBottomPanel() {
+    //     val panel = mainWindow.panel
+    //     if (panel.isPanelVisible()) panel.hidePanel() else panel.getCurrentViewId()?.let { panel.showView(it) }
+    // }
     private fun showPluginManager() {
         val pm = mainWindow.pluginManager ?: return
         PluginManagerDialog(mainWindow, pm).isVisible = true

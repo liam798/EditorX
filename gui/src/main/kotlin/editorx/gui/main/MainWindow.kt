@@ -4,7 +4,7 @@ import editorx.gui.CachedViewProvider
 import editorx.gui.main.activitybar.ActivityBar
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
-import editorx.gui.main.panel.Panel
+// import editorx.gui.main.panel.Panel
 import editorx.gui.main.sidebar.SideBar
 import editorx.gui.main.statusbar.StatusBar
 import editorx.gui.main.titlebar.TitleBar
@@ -30,7 +30,7 @@ class MainWindow(val services: GuiServices) : JFrame() {
     val activityBar by lazy { ActivityBar(this) }
     val sideBar by lazy { SideBar(this) }
     val editor by lazy { Editor(this) }
-    val panel by lazy { Panel(this) }
+    // val panel by lazy { Panel(this) }
     val statusBar by lazy { StatusBar(this) }
 
     // Plugin Manager reference for UI integrations
@@ -44,13 +44,14 @@ class MainWindow(val services: GuiServices) : JFrame() {
         }
     }
 
-    private val verticalSplit by lazy {
-        JSplitPane(JSplitPane.VERTICAL_SPLIT, horizontalSplit, panel).apply {
-            dividerLocation = Int.MAX_VALUE  // 初始时隐藏Panel
-            isOneTouchExpandable = false
-            dividerSize = 8
-        }
-    }
+    // 暂时注释掉垂直分割面板（Panel相关）
+    // private val verticalSplit by lazy {
+    //     JSplitPane(JSplitPane.VERTICAL_SPLIT, horizontalSplit, panel).apply {
+    //         dividerLocation = Int.MAX_VALUE  // 初始时隐藏Panel
+    //         isOneTouchExpandable = false
+    //         dividerSize = 8
+    //     }
+    // }
 
     init {
         setupWindow()
@@ -74,7 +75,8 @@ class MainWindow(val services: GuiServices) : JFrame() {
         // 正确安装菜单栏，避免某些 LAF 下作为普通组件加入导致不显示
         jMenuBar = titleBar
         add(activityBar, BorderLayout.WEST)
-        add(verticalSplit, BorderLayout.CENTER)
+        // 暂时直接使用水平分割面板，不包含Panel
+        add(horizontalSplit, BorderLayout.CENTER)
         add(statusBar, BorderLayout.SOUTH)
     }
 
@@ -82,14 +84,15 @@ class MainWindow(val services: GuiServices) : JFrame() {
         // 使用不绘制边线的分割条 UI
         val customUI = NoLineSplitPaneUI()
         horizontalSplit.setUI(customUI)
-        verticalSplit.setUI(NoLineSplitPaneUI())
+        // 暂时注释掉垂直分割面板的UI设置
+        // verticalSplit.setUI(NoLineSplitPaneUI())
         horizontalSplit.border = javax.swing.BorderFactory.createEmptyBorder()
-        verticalSplit.border = javax.swing.BorderFactory.createEmptyBorder()
+        // verticalSplit.border = javax.swing.BorderFactory.createEmptyBorder()
         // 启用连续布局，减少布局跳动
         horizontalSplit.isContinuousLayout = true
-        verticalSplit.isContinuousLayout = true
+        // verticalSplit.isContinuousLayout = true
         // 始终保留一个可拖拽的分割条（8px），隐藏时配合 Panel 逻辑将其贴底
-        verticalSplit.dividerSize = 8
+        // verticalSplit.dividerSize = 8
     }
 
     private fun setupActivityBarDefaultItems() {
