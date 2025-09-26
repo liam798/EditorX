@@ -2,7 +2,7 @@ package editorx.plugin
 
 import editorx.command.CommandRegistry
 import editorx.event.EventBus
-import editorx.gui.SideBarViewProvider
+import editorx.gui.ViewProvider
 import editorx.settings.SettingsStore
 import editorx.workspace.WorkspaceManager
 import java.io.File
@@ -17,7 +17,7 @@ interface PluginContext {
     /**
      * 在 ActivityBar 注册一个入口按钮，并指定其 SideBar 视图提供器
      */
-    fun addActivityBarItem(iconPath: String, viewProvider: SideBarViewProvider)
+    fun addActivityBarItem(iconPath: String, viewProvider: ViewProvider)
 
     /**
      * 让主编辑器打开一个文件
