@@ -1,6 +1,6 @@
 package editorx.gui.plugin
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContext
 import editorx.plugin.PluginContextFactory

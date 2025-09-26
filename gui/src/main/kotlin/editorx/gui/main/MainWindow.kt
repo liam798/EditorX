@@ -1,12 +1,14 @@
-package editorx.gui
+package editorx.gui.main
 
+import editorx.gui.CachedViewProvider
+import editorx.gui.GuiControl
 import editorx.gui.ui.widget.NoLineSplitPaneUI
-import editorx.gui.workbench.activitybar.ActivityBar
-import editorx.gui.workbench.editor.Editor
-import editorx.gui.workbench.explorer.Explorer
-import editorx.gui.workbench.sidebar.SideBar
-import editorx.gui.workbench.statusbar.StatusBar
-import editorx.gui.workbench.titlebar.TitleBar
+import editorx.gui.main.activitybar.ActivityBar
+import editorx.gui.main.editor.Editor
+import editorx.gui.main.explorer.Explorer
+import editorx.gui.main.sidebar.SideBar
+import editorx.gui.main.statusbar.StatusBar
+import editorx.gui.main.titlebar.TitleBar
 import editorx.plugin.PluginManager
 import java.awt.BorderLayout
 import java.awt.Dimension

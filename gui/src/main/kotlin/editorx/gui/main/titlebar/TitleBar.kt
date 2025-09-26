@@ -1,6 +1,6 @@
-package editorx.gui.workbench.titlebar
+package editorx.gui.main.titlebar
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import editorx.gui.ui.dialog.PluginManagerDialog
 import java.awt.event.ActionEvent
 import java.awt.event.InputEvent

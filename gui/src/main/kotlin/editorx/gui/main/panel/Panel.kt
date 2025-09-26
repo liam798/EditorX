@@ -1,6 +1,6 @@
-package editorx.gui.workbench.panel
+package editorx.gui.main.panel
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import java.awt.BorderLayout
 import java.awt.Color
 import javax.swing.*

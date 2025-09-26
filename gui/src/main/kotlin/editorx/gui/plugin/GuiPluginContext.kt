@@ -1,6 +1,6 @@
 package editorx.gui.plugin
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import editorx.gui.ViewProvider
 import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContext
@@ -8,7 +8,6 @@ import editorx.settings.SettingsStore
 import editorx.syntax.SyntaxAdapter
 import editorx.syntax.SyntaxManager
 import editorx.workspace.WorkspaceManager
-import java.io.File
 import java.util.logging.Logger
 
 /**

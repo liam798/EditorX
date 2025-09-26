@@ -1,4 +1,4 @@
-package editorx.gui.workbench.explorer
+package editorx.gui.main.explorer
 
 import javax.swing.JPanel
 

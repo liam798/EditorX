@@ -1,6 +1,6 @@
-package editorx.gui.workbench.sidebar
+package editorx.gui.main.sidebar
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Dimension

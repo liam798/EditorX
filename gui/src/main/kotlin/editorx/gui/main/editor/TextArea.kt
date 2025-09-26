@@ -1,4 +1,4 @@
-package editorx.gui.workbench.editor
+package editorx.gui.main.editor
 
 import editorx.syntax.SyntaxManager
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea

@@ -1,6 +1,6 @@
-package editorx.gui.workbench.editor
+package editorx.gui.main.editor
 
-import editorx.gui.MainWindow
+import editorx.gui.main.MainWindow
 import editorx.gui.ui.theme.ThemeManager
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.CardLayout
