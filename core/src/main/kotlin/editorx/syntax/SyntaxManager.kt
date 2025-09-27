@@ -10,26 +10,26 @@ import java.util.concurrent.ConcurrentHashMap
  * 负责管理所有语法高亮提供者
  */
 object SyntaxManager {
-    private val adapters = mutableListOf<SyntaxAdapter>()
-    private val fileToAdapterCache = ConcurrentHashMap<String, SyntaxAdapter?>()
+    private val adapters = mutableListOf<SyntaxProvider>()
+    private val fileToAdapterCache = ConcurrentHashMap<String, SyntaxProvider?>()
 
     /**
      * 注册语法适配器
      */
-    fun registerAdapter(adapter: SyntaxAdapter) {
+    fun registerAdapter(adapter: SyntaxProvider) {
         adapters.add(adapter)
 
         // 注册 TokenMaker
-        adapter.getTokenMakerProvider().let { provider ->
+        adapter.getSyntaxHighlighter().let { syntaxHighlighter ->
             val tmf = TokenMakerFactory.getDefaultInstance() as AbstractTokenMakerFactory
-            tmf.putMapping(adapter.languageId, provider.getTokenMakerClassName())
+            tmf.putMapping(adapter.syntaxStyleKey, syntaxHighlighter.getTokenMakerClassName())
         }
     }
 
     /**
      * 获取文件对应的语法适配器
      */
-    fun getAdapterForFile(file: File): SyntaxAdapter? {
+    fun getAdapterForFile(file: File): SyntaxProvider? {
         val cacheKey = file.absolutePath
         return fileToAdapterCache.computeIfAbsent(cacheKey) {
             val ext = file.extension.lowercase()

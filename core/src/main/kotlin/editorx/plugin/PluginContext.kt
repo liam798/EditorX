@@ -1,8 +1,8 @@
 package editorx.plugin
 
-import editorx.gui.ViewProvider
+import editorx.gui.CachedViewProvider
 import editorx.settings.SettingsStore
-import editorx.syntax.SyntaxAdapter
+import editorx.syntax.CachedSyntaxProvider
 import editorx.workspace.WorkspaceManager
 
 /**
@@ -25,10 +25,10 @@ interface PluginContext {
     /**
      * 在 ActivityBar 注册一个入口按钮，并指定视图提供器
      */
-    fun addActivityBarItem(iconPath: String, viewProvider: ViewProvider)
+    fun addActivityBarItem(iconPath: String, viewProvider: CachedViewProvider)
 
     /**
      * 注册语法适配器
      */
-    fun registerSyntaxAdapter(syntaxAdapter: SyntaxAdapter)
+    fun registerSyntaxAdapter(syntaxProvider: CachedSyntaxProvider)
 }
