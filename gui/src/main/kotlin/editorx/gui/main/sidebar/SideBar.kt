@@ -20,7 +20,7 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
     private fun setupSideBar() {
         layout = cardLayout
         background = Color.WHITE
-        border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
         isVisible = false
         // 初始化时隐藏SideBar
         updateVisibility()

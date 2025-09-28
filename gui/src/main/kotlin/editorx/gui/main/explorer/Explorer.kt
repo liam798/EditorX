@@ -2,6 +2,7 @@ package editorx.gui.main.explorer
 
 import editorx.file.FileTypeRegistry
 import editorx.gui.main.MainWindow
+import editorx.gui.IconRef
 import editorx.util.IconLoader
 import editorx.util.IconUtil
 import editorx.vfs.LocalVirtualFile
@@ -14,6 +15,7 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.Insets
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -27,6 +29,9 @@ import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 
 class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
+    companion object {
+        private const val TOP_BAR_ICON_SIZE = 16
+    }
 
     private val searchField = JTextField()
     private val refreshBtn = JButton("刷新")
@@ -45,34 +50,71 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         installFileDropTarget()
         showEmptyRoot()
     }
+    
+    /**
+     * 取消当前的刷新任务
+     */
+    fun cancelRefresh() {
+        currentTask?.interrupt()
+        isTaskCancelled = true
+        hideProgress()
+    }
+    
+    /**
+     * 清理资源
+     */
+    fun cleanup() {
+        cancelRefresh()
+    }
 
     private fun buildUI() {
         // Compact toolbar-like header
         val toolBar =
             JToolBar().apply {
                 isFloatable = false
-                border = EmptyBorder(4, 4, 4, 0)
+                border = EmptyBorder(0, 0, 0, 0)
                 layout = BoxLayout(this, BoxLayout.X_AXIS)
             }
 
         // Search field with placeholder; stretch horizontally
-        searchField.columns = 16
-        searchField.putClientProperty("JTextField.placeholderText", "搜索...")
-        searchField.maximumSize =
-            java.awt.Dimension(Int.MAX_VALUE, searchField.preferredSize.height)
-        toolBar.add(searchField)
+        // searchField.columns = 16
+        // searchField.putClientProperty("JTextField.placeholderText", "搜索...")
+        // searchField.maximumSize =
+        //     java.awt.Dimension(Int.MAX_VALUE, searchField.preferredSize.height)
+        // toolBar.add(searchField)
+        /*
+        左侧按钮
+        */
+        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addDirectory.svg"), TOP_BAR_ICON_SIZE)).apply {
+            toolTipText = "打开文件夹"
+            isFocusable = false
+            margin = Insets(2, 6, 2, 6)
+            addActionListener { openFolder() }
+        })
+        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addFile.svg"), TOP_BAR_ICON_SIZE)).apply {
+            toolTipText = "打开文件"
+            isFocusable = false
+            margin = Insets(2, 6, 2, 6)
+            addActionListener { mainWindow.openFileChooserAndOpen() }
+        })
+
         toolBar.add(Box.createHorizontalGlue())
 
-        toolBar.add(Box.createHorizontalStrut(4))
-        toolBar.addSeparator()
-        toolBar.add(Box.createHorizontalStrut(4))
+        // toolBar.add(Box.createHorizontalStrut(4))
+        // toolBar.addSeparator()
+        // toolBar.add(Box.createHorizontalStrut(4))
 
         // Right side: options + refresh
-        showHiddenCheck.text = "显示隐藏文件"
-        toolBar.add(showHiddenCheck)
-        refreshBtn.isFocusable = false
-        refreshBtn.margin = java.awt.Insets(2, 10, 2, 10)
-        toolBar.add(refreshBtn)
+        // showHiddenCheck.text = "显示隐藏文件"
+        // toolBar.add(showHiddenCheck)
+        // refreshBtn.isFocusable = false
+        // refreshBtn.margin = java.awt.Insets(2, 10, 2, 10)
+        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/refresh.svg"), TOP_BAR_ICON_SIZE)).apply {
+            toolTipText = "从磁盘重新加载"
+            isFocusable = false
+            margin = Insets(2, 6, 2, 6)
+            addActionListener { refreshRootPreserveSelection() }
+        })
 
         add(toolBar, BorderLayout.NORTH)
 
@@ -81,7 +123,22 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         // 单击只选中；双击才展开/收起。点击左侧的展开图标仍然是单击生效（JTree 默认行为）
         tree.toggleClickCount = 2
         tree.cellRenderer = FileTreeCellRenderer()
-        add(JScrollPane(tree), BorderLayout.CENTER)
+        val scrollPane = JScrollPane(tree)
+        scrollPane.border = null
+        add(scrollPane, BorderLayout.CENTER)
+    }
+
+
+    private fun openFolder() {
+        val chooser = JFileChooser().apply {
+            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+            dialogTitle = "选择文件夹"
+        }
+        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            val selected = chooser.selectedFile
+            mainWindow.guiControl.workspace.openWorkspace(selected)
+            (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
+        }
     }
 
     private fun installListeners() {
@@ -144,38 +201,116 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     fun refreshRoot() {
+        // 取消之前的任务
+        currentTask?.interrupt()
+        isTaskCancelled = false
+        
         showProgress(message = "正在刷新文件树...", indeterminate = true)
-        try {
-            val rootDir = mainWindow.guiControl.workspace.getWorkspaceRoot()
-            if (rootDir == null || !rootDir.exists()) {
-                showEmptyRoot()
-                return
+        
+        currentTask = Thread {
+            try {
+                val rootDir = mainWindow.guiControl.workspace.getWorkspaceRoot()
+                if (rootDir == null || !rootDir.exists()) {
+                    SwingUtilities.invokeLater { showEmptyRoot() }
+                    return@Thread
+                }
+                
+                val newRoot = FileNode(rootDir)
+                newRoot.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+                
+                // 检查是否被取消
+                if (isTaskCancelled) return@Thread
+
+                // 在EDT中更新UI
+                SwingUtilities.invokeLater {
+                    if (!isTaskCancelled) {
+                        treeModel.setRoot(newRoot)
+                        tree.isEnabled = true
+                        tree.expandPath(TreePath(treeModel.root))
+                        tree.selectionPath = TreePath(treeModel.root)
+                        tree.updateUI()
+                    }
+                }
+            } catch (e: InterruptedException) {
+                // 任务被取消，正常退出
+            } catch (e: Exception) {
+                SwingUtilities.invokeLater {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "刷新文件树时出错: ${e.message}",
+                        "错误",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+            } finally {
+                SwingUtilities.invokeLater { hideProgress() }
             }
-            val newRoot = FileNode(rootDir)
-            newRoot.loadChildrenIfNeeded(showHiddenCheck.isSelected)
-            treeModel.setRoot(newRoot)
-            tree.isEnabled = true
-            tree.expandPath(TreePath(treeModel.root))
-            tree.selectionPath = TreePath(treeModel.root)
-            tree.updateUI()
-        } finally {
-            hideProgress()
+        }.apply { 
+            isDaemon = true
+            start() 
         }
     }
 
     private fun showEmptyRoot() {
-        val placeholder = DefaultMutableTreeNode("未打开工作区 — 将文件夹拖拽到此处")
+        val placeholder = DefaultMutableTreeNode("未打开工作区")
         treeModel.setRoot(placeholder)
         tree.isEnabled = true
         tree.updateUI()
     }
 
     private fun refreshRootPreserveSelection() {
-        val selFile = (tree.lastSelectedPathComponent as? FileNode)?.file
-        val expandedPaths = getExpandedPaths()
-        refreshRoot()
-        restoreExpandedPaths(expandedPaths)
-        if (selFile != null) selectFile(selFile)
+          // 取消之前的任务
+          currentTask?.interrupt()
+          isTaskCancelled = false
+          
+          showProgress(message = "正在刷新文件树...", indeterminate = true)
+          
+          currentTask = Thread {
+            val selFile = (tree.lastSelectedPathComponent as? FileNode)?.file
+            val expandedPaths = getExpandedPaths()
+              try {
+                  val rootDir = mainWindow.guiControl.workspace.getWorkspaceRoot()
+                  if (rootDir == null || !rootDir.exists()) {
+                      SwingUtilities.invokeLater { showEmptyRoot() }
+                      return@Thread
+                  }
+                  
+                  val newRoot = FileNode(rootDir)
+                  newRoot.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+                  
+                  // 检查是否被取消
+                  if (isTaskCancelled) return@Thread
+  
+                  // 在EDT中更新UI
+                  SwingUtilities.invokeLater {
+                      if (!isTaskCancelled) {
+                          treeModel.setRoot(newRoot)
+                          tree.isEnabled = true
+                          tree.expandPath(TreePath(treeModel.root))
+                          tree.selectionPath = TreePath(treeModel.root)
+                          tree.updateUI()
+                      }
+                  }
+              } catch (e: InterruptedException) {
+                  // 任务被取消，正常退出
+              } catch (e: Exception) {
+                  SwingUtilities.invokeLater {
+                      JOptionPane.showMessageDialog(
+                          this,
+                          "刷新文件树时出错: ${e.message}",
+                          "错误",
+                          JOptionPane.ERROR_MESSAGE
+                      )
+                  }
+              } finally {
+                  SwingUtilities.invokeLater { hideProgress() }
+                  restoreExpandedPaths(expandedPaths)
+                  if (selFile != null) selectFile(selFile)
+              }
+          }.apply { 
+              isDaemon = true
+              start() 
+          }
     }
 
     private fun togglePath(path: TreePath) {

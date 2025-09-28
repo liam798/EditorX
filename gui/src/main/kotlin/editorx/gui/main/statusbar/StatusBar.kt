@@ -32,8 +32,8 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     private val progressBar = JProgressBar().apply {
         isStringPainted = true
         isVisible = false
-        preferredSize = Dimension(100, 16)
-        maximumSize = Dimension(100, 16) // 限制最大宽度
+        preferredSize = Dimension(150, 6)
+        maximumSize = Dimension(150, 6) // 限制最大宽度
     }
     private val progressCancelButton = JButton().apply {
         isVisible = false

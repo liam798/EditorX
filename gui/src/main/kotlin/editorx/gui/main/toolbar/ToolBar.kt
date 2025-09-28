@@ -41,18 +41,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         /*
          左侧按钮
          */
-        add(JButton(IconLoader.getIcon(IconRef("icons/addDirectory.svg"), ICON_SIZE)).apply {
-            toolTipText = "打开文件夹"
-            isFocusable = false
-            margin = Insets(2, 6, 2, 6)
-            addActionListener { openFolder() }
-        })
-        add(JButton(IconLoader.getIcon(IconRef("icons/addFile.svg"), ICON_SIZE)).apply {
-            toolTipText = "打开文件"
-            isFocusable = false
-            margin = Insets(2, 6, 2, 6)
-            addActionListener { mainWindow.openFileChooserAndOpen() }
-        })
+
 
         add(Box.createHorizontalGlue())
 
