@@ -67,6 +67,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         tabbedPane.addChangeListener {
             val file = getCurrentFile()
             mainWindow.statusBar.setFileInfo(file?.name ?: "", file?.let { it.length().toString() + " B" })
+            
+            // 更新行号和列号显示
+            if (file != null) {
+                val textArea = getCurrentTextArea()
+                if (textArea != null) {
+                    val caretPos = textArea.caretPosition
+                    val line = try {
+                        textArea.getLineOfOffset(caretPos) + 1
+                    } catch (_: Exception) {
+                        1
+                    }
+                    val col = caretPos - textArea.getLineStartOffsetOfCurrentLine() + 1
+                    mainWindow.statusBar.setLineColumn(line, col)
+                }
+            } else {
+                // 没有文件打开时隐藏行号和列号
+                mainWindow.statusBar.hideLineColumn()
+            }
+            
             updateTabHeaderStyles()
         }
 
@@ -809,5 +828,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
         return false
+    }
+
+    private fun getCurrentTextArea(): TextArea? {
+        val currentIndex = tabbedPane.selectedIndex
+        return if (currentIndex >= 0) tabTextAreas[currentIndex] else null
     }
 }
