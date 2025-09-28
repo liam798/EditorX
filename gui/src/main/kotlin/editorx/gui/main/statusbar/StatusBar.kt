@@ -16,16 +16,14 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         font = font.deriveFont(Font.PLAIN, 11f)
         foreground = Color.GRAY
     }
-    private val lineColumnLabel = JLabel("").apply {
-        font = font.deriveFont(Font.PLAIN, 11f)
-        foreground = Color.GRAY
-    }
 
     private var currentMessageTimer: Timer? = null
 
-    /*
-    进度条相关
-     */
+    /////////////////////
+    // 右侧子组件
+    /////////////////////
+
+    // 进度条
     private val progressLabel = JLabel("").apply {
         font = font.deriveFont(Font.PLAIN, 11f)
         foreground = Color.GRAY
@@ -54,6 +52,13 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     private val progressUpdateThrottleMs = 50L // 限制更新频率为每50ms最多一次
     private var onProgressCancel: (() -> Unit)? = null
 
+    // 行号和列号
+    private val lineColumnLabel = JLabel("").apply {
+        font = font.deriveFont(Font.PLAIN, 11f)
+        foreground = Color.GRAY
+        isVisible = false  // 初始状态隐藏
+    }
+
     init {
         // 初始状态栏布局
         layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -67,17 +72,17 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         preferredSize = Dimension(0, 25)
 
         // 安装子组件
+        add(Box.createHorizontalStrut(20))
         setupLeftComponents()
         add(Box.createHorizontalGlue())
         setupRightComponents()
+        add(Box.createHorizontalStrut(20))
     }
 
     private fun setupLeftComponents() {
         add(statusLabel)
         add(Box.createHorizontalStrut(8))
         add(fileInfoLabel)
-        add(Box.createHorizontalStrut(8))
-        add(lineColumnLabel)
     }
 
     private fun setupRightComponents() {
@@ -86,6 +91,8 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         add(progressBar)
         add(Box.createHorizontalStrut(4))
         add(progressCancelButton)
+        add(Box.createHorizontalStrut(8))
+        add(lineColumnLabel)
     }
 
     fun setMessage(msg: String, persistent: Boolean = false) {
@@ -111,6 +118,11 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     fun setLineColumn(line: Int, column: Int) {
         lineColumnLabel.text = "行 $line, 列 $column"
+        lineColumnLabel.isVisible = true
+    }
+
+    fun hideLineColumn() {
+        lineColumnLabel.isVisible = false
     }
 
     fun showProgress(
@@ -196,6 +208,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         statusLabel.text = "就绪"
         fileInfoLabel.text = ""
         lineColumnLabel.text = ""
+        hideLineColumn()
         hideProgress()
     }
 
