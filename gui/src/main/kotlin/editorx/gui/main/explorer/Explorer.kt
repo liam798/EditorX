@@ -1,17 +1,16 @@
 package editorx.gui.main.explorer
 
+import editorx.file.FileTypeRegistry
+import editorx.gui.IconRef
 import editorx.gui.main.MainWindow
-import editorx.gui.utils.IconUtil
+import editorx.util.IconLoader
+import editorx.util.IconUtil
+import editorx.vfs.LocalVirtualFile
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetDragEvent
-import java.awt.dnd.DropTargetDropEvent
-import java.awt.dnd.DropTargetEvent
-import java.awt.dnd.DropTargetListener
+import java.awt.dnd.*
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -633,13 +632,38 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         private fun getIconForFile(file: File): Icon {
             val ext = file.extension.lowercase()
             val key = if (ext.isBlank()) "__noext__" else ext
+
+            // Prefer plugin-provided file type icons
+            val vt = LocalVirtualFile.of(file)
+            val ft = FileTypeRegistry.getByFile(vt)
+            if (ft != null) {
+                val ref = ft.getIcon()
+                if (ref != null) {
+                    val ico = IconLoader.getIcon(ref, 16)
+                    if (ico != null) return ico
+                }
+            }
+
+            // Built-in mappings for common extensions
+            iconForExtension(ext)?.let { return it }
+
             return fileIconCache.getOrPut(key) {
                 val base: Icon =
                     (fs.getSystemIcon(file)
                         ?: defaultFile ?: UIManager.getIcon("Tree.leafIcon")
                         ?: createDefaultIcon())
-                // 统一 16x16 尺寸
                 IconUtil.resizeIcon(base, 16, 16)
+            }
+        }
+
+        private fun iconForExtension(ext: String): Icon? {
+            val key = if (ext.isBlank()) "__noext__" else ext
+            return fileIconCache.getOrPut(key) {
+                val path = when (ext) {
+                    else -> null
+                }
+                val icon = path?.let { IconLoader.getIcon(IconRef(it), 16) }
+                icon ?: return IconLoader.getIcon(IconRef("icons/file-anyType.svg"),16)
             }
         }
 

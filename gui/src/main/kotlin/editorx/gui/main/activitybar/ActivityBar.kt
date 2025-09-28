@@ -4,8 +4,8 @@ import editorx.gui.core.Constants
 import editorx.gui.ViewProvider
 import editorx.gui.main.MainWindow
 import editorx.gui.core.theme.ThemeManager
-import editorx.gui.widget.SvgIcon
-import editorx.gui.utils.IconUtil
+import editorx.gui.IconRef
+import editorx.util.IconLoader
 import java.awt.*
 import java.awt.geom.RoundRectangle2D
 import javax.swing.*
@@ -45,7 +45,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     fun addItem(id: String, tooltip: String, iconPath: String, viewProvider: ViewProvider) {
-        val icon = loadIcon(iconPath)
+        val icon = IconLoader.getIcon(IconRef(iconPath), ICON_SIZE) ?: createDefaultIcon()
         val btn = createActivityButton(icon, tooltip, id)
         val wasEmpty = buttonMap.isEmpty()
         buttonGroup.add(btn)
@@ -81,31 +81,6 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
                 autoSelected = true
                 updateAllButtonStates()
             }
-        }
-    }
-
-
-    private fun loadIcon(iconPath: String): Icon {
-        return try {
-            when {
-                iconPath.isEmpty() -> createDefaultIcon()
-                iconPath.endsWith(".svg") -> {
-                    val resPath = if (iconPath.startsWith("/")) iconPath else "/$iconPath"
-                    SvgIcon.fromResource(resPath, ICON_SIZE, ICON_SIZE) ?: createDefaultIcon()
-                }
-
-                else -> {
-                    val resource = javaClass.getResource("/$iconPath")
-                    if (resource != null) {
-                        val originalIcon = ImageIcon(resource)
-                        IconUtil.resizeIcon(originalIcon, ICON_SIZE, ICON_SIZE)
-                    } else {
-                        createDefaultIcon()
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            createDefaultIcon()
         }
     }
 

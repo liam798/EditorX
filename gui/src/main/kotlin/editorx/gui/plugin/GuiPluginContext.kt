@@ -1,12 +1,16 @@
 package editorx.gui.plugin
 
 import editorx.gui.ViewProvider
+import editorx.file.FileType
+import editorx.file.FileTypeRegistry
+import editorx.navigation.NavigationProvider
+import editorx.navigation.NavigationRegistry
 import editorx.gui.main.MainWindow
 import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContext
 import editorx.settings.SettingsStore
-import editorx.syntax.SyntaxManager
-import editorx.syntax.SyntaxProvider
+import editorx.syntax.SyntaxHighlighterManager
+import editorx.syntax.SyntaxHighlighterProvider
 import editorx.workspace.WorkspaceManager
 import java.util.logging.Logger
 
@@ -30,7 +34,15 @@ class GuiPluginContext(
         mainWindow.activityBar.addItem(loadedPlugin.id, loadedPlugin.name, iconPath, viewProvider)
     }
 
-    override fun registerSyntaxAdapter(syntaxProvider: SyntaxProvider) {
-        SyntaxManager.registerAdapter(syntaxProvider)
+    override fun registerSyntaxHighlighterProvider(syntaxHighlighterProvider: SyntaxHighlighterProvider) {
+        SyntaxHighlighterManager.registerProvider(syntaxHighlighterProvider)
+    }
+
+    override fun registerFileType(fileType: FileType) {
+        FileTypeRegistry.register(fileType)
+    }
+
+    override fun registerNavigationProvider(provider: NavigationProvider) {
+        NavigationRegistry.register(provider)
     }
 }

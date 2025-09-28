@@ -2,6 +2,8 @@ package editorx.gui.main.editor
 
 import editorx.gui.main.MainWindow
 import editorx.gui.core.theme.ThemeManager
+import editorx.navigation.NavigationRegistry
+import editorx.vfs.LocalVirtualFile
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.CardLayout
 import java.awt.Color
@@ -9,6 +11,7 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Rectangle
 import java.awt.dnd.*
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
@@ -348,6 +351,20 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     updateTabHeaderStyles()
                 }
             })
+
+            // Ctrl+B (or Cmd+B on macOS) to attempt navigation (goto definition)
+            val key = if (System.getProperty("os.name").lowercase().contains("mac"))
+                KeyStroke.getKeyStroke(KeyEvent.VK_B, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            else KeyStroke.getKeyStroke(KeyEvent.VK_B, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            getInputMap(JComponent.WHEN_FOCUSED).put(key, "gotoDefinition")
+            actionMap.put("gotoDefinition", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
+                    val index = tabbedPane.indexOfComponent(scrollComp)
+                    val f = tabToFile[index] ?: return
+                    attemptNavigate(f, this@apply)
+                }
+            })
         }
         try {
             // 在装载初始文件内容时静默，不触发脏标记
@@ -397,6 +414,44 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         dirtyTabs.remove(index)
         textArea.putClientProperty("suppressDirty", false)
         updateTabHeaderStyles()
+    }
+
+    private fun attemptNavigate(file: File, textArea: TextArea) {
+        try {
+            val vf = LocalVirtualFile.of(file)
+            val provider = NavigationRegistry.findFirstForFile(vf)
+            if (provider == null) {
+                mainWindow.statusBar.setMessage("无可用跳转处理器")
+                return
+            }
+            val caret = textArea.caretPosition
+            val target = provider.gotoDefinition(vf, caret, textArea.text)
+            if (target == null) {
+                mainWindow.statusBar.setMessage("未找到跳转目标")
+                return
+            }
+            val targetFile = when (target.file) {
+                is LocalVirtualFile -> (target.file as LocalVirtualFile).toFile()
+                else -> null
+            }
+            if (targetFile != null) {
+                openFile(targetFile)
+                val idx = fileToTab[targetFile]
+                if (idx != null) {
+                    val ta = tabTextAreas[idx]
+                    if (ta != null) {
+                        val pos = target.offset.coerceIn(0, ta.document.length)
+                        ta.caretPosition = pos
+                        val r = ta.modelToView2D(pos)
+                        if (r != null) ta.scrollRectToVisible(r.bounds)
+                    }
+                }
+            } else {
+                mainWindow.statusBar.setMessage("跳转目标不可打开")
+            }
+        } catch (e: Exception) {
+            mainWindow.statusBar.setMessage("跳转失败: ${e.message}")
+        }
     }
 
     private fun createTabHeader(file: File): JPanel = JPanel().apply {

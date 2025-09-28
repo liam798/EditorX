@@ -9,15 +9,15 @@ import java.util.concurrent.ConcurrentHashMap
  * 语法高亮管理器
  * 负责管理所有语法高亮提供者
  */
-object SyntaxManager {
-    private val adapters = mutableListOf<SyntaxProvider>()
-    private val fileToAdapterCache = ConcurrentHashMap<String, SyntaxProvider?>()
+object SyntaxHighlighterManager {
+    private val providers = mutableListOf<SyntaxHighlighterProvider>()
+    private val fileToProviderCache = ConcurrentHashMap<String, SyntaxHighlighterProvider?>()
 
     /**
      * 注册语法适配器
      */
-    fun registerAdapter(adapter: SyntaxProvider) {
-        adapters.add(adapter)
+    fun registerProvider(adapter: SyntaxHighlighterProvider) {
+        providers.add(adapter)
 
         // 注册 TokenMaker
         val tmf = TokenMakerFactory.getDefaultInstance() as AbstractTokenMakerFactory
@@ -27,11 +27,11 @@ object SyntaxManager {
     /**
      * 获取文件对应的语法适配器
      */
-    fun getAdapterForFile(file: File): SyntaxProvider? {
+    fun getProviderForFile(file: File): SyntaxHighlighterProvider? {
         val cacheKey = file.absolutePath
-        return fileToAdapterCache.computeIfAbsent(cacheKey) {
+        return fileToProviderCache.computeIfAbsent(cacheKey) {
             val ext = file.extension.lowercase()
-            return@computeIfAbsent adapters.find { ext in it.fileExtensions }
+            return@computeIfAbsent providers.find { ext in it.fileExtensions }
         }
     }
 }

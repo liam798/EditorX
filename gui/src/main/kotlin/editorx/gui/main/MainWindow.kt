@@ -3,7 +3,7 @@ package editorx.gui.main
 import editorx.gui.CachedViewProvider
 import editorx.gui.GuiControl
 import editorx.gui.core.Constants
-import editorx.gui.widget.NoLineSplitPaneUI
+import editorx.widget.NoLineSplitPaneUI
 import editorx.gui.main.activitybar.ActivityBar
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer

@@ -1,9 +1,10 @@
 package editorx.plugin
 
-import editorx.gui.CachedViewProvider
 import editorx.gui.ViewProvider
+import editorx.file.FileType
+import editorx.navigation.NavigationProvider
 import editorx.settings.SettingsStore
-import editorx.syntax.SyntaxProvider
+import editorx.syntax.SyntaxHighlighterProvider
 import editorx.workspace.WorkspaceManager
 
 /**
@@ -31,5 +32,15 @@ interface PluginContext {
     /**
      * 注册语法适配器
      */
-    fun registerSyntaxAdapter(syntaxProvider: SyntaxProvider)
+    fun registerSyntaxHighlighterProvider(syntaxHighlighterProvider: SyntaxHighlighterProvider)
+
+    /**
+     * 注册文件类型
+     */
+    fun registerFileType(fileType: FileType)
+
+    /**
+     * 注册跳转/导航提供者
+     */
+    fun registerNavigationProvider(provider: NavigationProvider)
 }

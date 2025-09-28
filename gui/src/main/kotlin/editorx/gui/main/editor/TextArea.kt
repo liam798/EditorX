@@ -1,6 +1,6 @@
 package editorx.gui.main.editor
 
-import editorx.syntax.SyntaxManager
+import editorx.syntax.SyntaxHighlighterManager
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants
 import java.awt.Font
@@ -21,12 +21,12 @@ class TextArea : RSyntaxTextArea() {
      */
     fun detectSyntax(file: File) {
         // 检测是否有自定义语法高亮器
-        val syntaxAdapter = SyntaxManager.getAdapterForFile(file)
-        if (syntaxAdapter != null) {
-            println("找到自定义语法适配器: ${syntaxAdapter::class.simpleName}")
-            this.syntaxEditingStyle = syntaxAdapter.syntaxStyleKey
-            this.isCodeFoldingEnabled = syntaxAdapter.isCodeFoldingEnabled
-            this.isBracketMatchingEnabled = syntaxAdapter.isBracketMatchingEnabled
+        val syntaxProvider = SyntaxHighlighterManager.getProviderForFile(file)
+        if (syntaxProvider != null) {
+            println("找到自定义语法高亮器: ${syntaxProvider::class.simpleName}")
+            this.syntaxEditingStyle = syntaxProvider.syntaxStyleKey
+            this.isCodeFoldingEnabled = syntaxProvider.isCodeFoldingEnabled
+            this.isBracketMatchingEnabled = syntaxProvider.isBracketMatchingEnabled
         } else {
             println("未找到自定义语法高亮器，使用默认语法")
             syntaxEditingStyle = detectDefaultSyntax(file)

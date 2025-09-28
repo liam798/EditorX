@@ -1,4 +1,4 @@
-package editorx.gui.utils
+package editorx.util
 
 import java.awt.Component
 import java.awt.Graphics

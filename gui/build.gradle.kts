@@ -6,6 +6,9 @@ plugins {
 dependencies {
     implementation(project(":core"))
     implementation(project(":plugins:smali"))
+    implementation(project(":plugins:json"))
+    implementation(project(":plugins:yaml"))
+    implementation(project(":plugins:xml"))
 
     implementation("com.fifesoft:rsyntaxtextarea:3.4.0")
     implementation("com.formdev:flatlaf:3.4")

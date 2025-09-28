@@ -1,4 +1,4 @@
-package editorx.gui.widget
+package editorx.widget
 
 import java.awt.*
 import javax.swing.BorderFactory

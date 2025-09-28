@@ -1,6 +1,6 @@
 package editorx.syntax
 
-interface SyntaxProvider {
+interface SyntaxHighlighterProvider {
     val syntaxStyleKey: String           // e.g., "text/smali"
     val fileExtensions: Set<String>      // e.g., setOf(".smali")
 
