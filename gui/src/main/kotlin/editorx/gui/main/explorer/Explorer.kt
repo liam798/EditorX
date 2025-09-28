@@ -153,7 +153,9 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun refreshRootPreserveSelection() {
         val selFile = (tree.lastSelectedPathComponent as? FileNode)?.file
+        val expandedPaths = getExpandedPaths()
         refreshRoot()
+        restoreExpandedPaths(expandedPaths)
         if (selFile != null) selectFile(selFile)
     }
 
@@ -183,6 +185,44 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     private fun expandTo(path: TreePath) {
         var p: TreePath? = path.parentPath
         while (p != null) { tree.expandPath(p); p = p.parentPath }
+    }
+
+    private fun getExpandedPaths(): Set<String> {
+        val expandedPaths = mutableSetOf<String>()
+        val root = treeModel.root as? FileNode ?: return expandedPaths
+        
+        fun collectExpandedPaths(node: FileNode, currentPath: String) {
+            val nodePath = if (currentPath.isEmpty()) node.file.name else "$currentPath/${node.file.name}"
+            if (tree.isExpanded(TreePath(node.path))) {
+                expandedPaths.add(nodePath)
+            }
+            node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+            for (i in 0 until node.childCount) {
+                val child = node.getChildAt(i) as FileNode
+                collectExpandedPaths(child, nodePath)
+            }
+        }
+        
+        collectExpandedPaths(root, "")
+        return expandedPaths
+    }
+
+    private fun restoreExpandedPaths(expandedPaths: Set<String>) {
+        val root = treeModel.root as? FileNode ?: return
+        
+        fun expandMatchingPaths(node: FileNode, currentPath: String) {
+            val nodePath = if (currentPath.isEmpty()) node.file.name else "$currentPath/${node.file.name}"
+            if (expandedPaths.contains(nodePath)) {
+                tree.expandPath(TreePath(node.path))
+            }
+            node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+            for (i in 0 until node.childCount) {
+                val child = node.getChildAt(i) as FileNode
+                expandMatchingPaths(child, nodePath)
+            }
+        }
+        
+        expandMatchingPaths(root, "")
     }
 
     private fun depthFirstSearch(n: FileNode, pred: (FileNode) -> Boolean): FileNode? {
