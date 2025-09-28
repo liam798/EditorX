@@ -72,11 +72,11 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         preferredSize = Dimension(0, 25)
 
         // 安装子组件
-        add(Box.createHorizontalStrut(20))
+        add(Box.createHorizontalStrut(4))
         setupLeftComponents()
         add(Box.createHorizontalGlue())
         setupRightComponents()
-        add(Box.createHorizontalStrut(20))
+        add(Box.createHorizontalStrut(4))
     }
 
     private fun setupLeftComponents() {
