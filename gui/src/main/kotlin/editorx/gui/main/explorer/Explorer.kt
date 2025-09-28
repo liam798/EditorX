@@ -85,17 +85,17 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         /*
         左侧按钮
         */
-        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addDirectory.svg"), TOP_BAR_ICON_SIZE)).apply {
-            toolTipText = "打开文件夹"
-            isFocusable = false
-            margin = Insets(2, 6, 2, 6)
-            addActionListener { openFolder() }
-        })
         toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addFile.svg"), TOP_BAR_ICON_SIZE)).apply {
-            toolTipText = "打开文件"
+            toolTipText = "新建文件..."
             isFocusable = false
             margin = Insets(2, 6, 2, 6)
             addActionListener { mainWindow.openFileChooserAndOpen() }
+        })
+        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addDirectory.svg"), TOP_BAR_ICON_SIZE)).apply {
+            toolTipText = "新建文件夹..."
+            isFocusable = false
+            margin = Insets(2, 6, 2, 6)
+            addActionListener { openFolder() }
         })
 
         toolBar.add(Box.createHorizontalGlue())

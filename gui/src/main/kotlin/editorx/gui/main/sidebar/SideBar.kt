@@ -80,8 +80,8 @@ class SideBar(private val mainWindow: MainWindow) : JPanel() {
                 preserveNextDivider = false
             } else {
                 minimumSize = Dimension(0, 0)
-                preferredSize = Dimension(300, 0)
-                updateDividerLocation(300) // 显示SideBar时，设置dividerLocation为300（和preferredSize保持一致）
+                preferredSize = Dimension(250, 0)
+                updateDividerLocation(250) // 显示SideBar时，设置dividerLocation为300（和preferredSize保持一致）
             }
         } else {
             isVisible = false
