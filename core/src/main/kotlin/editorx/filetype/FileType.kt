@@ -1,6 +1,6 @@
 package editorx.filetype
 
-import editorx.gui.IconRef
+import javax.swing.Icon
 
 interface FileType {
 
@@ -12,6 +12,6 @@ interface FileType {
 
     fun getExtensions(): Array<String>
 
-    fun getIcon(): IconRef
+    fun getIcon(): Icon?
 }
 

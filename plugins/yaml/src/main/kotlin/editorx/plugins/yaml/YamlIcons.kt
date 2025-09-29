@@ -1,11 +1,13 @@
 package editorx.plugins.yaml
 
 import editorx.gui.IconRef
+import editorx.util.IconLoader
+import javax.swing.Icon
 
 object YamlIcons {
-    val YamlFile: IconRef = load("icons/yaml.svg")
+    val YamlFile: Icon? = load("icons/yaml.svg")
 
-    private fun load(path: String): IconRef {
-        return IconRef(path, YamlIcons::class.java.classLoader)
+    private fun load(path: String): Icon? {
+        return IconLoader.getIcon(IconRef(path, YamlIcons::class.java.classLoader))
     }
 }

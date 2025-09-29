@@ -1,11 +1,13 @@
 package editorx.plugins.xml
 
 import editorx.gui.IconRef
+import editorx.util.IconLoader
+import javax.swing.Icon
 
 object XmlIcons {
-    val XmlFile: IconRef = load("icons/xml.svg")
+    val XmlFile: Icon? = load("icons/xml.svg")
 
-    private fun load(path: String): IconRef {
-        return IconRef(path, XmlIcons::class.java.classLoader)
+    private fun load(path: String): Icon? {
+        return IconLoader.getIcon(IconRef(path, XmlIcons::class.java.classLoader))
     }
 }

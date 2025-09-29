@@ -2,6 +2,7 @@ package editorx.plugins.json
 
 import editorx.filetype.LanguageFileType
 import editorx.gui.IconRef
+import javax.swing.Icon
 
 object JsonFIleType : LanguageFileType(JsonLanguage) {
 
@@ -9,5 +10,5 @@ object JsonFIleType : LanguageFileType(JsonLanguage) {
 
     override fun getExtensions(): Array<String> = arrayOf("json")
 
-    override fun getIcon(): IconRef = JsonIcons.JsonFile
+    override fun getIcon(): Icon? = JsonIcons.JsonFile
 }

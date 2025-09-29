@@ -1015,9 +1015,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             // Prefer plugin-provided file type icons
             val ft = FileTypeRegistry.getFileTypeByFileName(file.name)
             if (ft != null) {
-                val ref = ft.getIcon()
-                val ico = IconLoader.getIcon(ref, 16)
-                if (ico != null) return ico
+                val icon = ft.getIcon()
+                if (icon != null) return icon
             }
 
             return fileIconCache.getOrPut(key) {

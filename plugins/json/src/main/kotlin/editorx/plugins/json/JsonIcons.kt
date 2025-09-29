@@ -1,11 +1,13 @@
 package editorx.plugins.json
 
 import editorx.gui.IconRef
+import editorx.util.IconLoader
+import javax.swing.Icon
 
 object JsonIcons {
-    val JsonFile: IconRef = load("icons/json.svg")
+    val JsonFile: Icon? = load("icons/json.svg")
 
-    private fun load(path: String): IconRef {
-        return IconRef(path, JsonIcons::class.java.classLoader)
+    private fun load(path: String): Icon? {
+        return IconLoader.getIcon(IconRef(path, JsonIcons::class.java.classLoader))
     }
 }

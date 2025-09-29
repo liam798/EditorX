@@ -4,7 +4,6 @@ import editorx.filetype.FileTypeRegistry
 import editorx.gui.core.theme.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
-import editorx.util.IconLoader
 import editorx.util.IconUtil
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.*
@@ -661,7 +660,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             return ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
         }
         val fileTypeIcon =
-            FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()?.let { IconLoader.getIcon(it, 16) }
+            FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()?.let { IconUtil.resizeIcon(it, 16, 16) }
         return fileTypeIcon ?: ExplorerIcons.AnyType?.let { IconUtil.resizeIcon(it, 16, 16) }
     }
 
