@@ -2,6 +2,10 @@ package editorx.gui.main.navigationbar
 
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
+import editorx.filetype.FileTypeRegistry
+import editorx.gui.main.explorer.ExplorerIcons
+import editorx.util.IconUtil
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.Font
 import java.awt.Toolkit
@@ -10,6 +14,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
 import javax.swing.*
+import javax.swing.Icon
 import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
 
@@ -34,9 +39,9 @@ class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
             add(JLabel("未打开文件").apply { font = font.deriveFont(Font.PLAIN, 12f) })
         } else {
             crumbs.forEachIndexed { index, crumb ->
-                add(createLabel(crumb))
+                add(createCrumbComponent(crumb))
                 if (index != crumbs.lastIndex) {
-                    add(JLabel(" > ").apply { font = font.deriveFont(Font.PLAIN, 12f) })
+                    add(JLabel("  >  ").apply { font = font.deriveFont(Font.PLAIN, 12f) })
                 }
             }
         }
@@ -83,24 +88,59 @@ class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
         }
     }
 
-    private fun createLabel(crumb: Crumb): JLabel {
-        return JLabel(crumb.display).apply {
-            font = font.deriveFont(Font.PLAIN, 12f)
+    private fun createCrumbComponent(crumb: Crumb): JComponent {
+        val container = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            isOpaque = false
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = crumb.file?.absolutePath
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
-                    if (SwingUtilities.isLeftMouseButton(e)) handleClick(crumb)
-                }
+            border = EmptyBorder(2, 4, 2, 4) // 添加内边距
+        }
+        val iconLabel = JLabel(resolveIcon(crumb)).apply {
+            border = EmptyBorder(0, 0, 0, 4)
+            verticalAlignment = SwingConstants.CENTER
+        }
+        container.add(iconLabel)
+        container.add(JLabel(crumb.display).apply {
+            font = font.deriveFont(Font.PLAIN, 12f)
+            verticalAlignment = SwingConstants.CENTER
+        })
+        container.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) {
+                container.isOpaque = true
+                container.background = Color(200, 200, 200, 0xef) // 半透明浅灰色
+                container.repaint()
+            }
 
-                override fun mousePressed(e: MouseEvent) {
-                    if (SwingUtilities.isRightMouseButton(e)) showMenu(crumb, e)
-                }
+            override fun mouseExited(e: MouseEvent) {
+                container.isOpaque = false
+                container.repaint()
+            }
 
-                override fun mouseReleased(e: MouseEvent) {
-                    if (SwingUtilities.isRightMouseButton(e)) showMenu(crumb, e)
-                }
-            })
+            override fun mouseClicked(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e)) handleClick(crumb)
+            }
+
+            override fun mousePressed(e: MouseEvent) {
+                if (SwingUtilities.isRightMouseButton(e)) showMenu(crumb, e)
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                if (SwingUtilities.isRightMouseButton(e)) showMenu(crumb, e)
+            }
+        })
+        return container
+    }
+
+    private fun resolveIcon(crumb: Crumb): Icon? {
+        val file = crumb.file ?: return ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
+        return if (file.isDirectory) {
+//            ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
+            return null
+        } else {
+            val fileTypeIcon = FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()
+            val resized = fileTypeIcon?.let { IconUtil.resizeIcon(it, 14, 14) }
+            resized ?: ExplorerIcons.AnyType?.let { IconUtil.resizeIcon(it, 14, 14) }
         }
     }
 
