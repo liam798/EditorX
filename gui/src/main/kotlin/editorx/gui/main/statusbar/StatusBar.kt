@@ -54,7 +54,8 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     // 行号和列号
     private val lineColumnLabel = JLabel("").apply {
-        font = font.deriveFont(Font.PLAIN, 11f)
+        toolTipText = "转到行/列"
+        font = font.deriveFont(Font.PLAIN, 12f)
         foreground = Color.GRAY
         isVisible = false  // 初始状态隐藏
     }
