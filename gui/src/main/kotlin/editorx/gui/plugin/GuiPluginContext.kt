@@ -1,10 +1,8 @@
 package editorx.gui.plugin
 
+import editorx.filetype.FileType
+import editorx.filetype.FileTypeRegistry
 import editorx.gui.ViewProvider
-import editorx.file.FileType
-import editorx.file.FileTypeRegistry
-import editorx.navigation.NavigationProvider
-import editorx.navigation.NavigationRegistry
 import editorx.gui.main.MainWindow
 import editorx.plugin.LoadedPlugin
 import editorx.plugin.PluginContext
@@ -39,10 +37,6 @@ class GuiPluginContext(
     }
 
     override fun registerFileType(fileType: FileType) {
-        FileTypeRegistry.register(fileType)
-    }
-
-    override fun registerNavigationProvider(provider: NavigationProvider) {
-        NavigationRegistry.register(provider)
+        FileTypeRegistry.registerFileType(fileType)
     }
 }

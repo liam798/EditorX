@@ -1,17 +1,17 @@
-package editorx.lang
+package editorx.filetype
 
-import editorx.file.FileType
+import editorx.lang.Language
 
 abstract class LanguageFileType(
     val language: Language,
 ) : FileType {
 
-    override fun getDisplayName(): String {
-        return language.getDisplayName()
-    }
-
     override fun isBinary(): Boolean {
         return false
+    }
+
+    override fun getDisplayName(): String {
+        return language.getDisplayName()
     }
 }
 

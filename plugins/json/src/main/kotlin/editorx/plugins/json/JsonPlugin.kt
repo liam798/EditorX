@@ -12,7 +12,7 @@ class JsonPlugin : Plugin {
     )
 
     override fun activate(context: PluginContext) {
-        context.registerFileType(JsonFIleType())
+        context.registerFileType(JsonFIleType)
     }
 }
 

@@ -1,4 +1,4 @@
-package editorx.file
+package editorx.filetype
 
 import editorx.gui.IconRef
 
@@ -25,7 +25,7 @@ interface FileType {
     /**
      * Returns the default extension for files of the type, <em>not</em> including the leading '.'.
      */
-    fun getExtensions(): Set<String>
+    fun getDefaultExtension(): String
 
     /** Optional icon for Explorer or tabs. */
     fun getIcon(): IconRef

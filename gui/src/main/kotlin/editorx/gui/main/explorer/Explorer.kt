@@ -1,6 +1,6 @@
 package editorx.gui.main.explorer
 
-import editorx.file.FileTypeRegistry
+import editorx.filetype.FileTypeRegistry
 import editorx.gui.IconRef
 import editorx.gui.main.MainWindow
 import editorx.util.IconLoader

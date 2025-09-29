@@ -1,9 +1,3 @@
 import editorx.lang.Language
 
-class YamlLanguage : Language("xml") {
-    companion object {
-        private val INSTANCE: YamlLanguage = YamlLanguage()
-
-        fun getInstance(): YamlLanguage = INSTANCE
-    }
-}
+object YamlLanguage : Language("yaml", "yaml", "application/x-yaml", "application/yaml", "text/yaml", "text/x-yaml")

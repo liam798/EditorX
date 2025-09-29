@@ -1,6 +1,6 @@
 package editorx.gui.main.editor
 
-import editorx.file.FileTypeRegistry
+import editorx.filetype.FileTypeRegistry
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
 import editorx.gui.core.theme.ThemeManager

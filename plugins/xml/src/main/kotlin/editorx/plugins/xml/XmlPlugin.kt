@@ -13,7 +13,7 @@ class XmlPlugin : Plugin {
     )
 
     override fun activate(context: PluginContext) {
-        context.registerFileType(XmlFileType())
+        context.registerFileType(XmlFileType)
     }
 }
 

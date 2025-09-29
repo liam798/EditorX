@@ -1,5 +1,6 @@
-package editorx.file
+package editorx.filetype
 
+import editorx.lang.Language
 import editorx.vfs.VirtualFile
 import java.util.concurrent.ConcurrentHashMap
 
@@ -11,10 +12,10 @@ object FileTypeRegistry {
     private val byExt = ConcurrentHashMap<String, FileType>() // ext lowercased (no dot)
 
     @Synchronized
-    fun register(fileType: FileType) {
+    fun registerFileType(fileType: FileType) {
         if (byId.containsKey(fileType.getName())) return
         byId[fileType.getName()] = fileType
-        fileType.getExtensions().forEach { ext ->
+        fileType.getDefaultExtension().let { ext ->
             val key = ext.trim().removePrefix(".").lowercase()
             if (key.isNotEmpty()) byExt[key] = fileType
         }
@@ -28,5 +29,8 @@ object FileTypeRegistry {
     fun getByFile(file: VirtualFile): FileType? = getByExtension(file.extension)
 
     fun all(): List<FileType> = byId.values.toList()
+    fun findFileTypeByLanguage(language: Language): LanguageFileType? {
+        TODO("Not yet implemented")
+    }
 }
 

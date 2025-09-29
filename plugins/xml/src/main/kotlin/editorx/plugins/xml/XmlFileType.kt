@@ -1,13 +1,15 @@
+import editorx.filetype.LanguageFileType
 import editorx.gui.IconRef
-import editorx.lang.LanguageFileType
 import editorx.plugins.xml.XmlIcons
 
-class XmlFileType : LanguageFileType(XmlLanguage.getInstance()) {
+object XmlFileType : LanguageFileType(XmlLanguage) {
+    const val DEFAULT_EXTENSION: String = "xml"
+
     override fun getName(): String = "xml"
 
     override fun getDescription(): String = "XML files"
 
-    override fun getExtensions(): Set<String> = setOf("xml")
+    override fun getDefaultExtension(): String = DEFAULT_EXTENSION
 
     override fun getIcon(): IconRef = XmlIcons.XmlFile
 }
