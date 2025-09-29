@@ -305,16 +305,18 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     private fun findNodeForFile(root: DefaultMutableTreeNode, targetFile: File): Array<Any>? {
-        if (root.userObject is File && (root.userObject as File).absolutePath == targetFile.absolutePath) {
+        val fileNode = root as? FileNode
+        if (fileNode?.represents(targetFile) == true) {
+            @Suppress("UNCHECKED_CAST")
             return root.path as Array<Any>
         }
 
+        fileNode?.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+
         for (i in 0 until root.childCount) {
-            val child = root.getChildAt(i) as? DefaultMutableTreeNode
-            if (child != null) {
-                val result = findNodeForFile(child, targetFile)
-                if (result != null) return result
-            }
+            val child = root.getChildAt(i) as? DefaultMutableTreeNode ?: continue
+            val result = findNodeForFile(child, targetFile)
+            if (result != null) return result
         }
         return null
     }
@@ -498,7 +500,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     private fun selectFirstMatch(q: String) {
         if (q.isEmpty()) return
         val root = treeModel.root as? FileNode ?: return
-        val node = depthFirstSearch(root) { it.file.name.contains(q, ignoreCase = true) }
+        val node = depthFirstSearch(root) { it.displayName.contains(q, ignoreCase = true) }
         if (node != null) {
             val tp = TreePath(node.path)
             expandTo(tp)
@@ -509,7 +511,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun selectFile(target: File) {
         val root = treeModel.root as? FileNode ?: return
-        val node = depthFirstSearch(root) { it.file == target }
+        val node = depthFirstSearch(root) { it.represents(target) }
         if (node != null) {
             val tp = TreePath(node.path)
             expandTo(tp)
@@ -530,40 +532,38 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         val expandedPaths = mutableSetOf<String>()
         val root = treeModel.root as? FileNode ?: return expandedPaths
 
-        fun collectExpandedPaths(node: FileNode, currentPath: String) {
-            val nodePath =
-                if (currentPath.isEmpty()) node.file.name else "$currentPath/${node.file.name}"
+        fun collectExpandedPaths(node: FileNode) {
+            val nodePath = node.file.absolutePath
             if (tree.isExpanded(TreePath(node.path))) {
                 expandedPaths.add(nodePath)
             }
             node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
             for (i in 0 until node.childCount) {
                 val child = node.getChildAt(i) as FileNode
-                collectExpandedPaths(child, nodePath)
+                collectExpandedPaths(child)
             }
         }
 
-        collectExpandedPaths(root, "")
+        collectExpandedPaths(root)
         return expandedPaths
     }
 
     private fun restoreExpandedPaths(expandedPaths: Set<String>) {
         val root = treeModel.root as? FileNode ?: return
 
-        fun expandMatchingPaths(node: FileNode, currentPath: String) {
-            val nodePath =
-                if (currentPath.isEmpty()) node.file.name else "$currentPath/${node.file.name}"
+        fun expandMatchingPaths(node: FileNode) {
+            val nodePath = node.file.absolutePath
             if (expandedPaths.contains(nodePath)) {
                 tree.expandPath(TreePath(node.path))
             }
             node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
             for (i in 0 until node.childCount) {
                 val child = node.getChildAt(i) as FileNode
-                expandMatchingPaths(child, nodePath)
+                expandMatchingPaths(child)
             }
         }
 
-        expandMatchingPaths(root, "")
+        expandMatchingPaths(root)
     }
 
     private fun depthFirstSearch(n: FileNode, pred: (FileNode) -> Boolean): FileNode? {
@@ -870,27 +870,37 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     // Node representing a File with lazy children loading
-    private class FileNode(val file: File) : DefaultMutableTreeNode(file) {
+    private class FileNode(
+        val file: File,
+        val displayName: String = file.name.ifEmpty { file.absolutePath },
+        representedFiles: List<File> = listOf(file)
+    ) : DefaultMutableTreeNode(file) {
         private var loaded = false
+        private val representedPaths = representedFiles.map { it.absolutePath }.toSet()
 
         override fun isLeaf(): Boolean = file.isFile
+
+        fun represents(target: File): Boolean = representedPaths.contains(target.absolutePath)
 
         fun loadChildrenIfNeeded(showHidden: Boolean) {
             if (loaded || file.isFile) return
             loaded = true
             removeAllChildren()
-            val children =
-                file.listFiles()
-                    ?.asSequence()
-                    ?.filter { showHidden || !it.name.startsWith(".") }
-                    ?.sortedWith(
-                        compareBy<File> { !it.isDirectory }.thenBy {
-                            it.name.lowercase()
-                        }
+            val children = file.visibleChildren(showHidden)
+            children.forEach { child ->
+                if (child.isDirectory) {
+                    val compressed = compressDirectoryChain(child, showHidden)
+                    add(
+                        FileNode(
+                            compressed.finalDir,
+                            compressed.displayName,
+                            compressed.representedFiles
+                        )
                     )
-                    ?.toList()
-                    ?: emptyList()
-            children.forEach { add(FileNode(it)) }
+                } else {
+                    add(FileNode(child))
+                }
+            }
         }
 
         fun reload(showHidden: Boolean) {
@@ -898,7 +908,39 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             loadChildrenIfNeeded(showHidden)
         }
 
-        override fun toString(): String = file.name.ifEmpty { file.absolutePath }
+        override fun toString(): String = displayName
+
+        private fun File.visibleChildren(showHidden: Boolean): List<File> =
+            listFiles()
+                ?.asSequence()
+                ?.filter { showHidden || !it.name.startsWith(".") }
+                ?.sortedWith(
+                    compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() }
+                )
+                ?.toList()
+                ?: emptyList()
+
+        private fun compressDirectoryChain(start: File, showHidden: Boolean): CompressedDirectory {
+            val chainFiles = mutableListOf<File>()
+            var current = start
+            while (true) {
+                chainFiles.add(current)
+                val children = current.visibleChildren(showHidden)
+                if (children.size != 1) break
+                val onlyChild = children.first()
+                if (!onlyChild.isDirectory) break
+                if (chainFiles.any { it.absolutePath == onlyChild.absolutePath }) break
+                current = onlyChild
+            }
+            val display = chainFiles.joinToString("/") { it.name.ifEmpty { it.absolutePath } }
+            return CompressedDirectory(current, display, chainFiles)
+        }
+
+        private data class CompressedDirectory(
+            val finalDir: File,
+            val displayName: String,
+            val representedFiles: List<File>
+        )
     }
 
     /** 自定义渲染：为目录和常见后缀的文件展示系统图标（带缓存）。 */
@@ -924,11 +966,11 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     row,
                     hasFocus
                 )
-            val node = value as? DefaultMutableTreeNode
-            val file = (node as? FileNode)?.file
+            val node = value as? FileNode
+            val file = node?.file
             if (file != null) {
                 icon = getIconForFile(file)
-                text = file.name.ifEmpty { file.absolutePath }
+                text = node.displayName
             }
             return c
         }
