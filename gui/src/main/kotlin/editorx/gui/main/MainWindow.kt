@@ -43,7 +43,7 @@ class MainWindow(val guiControl: GuiControl) : JFrame() {
         setupWindow()
         setupLayout()
         tuneSplitPanes()
-        setupActivityBarDefaultItems()
+        setupDefaultActivityBarItems()
     }
 
     private fun setupWindow() {
@@ -95,7 +95,7 @@ class MainWindow(val guiControl: GuiControl) : JFrame() {
         }
     }
 
-    private fun setupActivityBarDefaultItems() {
+    private fun setupDefaultActivityBarItems() {
         // 添加默认的Explorer
         activityBar.addItem(
             "explorer",
