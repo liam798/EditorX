@@ -7,6 +7,7 @@ import editorx.gui.dialog.PluginManagerDialog
 import editorx.util.IconLoader
 import java.awt.Insets
 import java.awt.Color
+import java.awt.event.ActionListener
 import javax.swing.*
 
 /**
@@ -31,10 +32,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         buildActions()
     }
 
-    private fun JButton.compact(textLabel: String): JButton = apply {
+    private fun JButton.compact(textLabel: String, l: ActionListener): JButton = apply {
         text = textLabel
-        margin = Insets(2, 8, 2, 8)
+        margin = Insets(4, 4, 4, 4)
         isFocusable = false
+        addActionListener(l)
     }
 
     private fun buildActions() {
@@ -48,19 +50,9 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         /*
          右侧按钮
          */
-        toggleSideBarButton = JButton(getSideBarIcon()).apply {
-            toolTipText = "切换侧边栏"
-            isFocusable = false
-            margin = Insets(2, 6, 2, 6)
-            addActionListener { toggleSideBar() }
-        }
+        toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") { toggleSideBar() }
         add(toggleSideBarButton)
-        add(JButton(IconLoader.getIcon(IconRef("icons/settings.svg"), ICON_SIZE)).apply {
-            toolTipText = "设置"
-            isFocusable = false
-            margin = Insets(2, 6, 2, 6)
-            addActionListener { showSettings() }
-        })
+        add(JButton(getSideBarIcon()).compact("设置") { showSettings() })
     }
 
     private fun openFolder() {
