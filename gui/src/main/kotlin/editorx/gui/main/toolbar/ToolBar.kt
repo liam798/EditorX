@@ -4,6 +4,7 @@ import editorx.gui.IconRef
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
 import editorx.gui.dialog.PluginManagerDialog
+import editorx.gui.main.navigationbar.NavigationBar
 import editorx.gui.toolchain.ApkTool
 import editorx.util.IconLoader
 import java.awt.Insets
@@ -22,6 +23,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         private const val ICON_SIZE = 20
     }
 
+    private val navigationBar = NavigationBar(mainWindow)
     private var toggleSideBarButton: JButton? = null
     private var compileTask: Thread? = null
 
@@ -44,18 +46,10 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
     private fun buildActions() {
-        /*
-         左侧按钮
-         */
-
-        /*
-         自适应填充
-         */
+        add(navigationBar)
+        add(Box.createHorizontalStrut(8))
         add(Box.createHorizontalGlue())
 
-        /*
-         右侧按钮
-         */
         add(JButton(IconLoader.getIcon(IconRef("icons/build.svg"), ICON_SIZE)).compact("编译") {
             compileWorkspaceApk()
         })
@@ -119,6 +113,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun showSettings() {
         JOptionPane.showMessageDialog(this, "设置界面待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
     }
+
 
     private fun compileWorkspaceApk() {
         if (compileTask?.isAlive == true) {

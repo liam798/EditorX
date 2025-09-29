@@ -67,6 +67,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         tabbedPane.addChangeListener {
             val file = getCurrentFile()
             mainWindow.statusBar.setFileInfo(file?.name ?: "", file?.let { it.length().toString() + " B" })
+            mainWindow.statusBar.updateNavigation(file)
 
             // 更新行号和列号显示
             if (file != null) {
@@ -320,6 +321,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     fun openFile(file: File) {
         if (fileToTab.containsKey(file)) {
             tabbedPane.selectedIndex = fileToTab[file]!!
+            mainWindow.statusBar.updateNavigation(file)
             return
         }
         val textArea = TextArea().apply {
@@ -413,6 +415,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         dirtyTabs.remove(index)
         textArea.putClientProperty("suppressDirty", false)
         updateTabHeaderStyles()
+        mainWindow.statusBar.updateNavigation(file)
     }
 
     private fun attemptNavigate(file: File, textArea: TextArea) {
@@ -611,6 +614,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             fileToTab.clear(); fileToTab.putAll(newFileToTab)
             tabTextAreas.clear(); tabTextAreas.putAll(newTabTextAreas)
             originalTextByIndex.clear(); originalTextByIndex.putAll(newOriginal)
+            mainWindow.statusBar.updateNavigation(getCurrentFile())
         }
     }
 

@@ -4,9 +4,12 @@ import editorx.gui.main.MainWindow
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Font
+import java.io.File
 import javax.swing.*
+import editorx.gui.main.navigationbar.NavigationBar
 
 class StatusBar(private val mainWindow: MainWindow) : JPanel() {
+    private val navigationBar = NavigationBar(mainWindow)
     private val statusLabel = JLabel("就绪").apply {
         font = font.deriveFont(Font.PLAIN, 12f)
         foreground = Color.BLACK
@@ -81,9 +84,11 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     private fun setupLeftComponents() {
-        add(statusLabel)
-        add(Box.createHorizontalStrut(8))
-        add(fileInfoLabel)
+//        add(statusLabel)
+//        add(Box.createHorizontalStrut(8))
+//        add(fileInfoLabel)
+//        add(Box.createHorizontalStrut(12))
+        add(navigationBar)
     }
 
     private fun setupRightComponents() {
@@ -106,6 +111,11 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
                     start()
                 }
         }
+    }
+
+
+    fun updateNavigation(currentFile: File?) {
+        navigationBar.update(currentFile)
     }
 
     fun setFileInfo(fileName: String, fileSize: String? = null, encoding: String? = null) {
