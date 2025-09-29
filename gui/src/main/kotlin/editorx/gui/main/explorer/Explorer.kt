@@ -6,10 +6,7 @@ import editorx.gui.main.MainWindow
 import editorx.util.IconLoader
 import editorx.util.IconUtil
 import editorx.vfs.LocalVirtualFile
-import java.awt.BorderLayout
-import java.awt.Cursor
-import java.awt.Desktop
-import java.awt.Insets
+import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
 import java.awt.event.KeyAdapter
@@ -88,9 +85,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         /*
         Left
         */
-        toolBar.add(Box.createHorizontalStrut(12))
         toolBar.add(JLabel("Explorer").apply {
-            font = font.deriveFont(font.size2D + 1.5f)
+            font = font.deriveFont(Font.PLAIN, 12f)
             border = EmptyBorder(0, 8, 0, 8)
         })
 
