@@ -35,7 +35,7 @@ interface PluginContext {
     fun registerFileType(fileType: FileType)
 
     /**
-     * 注册语法高亮工厂
+     * 注册语法高亮
      */
     fun registerSyntaxHighlighter(language: Language, syntaxHighlighter: SyntaxHighlighter)
 }
