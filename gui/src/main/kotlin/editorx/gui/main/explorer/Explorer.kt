@@ -3,6 +3,7 @@ package editorx.gui.main.explorer
 import editorx.filetype.FileTypeRegistry
 import editorx.gui.IconRef
 import editorx.gui.main.MainWindow
+import editorx.gui.toolchain.ApkTool
 import editorx.util.IconLoader
 import editorx.util.IconUtil
 import java.awt.*
@@ -778,21 +779,10 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun decompileApk(apkFile: File) {
         try {
-            // 检查是否被取消
-            if (isTaskCancelled || Thread.currentThread().isInterrupted) {
-                return
-            }
+            if (isTaskCancelled || Thread.currentThread().isInterrupted) return
 
-            // 检查apktool是否可用
-            val apktoolPath = findApktool()
-            if (apktoolPath == null) {
-                throw Exception("未找到apktool，请确保apktool已安装并在PATH中")
-            }
-
-            // 创建输出目录
             val outputDir = File(apkFile.parentFile, apkFile.nameWithoutExtension + "_decompiled")
             if (outputDir.exists()) {
-                // 如果目录已存在，询问是否覆盖
                 val overwrite =
                     JOptionPane.showConfirmDialog(
                         this,
@@ -800,99 +790,37 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                         "确认覆盖",
                         JOptionPane.YES_NO_OPTION
                     ) == JOptionPane.YES_OPTION
-
                 if (!overwrite) return
             }
 
-            // 再次检查是否被取消
-            if (isTaskCancelled || Thread.currentThread().isInterrupted) {
-                return
-            }
+            if (isTaskCancelled || Thread.currentThread().isInterrupted) return
 
             showProgress(message = "正在反编译APK...", indeterminate = true, cancellable = true)
-
-            // 删除现有目录
             if (outputDir.exists()) deleteRecursively(outputDir)
 
-            // 执行apktool反编译
-            val processBuilder =
-                ProcessBuilder(
-                    apktoolPath,
-                    "d",
-                    apkFile.absolutePath,
-                    "-o",
-                    outputDir.absolutePath,
-                    "-f" // 强制覆盖
-                )
-
-            val process = processBuilder.start()
-
-            // 在等待过程中检查取消状态
-            while (process.isAlive) {
-                if (isTaskCancelled || Thread.currentThread().isInterrupted) {
-                    process.destroy()
-                    return
+            val result =
+                ApkTool.decompile(apkFile, outputDir, force = true) {
+                    isTaskCancelled || Thread.currentThread().isInterrupted
                 }
-                Thread.sleep(100) // 短暂等待
-            }
 
-            val exitCode = process.exitValue()
-
-            if (exitCode != 0) {
-                val errorOutput = process.errorStream.bufferedReader().readText()
-                throw Exception("apktool执行失败: $errorOutput")
-            }
-
-            // 反编译成功后，打开输出目录
-            if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
-                SwingUtilities.invokeLater {
-                    mainWindow.guiControl.workspace.openWorkspace(outputDir)
-                    refreshRoot()
-                    mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
-                }
+            when (result.status) {
+                ApkTool.Status.SUCCESS ->
+                    if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
+                        SwingUtilities.invokeLater {
+                            mainWindow.guiControl.workspace.openWorkspace(outputDir)
+                            refreshRoot()
+                            mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
+                        }
+                    }
+                ApkTool.Status.CANCELLED -> return
+                ApkTool.Status.NOT_FOUND -> throw Exception("未找到apktool，请确保apktool已安装并在PATH中")
+                ApkTool.Status.FAILED -> throw Exception("apktool执行失败: ${result.output}")
             }
         } catch (e: Exception) {
             if (!isTaskCancelled) {
                 throw Exception("反编译APK失败: ${e.message}")
             }
         }
-    }
-
-    private fun findApktool(): String? {
-        // 首先检查项目tools目录下的apktool
-        val projectRoot = File(System.getProperty("user.dir"))
-        val localApktool = File(projectRoot, "tools/apktool")
-        if (localApktool.exists() && localApktool.canExecute()) {
-            return localApktool.absolutePath
-        }
-
-        // 然后检查PATH中的apktool
-        try {
-            val process = ProcessBuilder("apktool", "--version").start()
-            val exitCode = process.waitFor()
-            if (exitCode == 0) {
-                return "apktool"
-            }
-        } catch (e: Exception) {
-            // apktool不在PATH中，继续查找
-        }
-
-        // 检查常见安装位置
-        val commonPaths =
-            listOf(
-                "/usr/local/bin/apktool",
-                "/opt/homebrew/bin/apktool",
-                "/usr/bin/apktool",
-                System.getProperty("user.home") + "/.local/bin/apktool"
-            )
-
-        for (path in commonPaths) {
-            if (File(path).exists()) {
-                return path
-            }
-        }
-
-        return null
     }
 
     // Node representing a File with lazy children loading
