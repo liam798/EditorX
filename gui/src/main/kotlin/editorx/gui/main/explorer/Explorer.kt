@@ -385,6 +385,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         currentTask?.interrupt()
         isTaskCancelled = false
 
+        val previousState = captureTreeState()
+
         showProgress(message = "正在刷新文件树...", indeterminate = true)
 
         currentTask = Thread {
@@ -406,9 +408,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     if (!isTaskCancelled) {
                         treeModel.setRoot(newRoot)
                         tree.isEnabled = true
-                        tree.expandPath(TreePath(treeModel.root))
-                        tree.selectionPath = TreePath(treeModel.root)
                         tree.updateUI()
+                        applyTreeState(previousState, newRoot)
                     }
                 }
             } catch (e: InterruptedException) {
@@ -445,9 +446,9 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
         showProgress(message = "正在刷新文件树...", indeterminate = true)
 
+        val previousState = captureTreeState()
+
         currentTask = Thread {
-            val selFile = (tree.lastSelectedPathComponent as? FileNode)?.file
-            val expandedPaths = getExpandedPaths()
             try {
                 val rootDir = mainWindow.guiControl.workspace.getWorkspaceRoot()
                 if (rootDir == null || !rootDir.exists()) {
@@ -466,9 +467,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     if (!isTaskCancelled) {
                         treeModel.setRoot(newRoot)
                         tree.isEnabled = true
-                        tree.expandPath(TreePath(treeModel.root))
-                        tree.selectionPath = TreePath(treeModel.root)
                         tree.updateUI()
+                        applyTreeState(previousState, newRoot)
                     }
                 }
             } catch (e: InterruptedException) {
@@ -484,8 +484,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                 }
             } finally {
                 SwingUtilities.invokeLater { hideProgress() }
-                restoreExpandedPaths(expandedPaths)
-                if (selFile != null) selectFile(selFile)
             }
         }.apply {
             isDaemon = true
@@ -575,6 +573,35 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             if (r != null) return r
         }
         return null
+    }
+
+    private data class TreeState(
+        val expandedPaths: Set<String>,
+        val selectedFilePath: String?
+    )
+
+    private fun captureTreeState(): TreeState? {
+        val root = treeModel.root as? FileNode ?: return null
+        val expanded = getExpandedPaths()
+        val selected = (tree.lastSelectedPathComponent as? FileNode)?.file?.absolutePath
+        return TreeState(expanded, selected)
+    }
+
+    private fun applyTreeState(state: TreeState?, newRoot: FileNode) {
+        if (state == null) {
+            SwingUtilities.invokeLater {
+                val rootPath = TreePath(newRoot.path)
+                tree.expandPath(rootPath)
+                tree.selectionPath = rootPath
+            }
+            return
+        }
+
+        restoreExpandedPaths(state.expandedPaths)
+        state.selectedFilePath?.let { path ->
+            val target = File(path)
+            SwingUtilities.invokeLater { selectFile(target) }
+        }
     }
 
     private fun openFile(file: File) {
