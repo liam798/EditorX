@@ -14,7 +14,7 @@ import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
 
 /**
- * 顶部工具栏左侧的面包屑导航栏，支持点击跳转与右键操作。
+ * 面包屑导航栏
  */
 class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
     private val crumbs = mutableListOf<Crumb>()
