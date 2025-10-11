@@ -1014,27 +1014,28 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
             
             // 添加权限标签 - 只有当存在权限时才显示
-            if (manifestData.permissions.isNotEmpty()) {
-                val permissionsContent = manifestData.permissions.joinToString("\n") { "• $it" }
-                manifestViewTabs!!.addTab("Permission (${manifestData.permissions.size})", createManifestContentArea(permissionsContent))
+            if (manifestData.permissionsXml.isNotEmpty()) {
+                manifestViewTabs!!.addTab("Permission (${manifestData.permissionsXml.size})", createManifestContentArea(manifestData.permissionsXml.joinToString("\n"), true))
             }
             
             // 添加 Activity 标签 - 只有当存在Activity时才显示
-            if (manifestData.activities.isNotEmpty()) {
-                val activitiesContent = manifestData.activities.joinToString("\n\n") { it }
-                manifestViewTabs!!.addTab("Activity (${manifestData.activities.size})", createManifestContentArea(activitiesContent))
+            if (manifestData.activitiesXml.isNotEmpty()) {
+                manifestViewTabs!!.addTab("Activity (${manifestData.activitiesXml.size})", createManifestContentArea(manifestData.activitiesXml.joinToString("\n\n"), true))
             }
             
             // 添加 Service 标签 - 只有当存在Service时才显示
-            if (manifestData.services.isNotEmpty()) {
-                val servicesContent = manifestData.services.joinToString("\n\n") { it }
-                manifestViewTabs!!.addTab("Service (${manifestData.services.size})", createManifestContentArea(servicesContent))
+            if (manifestData.servicesXml.isNotEmpty()) {
+                manifestViewTabs!!.addTab("Service (${manifestData.servicesXml.size})", createManifestContentArea(manifestData.servicesXml.joinToString("\n\n"), true))
+            }
+            
+            // 添加 Receiver 标签 - 只有当存在Receiver时才显示
+            if (manifestData.receiversXml.isNotEmpty()) {
+                manifestViewTabs!!.addTab("Receiver (${manifestData.receiversXml.size})", createManifestContentArea(manifestData.receiversXml.joinToString("\n\n"), true))
             }
             
             // 添加 Provider 标签 - 只有当存在Provider时才显示
-            if (manifestData.providers.isNotEmpty()) {
-                val providersContent = manifestData.providers.joinToString("\n\n") { it }
-                manifestViewTabs!!.addTab("Provider (${manifestData.providers.size})", createManifestContentArea(providersContent))
+            if (manifestData.providersXml.isNotEmpty()) {
+                manifestViewTabs!!.addTab("Provider (${manifestData.providersXml.size})", createManifestContentArea(manifestData.providersXml.joinToString("\n\n"), true))
             }
             
             // 使用 JSplitPane 分割主编辑器和底部视图
@@ -1079,119 +1080,178 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     }
     
     // 创建 AndroidManifest 内容区域
-    private fun createManifestContentArea(content: String): JScrollPane {
-        val textArea = javax.swing.JTextArea(content).apply {
+    private fun createManifestContentArea(content: String, useXmlHighlight: Boolean = true): RTextScrollPane {
+        val textArea = TextArea().apply {
+            text = content
             isEditable = false
             font = Font("Consolas", Font.PLAIN, 13)
-            border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
-            lineWrap = false
-            tabSize = 4
             background = Color.WHITE
+            
+            // 根据参数决定是否应用XML语法高亮
+            if (useXmlHighlight) {
+                syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_XML
+            } else {
+                // 纯文本，不使用语法高亮
+                syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
+            }
         }
-        return JScrollPane(textArea).apply {
+        
+        return RTextScrollPane(textArea).apply {
             border = BorderFactory.createEmptyBorder()
             background = Color.WHITE
             viewport.background = Color.WHITE
+            
+            // 确保文本区域滚动到顶部（1:1位置）
+            javax.swing.SwingUtilities.invokeLater {
+                textArea.caretPosition = 0
+                viewport.viewPosition = java.awt.Point(0, 0)
+            }
         }
     }
     
-    // 解析 AndroidManifest.xml 内容
+    // 解析 AndroidManifest.xml 内容，提取原始XML片段
     private fun parseAndroidManifest(content: String): ManifestData {
-        val permissions = mutableListOf<String>()
-        val activities = mutableListOf<String>()
-        val services = mutableListOf<String>()
-        val providers = mutableListOf<String>()
+        val permissionsXml = mutableListOf<String>()
+        val activitiesXml = mutableListOf<String>()
+        val servicesXml = mutableListOf<String>()
+        val receiversXml = mutableListOf<String>()
+        val providersXml = mutableListOf<String>()
         
         try {
-            // 提取权限
-            val permissionPattern = """<uses-permission\s+android:name="([^"]+)"""".toRegex()
-            permissions.addAll(permissionPattern.findAll(content).map { it.groupValues[1] })
+            // 提取权限 XML
+            val permissionPattern = """<uses-permission[^>]*/>""".toRegex()
+            permissionsXml.addAll(permissionPattern.findAll(content).map { it.value })
             
-            // 提取 Activity
-            val activityPattern = """<activity[^>]*android:name="([^"]+)"[^>]*>""".toRegex()
-            for (match in activityPattern.findAll(content)) {
-                val name = match.groupValues[1]
-                val startPos = match.range.first
-                val endPos = content.indexOf("</activity>", startPos).takeIf { it > 0 } ?: (startPos + 200)
-                val activityBlock = content.substring(startPos, endPos.coerceAtMost(content.length))
-                
-                val info = buildString {
-                    append("Activity: $name\n")
-                    
-                    // 检查是否为 LAUNCHER
-                    if (activityBlock.contains("android.intent.action.MAIN") && 
-                        activityBlock.contains("android.intent.category.LAUNCHER")) {
-                        append("  [LAUNCHER]\n")
-                    }
-                    
-                    // 提取 exported
-                    val exportedMatch = """android:exported="([^"]+)"""".toRegex().find(activityBlock)
-                    if (exportedMatch != null) {
-                        append("  exported: ${exportedMatch.groupValues[1]}\n")
-                    }
-                    
-                    // 提取 intent-filter
-                    if (activityBlock.contains("<intent-filter")) {
-                        append("  含有 intent-filter\n")
-                    }
-                }
-                activities.add(info)
-            }
+            // 提取 Activity XML（完整的activity块，包括子元素）
+            extractComponentXml(content, "activity", activitiesXml)
             
-            // 提取 Service
-            val servicePattern = """<service[^>]*android:name="([^"]+)"[^>]*>""".toRegex()
-            for (match in servicePattern.findAll(content)) {
-                val name = match.groupValues[1]
-                val startPos = match.range.first
-                val endPos = content.indexOf("</service>", startPos).takeIf { it > 0 } ?: (startPos + 200)
-                val serviceBlock = content.substring(startPos, endPos.coerceAtMost(content.length))
-                
-                val info = buildString {
-                    append("Service: $name\n")
-                    val exportedMatch = """android:exported="([^"]+)"""".toRegex().find(serviceBlock)
-                    if (exportedMatch != null) {
-                        append("  exported: ${exportedMatch.groupValues[1]}\n")
-                    }
-                    if (serviceBlock.contains("<intent-filter")) {
-                        append("  含有 intent-filter\n")
-                    }
-                }
-                services.add(info)
-            }
+            // 提取 Service XML（完整的service块，包括子元素）
+            extractComponentXml(content, "service", servicesXml)
             
-            // 提取 Provider
-            val providerPattern = """<provider[^>]*android:name="([^"]+)"[^>]*>""".toRegex()
-            for (match in providerPattern.findAll(content)) {
-                val name = match.groupValues[1]
-                val startPos = match.range.first
-                val endPos = content.indexOf("</provider>", startPos).takeIf { it > 0 } ?: (startPos + 200)
-                val providerBlock = content.substring(startPos, endPos.coerceAtMost(content.length))
-                
-                val info = buildString {
-                    append("Provider: $name\n")
-                    val exportedMatch = """android:exported="([^"]+)"""".toRegex().find(providerBlock)
-                    if (exportedMatch != null) {
-                        append("  exported: ${exportedMatch.groupValues[1]}\n")
-                    }
-                    val authMatch = """android:authorities="([^"]+)"""".toRegex().find(providerBlock)
-                    if (authMatch != null) {
-                        append("  authorities: ${authMatch.groupValues[1]}\n")
-                    }
-                }
-                providers.add(info)
-            }
+            // 提取 Receiver XML（完整的receiver块，包括子元素）
+            extractComponentXml(content, "receiver", receiversXml)
+            
+            // 提取 Provider XML（完整的provider块，包括子元素）
+            extractComponentXml(content, "provider", providersXml)
             
         } catch (e: Exception) {
             e.printStackTrace()
         }
         
-        return ManifestData(permissions, activities, services, providers)
+        return ManifestData(permissionsXml, activitiesXml, servicesXml, receiversXml, providersXml)
+    }
+    
+    // 提取指定组件的XML（统一处理activity、service、provider）
+    private fun extractComponentXml(content: String, componentName: String, resultList: MutableList<String>) {
+        // 首先查找所有自闭合标签
+        val selfClosingPattern = """<$componentName[^>]*/\s*>""".toRegex()
+        val selfClosingMatches = selfClosingPattern.findAll(content).toList()
+        
+        // 然后查找所有开始标签
+        val startPattern = """<$componentName\s+[^>]*>""".toRegex()
+        val startMatches = startPattern.findAll(content).toList()
+        
+        // 处理每个开始标签
+        for (match in startMatches) {
+            val startPos = match.range.first
+            
+            // 检查这是否是自闭合标签（避免重复）
+            val isSelfClosing = selfClosingMatches.any { it.range.first == startPos }
+            if (isSelfClosing) {
+                resultList.add(match.value)
+                continue
+            }
+            
+            // 查找对应的结束标签
+            val endTag = "</$componentName>"
+            var endPos = startPos + match.value.length
+            var depth = 1
+            var searchPos = endPos
+            
+            // 使用嵌套深度计数来处理嵌套标签
+            while (depth > 0 && searchPos < content.length) {
+                val nextStart = content.indexOf("<$componentName", searchPos)
+                val nextEnd = content.indexOf(endTag, searchPos)
+                
+                when {
+                    nextEnd == -1 -> break // 没找到结束标签
+                    nextStart != -1 && nextStart < nextEnd -> {
+                        // 又找到一个开始标签，增加深度
+                        depth++
+                        searchPos = nextStart + componentName.length + 1
+                    }
+                    else -> {
+                        // 找到结束标签
+                        depth--
+                        if (depth == 0) {
+                            endPos = nextEnd + endTag.length
+                        }
+                        searchPos = nextEnd + endTag.length
+                    }
+                }
+            }
+            
+            if (depth == 0) {
+                val componentXml = content.substring(startPos, endPos)
+                resultList.add(formatXml(componentXml))
+            }
+        }
+    }
+    
+    // 格式化XML，重新计算缩进
+    private fun formatXml(xml: String): String {
+        val lines = xml.lines()
+        if (lines.isEmpty()) return xml
+        
+        // 找到所有非空行的最小缩进量（公共前导空格数）
+        val minIndent = lines
+            .filter { it.isNotBlank() }
+            .map { line -> line.takeWhile { it == ' ' }.length }
+            .minOrNull() ?: 0
+        
+        // 移除公共缩进
+        val unindentedLines = lines.map { line ->
+            when {
+                line.isBlank() -> ""
+                line.length >= minIndent -> line.substring(minIndent)
+                else -> line.trimStart()
+            }
+        }
+        
+        // 重新计算缩进：根标签从第0列开始，子元素每级缩进4个空格
+        val result = mutableListOf<String>()
+        var indentLevel = 0
+        
+        for (line in unindentedLines) {
+            if (line.isBlank()) {
+                result.add("")
+                continue
+            }
+            
+            val trimmedLine = line.trim()
+            
+            // 如果是结束标签，先减少缩进级别再添加
+            if (trimmedLine.startsWith("</")) {
+                indentLevel = maxOf(0, indentLevel - 1)
+            }
+            
+            // 添加当前行
+            result.add("    ".repeat(indentLevel) + trimmedLine)
+            
+            // 如果是开始标签且不是自闭合标签，增加缩进级别
+            if (trimmedLine.startsWith("<") && !trimmedLine.startsWith("</") && !trimmedLine.endsWith("/>")) {
+                indentLevel++
+            }
+        }
+        
+        return result.joinToString("\n")
     }
     
     private data class ManifestData(
-        val permissions: List<String>,
-        val activities: List<String>,
-        val services: List<String>,
-        val providers: List<String>
+        val permissionsXml: List<String>,
+        val activitiesXml: List<String>,
+        val servicesXml: List<String>,
+        val receiversXml: List<String>,
+        val providersXml: List<String>
     )
 }
