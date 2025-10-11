@@ -747,34 +747,28 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         // 在后台线程中处理APK反编译
         currentTask = Thread {
             try {
-                // 检查是否被取消
-                if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
+                if (!Thread.currentThread().isInterrupted) {
+                    setWait(true)
                     decompileApk(apkFile)
-                }
-
-                // 检查是否被取消
-                if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
+                    setWait(false)
                     SwingUtilities.invokeLater {
                         hideProgress()
                         refreshRoot()
                     }
                 }
             } catch (e: Exception) {
-                if (!isTaskCancelled) {
-                    SwingUtilities.invokeLater {
-                        hideProgress()
-                        JOptionPane.showMessageDialog(
-                            this,
-                            "APK反编译失败: ${e.message}",
-                            "错误",
-                            JOptionPane.ERROR_MESSAGE
-                        )
-                    }
+                SwingUtilities.invokeLater {
+                    hideProgress()
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "APK反编译失败: ${e.message}",
+                        "错误",
+                        JOptionPane.ERROR_MESSAGE
+                    )
                 }
             }
         }
         currentTask?.start()
-
     }
 
     private fun decompileApk(apkFile: File) {
@@ -813,6 +807,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
                         }
                     }
+
                 ApkTool.Status.CANCELLED -> return
                 ApkTool.Status.NOT_FOUND -> throw Exception("未找到apktool，请确保apktool已安装并在PATH中")
                 ApkTool.Status.FAILED -> throw Exception("apktool执行失败: ${result.output}")
