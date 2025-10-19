@@ -15,8 +15,8 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
     private fun setupMenus() {
         add(createFileMenu())
         add(createEditMenu())
-        add(createPluginMenu())
-        add(createHelpMenu())
+//        add(createPluginMenu())
+//        add(createHelpMenu())
     }
 
     private fun createFileMenu(): JMenu {
