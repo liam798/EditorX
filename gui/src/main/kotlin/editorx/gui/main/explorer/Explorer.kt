@@ -93,7 +93,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         /*
         Left
         */
-        toolBar.add(JLabel("Explorer").apply {
+        toolBar.add(JLabel("资源管理器").apply {
             font = font.deriveFont(Font.PLAIN, 12f)
             border = EmptyBorder(0, 8, 0, 8)
         })
@@ -142,7 +142,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     private fun initFileTree() {
-        tree.isRootVisible = false
+        tree.isRootVisible = true
         tree.showsRootHandles = true
         // 单击只选中；双击才展开/收起。点击左侧的展开图标仍然是单击生效（JTree 默认行为）
         tree.toggleClickCount = 2
