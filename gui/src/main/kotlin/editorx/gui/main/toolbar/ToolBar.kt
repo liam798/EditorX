@@ -87,7 +87,9 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                 compileWorkspaceApk()
             })
             
-            add(Box.createHorizontalStrut(8))
+            add(Box.createHorizontalStrut(12))
+            addSeparator()
+            add(Box.createHorizontalStrut(12))
             
             toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") {
                 toggleSideBar()
