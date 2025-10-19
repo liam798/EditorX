@@ -802,7 +802,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
                         SwingUtilities.invokeLater {
                             mainWindow.guiControl.workspace.openWorkspace(outputDir)
-                            mainWindow.toolBar.updateNavigation(null)
+                            mainWindow.statusBar.updateNavigation(null)
                             refreshRoot()
                             mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
                         }
@@ -1018,7 +1018,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             val dir = files.firstOrNull { it.isDirectory }
                             if (dir != null) {
                                 mainWindow.guiControl.workspace.openWorkspace(dir)
-                                mainWindow.toolBar.updateNavigation(null)
+                                mainWindow.statusBar.updateNavigation(null)
                                 refreshRoot()
                                 mainWindow.statusBar.setMessage("已打开文件夹: ${dir.name}")
                                 dtde.dropComplete(true)
