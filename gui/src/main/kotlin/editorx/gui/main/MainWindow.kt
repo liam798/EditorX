@@ -3,15 +3,15 @@ package editorx.gui.main
 import editorx.gui.CachedViewProvider
 import editorx.gui.GuiEnvironment
 import editorx.gui.core.Constants
-import editorx.widget.NoLineSplitPaneUI
 import editorx.gui.main.activitybar.ActivityBar
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
+import editorx.gui.main.menubar.MenuBar
 import editorx.gui.main.sidebar.SideBar
 import editorx.gui.main.statusbar.StatusBar
-import editorx.gui.main.menubar.MenuBar
 import editorx.gui.main.toolbar.ToolBar
 import editorx.plugin.PluginManager
+import editorx.widget.NoLineSplitPaneUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
@@ -53,6 +53,21 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
         size = Dimension(1400, 900)
         setLocationRelativeTo(null)
         minimumSize = Dimension(800, 600)
+
+        if (isMacOS()) {
+            // 启用 macOS 外观
+            System.setProperty("apple.laf.useScreenMenuBar", "true")
+            System.setProperty("com.apple.mrj.application.apple.menu.about.name", "EditorX")
+
+            // 保留原生窗口装饰，但启用全窗口内容模式
+            rootPane.putClientProperty("apple.awt.fullWindowContent", true)
+            rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
+            rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
+        }
+    }
+
+    private fun isMacOS(): Boolean {
+        return System.getProperty("os.name").lowercase().contains("mac")
     }
 
     private fun setupLayout() {
@@ -60,10 +75,9 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
         layout = BorderLayout()
         // 正确安装菜单栏，避免某些 LAF 下作为普通组件加入导致不显示
         jMenuBar = titleBar
-        // 顶部工具栏（菜单栏之下）
+
         add(toolBar, BorderLayout.NORTH)
         add(activityBar, BorderLayout.WEST)
-        // 暂时直接使用水平分割面板，不包含Panel
         add(horizontalSplit, BorderLayout.CENTER)
         add(statusBar, BorderLayout.SOUTH)
     }
