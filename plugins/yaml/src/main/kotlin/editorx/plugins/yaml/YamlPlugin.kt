@@ -1,9 +1,9 @@
 package editorx.plugins.yaml
 
 import YamlFileType
-import editorx.plugin.Plugin
-import editorx.plugin.PluginContext
-import editorx.plugin.PluginInfo
+import editorx.core.plugin.Plugin
+import editorx.core.plugin.PluginContext
+import editorx.core.plugin.PluginInfo
 
 class YamlPlugin : Plugin {
 
@@ -13,7 +13,7 @@ class YamlPlugin : Plugin {
         version = "0.0.1",
     )
 
-    override fun activate(context: PluginContext) {
-        context.registerFileType(YamlFileType)
+    override fun activate(pluginContext: PluginContext) {
+        pluginContext.gui()?.registerFileType(YamlFileType)
     }
 }

@@ -1,11 +1,11 @@
 package editorx.gui.main.activitybar
 
-import editorx.util.IconRef
-import editorx.plugin.ViewProvider
+import editorx.core.util.IconRef
+import editorx.core.gui.GuiViewProvider
 import editorx.gui.core.Constants
 import editorx.gui.core.theme.ThemeManager
 import editorx.gui.main.MainWindow
-import editorx.util.IconLoader
+import editorx.core.util.IconLoader
 import java.awt.*
 import java.awt.geom.RoundRectangle2D
 import javax.swing.*
@@ -17,7 +17,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
 
     private val buttonGroup = ButtonGroup()
     private val buttonMap = mutableMapOf<String, JButton>()
-    private val viewProviderMap = mutableMapOf<String, ViewProvider>()
+    private val guiViewProviderMap = mutableMapOf<String, GuiViewProvider>()
     private var activeId: String? = null
     private var autoSelected: Boolean = false
 
@@ -44,13 +44,13 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         background = backgroundColor
     }
 
-    fun addItem(id: String, tooltip: String, iconPath: String, viewProvider: ViewProvider) {
+    fun addItem(id: String, tooltip: String, iconPath: String, viewProvider: GuiViewProvider) {
         val icon = IconLoader.getIcon(IconRef(iconPath), ICON_SIZE) ?: createDefaultIcon()
         val btn = createActivityButton(icon, tooltip, id)
         val wasEmpty = buttonMap.isEmpty()
         buttonGroup.add(btn)
         buttonMap[id] = btn
-        viewProviderMap[id] = viewProvider
+        guiViewProviderMap[id] = viewProvider
 
         // 按照排序顺序重新排列所有按钮
         reorderButtons()
@@ -150,7 +150,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     private fun handleButtonClick(id: String, userInitiated: Boolean = false) {
-        val viewProvider = viewProviderMap[id] ?: return
+        val viewProvider = guiViewProviderMap[id] ?: return
         // VSCode 模式：ActivityBar 仅控制 SideBar
         val isCurrentlyDisplayed =
             mainWindow.sideBar.getCurrentViewId() == id && mainWindow.sideBar.isActuallyVisible() == true
@@ -169,7 +169,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
      * 供外部在分割条被手动拖动等场景下同步按钮状态。
      */
     fun activateItem(id: String, userInitiated: Boolean = false) {
-        if (!viewProviderMap.containsKey(id)) return
+        if (!guiViewProviderMap.containsKey(id)) return
         if (activeId == id && mainWindow.sideBar.isActuallyVisible()) {
             updateAllButtonStates(); return
         }
@@ -209,7 +209,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
             buttonGroup.remove(button)
             remove(button)
             buttonMap.remove(id)
-            viewProviderMap.remove(id)
+            guiViewProviderMap.remove(id)
             if (activeId == id) activeId = null
             revalidate(); repaint()
         }
@@ -217,7 +217,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
 
     fun clearviewProviders() {
         buttonMap.values.forEach { button -> buttonGroup.remove(button); remove(button) }
-        buttonMap.clear(); viewProviderMap.clear(); activeId = null; revalidate(); repaint()
+        buttonMap.clear(); guiViewProviderMap.clear(); activeId = null; revalidate(); repaint()
     }
 
     /**

@@ -1,6 +1,6 @@
 package editorx.gui.dialog
 
-import editorx.plugin.PluginManager
+import editorx.core.plugin.PluginManager
 import java.awt.BorderLayout
 import javax.swing.*
 
@@ -22,7 +22,8 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
 
     private fun refresh() {
         model.clear()
-        pluginManager.listLoaded().forEach { p -> model.addElement("${p.name} (${p.version}) - ${p.id}") }
+        pluginManager.getAllPluginContexts()
+            .forEach { p -> model.addElement("${p.pluginInfo().name} (${p.pluginInfo().version}) - ${p.pluginInfo().id}") }
     }
 }
 

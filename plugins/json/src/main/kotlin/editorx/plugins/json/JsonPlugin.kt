@@ -1,8 +1,8 @@
 package editorx.plugins.json
 
-import editorx.plugin.Plugin
-import editorx.plugin.PluginContext
-import editorx.plugin.PluginInfo
+import editorx.core.plugin.Plugin
+import editorx.core.plugin.PluginContext
+import editorx.core.plugin.PluginInfo
 
 class JsonPlugin : Plugin {
     override fun getInfo(): PluginInfo = PluginInfo(
@@ -11,8 +11,8 @@ class JsonPlugin : Plugin {
         version = "0.0.1",
     )
 
-    override fun activate(context: PluginContext) {
-        context.registerFileType(JsonFIleType)
+    override fun activate(pluginContext: PluginContext) {
+        pluginContext.gui()?.registerFileType(JsonFIleType)
     }
 }
 

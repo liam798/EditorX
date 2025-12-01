@@ -1,7 +1,7 @@
 package editorx.plugins.yaml
 
-import editorx.util.IconRef
-import editorx.util.IconLoader
+import editorx.core.util.IconRef
+import editorx.core.util.IconLoader
 import javax.swing.Icon
 
 object YamlIcons {

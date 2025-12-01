@@ -1,10 +1,10 @@
 package editorx.gui.main.editor
 
-import editorx.filetype.FileTypeRegistry
+import editorx.core.filetype.FileTypeRegistry
 import editorx.gui.core.theme.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
-import editorx.util.IconUtils
+import editorx.core.util.IconUtils
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.*
 import java.awt.dnd.*

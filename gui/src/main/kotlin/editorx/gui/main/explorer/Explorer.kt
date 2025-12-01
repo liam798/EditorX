@@ -1,11 +1,11 @@
 package editorx.gui.main.explorer
 
-import editorx.filetype.FileTypeRegistry
-import editorx.util.IconRef
+import editorx.core.filetype.FileTypeRegistry
+import editorx.core.util.IconRef
 import editorx.gui.main.MainWindow
-import editorx.toolchain.ApkTool
-import editorx.util.IconLoader
-import editorx.util.IconUtils
+import editorx.core.toolchain.ApkTool
+import editorx.core.util.IconLoader
+import editorx.core.util.IconUtils
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
@@ -16,6 +16,7 @@ import java.awt.event.MouseEvent
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.TimeUnit
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.TreeExpansionEvent
@@ -31,7 +32,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private val searchField = JTextField()
     private val refreshBtn = JButton("刷新")
-    private val showHiddenCheck = JCheckBox("显示隐藏文件")
     private val treeRoot = DefaultMutableTreeNode()
     private val treeModel = DefaultTreeModel(treeRoot)
     private val tree = JTree(treeModel)
@@ -91,20 +91,23 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             }
 
         /*
-        Left
+        Left - 可收缩部分
         */
-        toolBar.add(JLabel("资源管理器").apply {
+        val titleLabel = JLabel("资源管理器").apply {
             font = font.deriveFont(Font.PLAIN, 12f)
             border = EmptyBorder(0, 8, 0, 8)
-        })
+            // 允许标签收缩，但设置最小宽度为0
+            minimumSize = Dimension(0, preferredSize.height)
+        }
+        toolBar.add(titleLabel)
 
         /*
-        Expanded
+        Expanded - 可伸缩空间
          */
         toolBar.add(Box.createHorizontalGlue())
 
         /*
-        Right
+        Right - 固定按钮组
          */
         locateButton = JButton(IconLoader.getIcon(IconRef("icons/locate.svg"), TOP_BAR_ICON_SIZE)).apply {
             toolTipText = "定位打开的文件..."
@@ -113,18 +116,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             addActionListener { locateCurrentFile() }
         }
         toolBar.add(locateButton!!)
-        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addFile.svg"), TOP_BAR_ICON_SIZE)).apply {
-            toolTipText = "新建文件..."
-            isFocusable = false
-            margin = Insets(4, 4, 4, 4)
-            addActionListener { createNewFile() }
-        })
-        toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/addDirectory.svg"), TOP_BAR_ICON_SIZE)).apply {
-            toolTipText = "新建文件夹..."
-            isFocusable = false
-            margin = Insets(4, 4, 4, 4)
-            addActionListener { createNewFolder() }
-        })
         toolBar.add(JButton(IconLoader.getIcon(IconRef("icons/refresh.svg"), TOP_BAR_ICON_SIZE)).apply {
             toolTipText = "刷新文件树..."
             isFocusable = false
@@ -238,6 +229,14 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             JOptionPane.showMessageDialog(this, "请先选择一个目录", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
+        createNewFileInDirectory(targetDir)
+    }
+
+    private fun createNewFileInDirectory(targetDir: File) {
+        if (!targetDir.exists() || !targetDir.isDirectory) {
+            JOptionPane.showMessageDialog(this, "目标目录不存在或不是目录", "错误", JOptionPane.ERROR_MESSAGE)
+            return
+        }
 
         val fileName = JOptionPane.showInputDialog(this, "请输入文件名:", "新建文件", JOptionPane.QUESTION_MESSAGE)
         if (fileName != null && fileName.isNotBlank()) {
@@ -260,6 +259,14 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         val targetDir = getCurrentSelectedDirectory()
         if (targetDir == null) {
             JOptionPane.showMessageDialog(this, "请先选择一个目录", "提示", JOptionPane.INFORMATION_MESSAGE)
+            return
+        }
+        createNewFolderInDirectory(targetDir)
+    }
+
+    private fun createNewFolderInDirectory(targetDir: File) {
+        if (!targetDir.exists() || !targetDir.isDirectory) {
+            JOptionPane.showMessageDialog(this, "目标目录不存在或不是目录", "错误", JOptionPane.ERROR_MESSAGE)
             return
         }
 
@@ -311,7 +318,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             return root.path as Array<Any>
         }
 
-        fileNode?.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+        fileNode?.loadChildrenIfNeeded(true)
 
         for (i in 0 until root.childCount) {
             val child = root.getChildAt(i) as? DefaultMutableTreeNode ?: continue
@@ -323,7 +330,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun installListeners() {
         refreshBtn.addActionListener { refreshRoot() }
-        showHiddenCheck.addChangeListener { refreshRootPreserveSelection() }
         searchField.addActionListener { selectFirstMatch(searchField.text.trim()) }
         searchField.addKeyListener(
             object : KeyAdapter() {
@@ -337,7 +343,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             object : TreeWillExpandListener {
                 override fun treeWillExpand(event: TreeExpansionEvent) {
                     val node = event.path.lastPathComponent as? FileNode ?: return
-                    node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+                    node.loadChildrenIfNeeded(true)
                 }
 
                 override fun treeWillCollapse(event: TreeExpansionEvent) {}
@@ -346,6 +352,32 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
         tree.addMouseListener(
             object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    // 处理右键按下事件，先选中节点再显示菜单
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        val row = tree.getClosestRowForLocation(e.x, e.y)
+                        if (row == -1) {
+                            // 点击在空白区域
+                            showContextMenuForEmptyArea(e.x, e.y)
+                            return
+                        }
+                        val bounds = tree.getRowBounds(row) ?: return
+                        // 仅当点击发生在该行的垂直范围内才认为命中
+                        if (e.y < bounds.y || e.y >= bounds.y + bounds.height) {
+                            // 点击在空白区域
+                            showContextMenuForEmptyArea(e.x, e.y)
+                            return
+                        }
+                        val path = tree.getPathForRow(row) ?: return
+                        val node = path.lastPathComponent as? FileNode ?: return
+
+                        // 先选中该节点
+                        tree.selectionPath = path
+                        // 然后显示菜单
+                        showContextMenu(node, e.x, e.y)
+                    }
+                }
+
                 override fun mouseClicked(e: MouseEvent) {
                     val row = tree.getClosestRowForLocation(e.x, e.y)
                     if (row == -1) return
@@ -358,9 +390,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     if (SwingUtilities.isLeftMouseButton(e) && e.clickCount == 2) {
                         // 文件：双击打开；目录：交给 JTree 自身处理展开/收起，避免重复切换
                         if (node.file.isFile) openFile(node.file)
-                    }
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        showContextMenu(node, e.x, e.y)
                     }
                 }
             }
@@ -398,7 +427,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                 }
 
                 val newRoot = FileNode(rootDir)
-                newRoot.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+                newRoot.loadChildrenIfNeeded(true)
 
                 // 检查是否被取消
                 if (isTaskCancelled) return@Thread
@@ -457,7 +486,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                 }
 
                 val newRoot = FileNode(rootDir)
-                newRoot.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+                newRoot.loadChildrenIfNeeded(true)
 
                 // 检查是否被取消
                 if (isTaskCancelled) return@Thread
@@ -539,7 +568,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             if (tree.isExpanded(TreePath(node.path))) {
                 expandedPaths.add(nodePath)
             }
-            node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+            node.loadChildrenIfNeeded(true)
             for (i in 0 until node.childCount) {
                 val child = node.getChildAt(i) as FileNode
                 collectExpandedPaths(child)
@@ -558,7 +587,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             if (expandedPaths.contains(nodePath)) {
                 tree.expandPath(TreePath(node.path))
             }
-            node.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+            node.loadChildrenIfNeeded(true)
             for (i in 0 until node.childCount) {
                 val child = node.getChildAt(i) as FileNode
                 expandMatchingPaths(child)
@@ -570,7 +599,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun depthFirstSearch(n: FileNode, pred: (FileNode) -> Boolean): FileNode? {
         if (pred(n)) return n
-        n.loadChildrenIfNeeded(showHiddenCheck.isSelected)
+        n.loadChildrenIfNeeded(true)
         for (i in 0 until n.childCount) {
             val c = n.getChildAt(i) as FileNode
             val r = depthFirstSearch(c, pred)
@@ -626,13 +655,47 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
     private fun showContextMenu(node: FileNode, x: Int, y: Int) {
         val menu = JPopupMenu()
-        if (node.file.isFile) {
-            menu.add(JMenuItem("打开").apply { addActionListener { openFile(node.file) } })
+        if (node.file.isDirectory) {
+            menu.add(JMenuItem("新建文件").apply {
+                addActionListener {
+                    // 确定目标目录：如果是文件，使用其父目录；如果是目录，使用该目录
+                    val targetDir = if (node.file.isFile) node.file.parentFile else node.file
+                    createNewFileInDirectory(targetDir)
+                }
+            })
+            menu.add(JMenuItem("新建文件夹").apply {
+                addActionListener {
+                    // 确定目标目录：如果是文件，使用其父目录；如果是目录，使用该目录
+                    val targetDir = if (node.file.isFile) node.file.parentFile else node.file
+                    createNewFolderInDirectory(targetDir)
+                }
+            })
         }
-        menu.add(JMenuItem("在系统中显示").apply { addActionListener { reveal(node) } })
+        menu.add(JMenuItem("在系统文件中显示").apply { addActionListener { reveal(node) } })
         menu.addSeparator()
-        menu.add(JMenuItem("刷新").apply { addActionListener { refreshNode(node) } })
         menu.add(JMenuItem("删除").apply { addActionListener { deleteNode(node) } })
+        menu.show(tree, x, y)
+    }
+
+    /**
+     * 在空白区域显示右键菜单
+     */
+    private fun showContextMenuForEmptyArea(x: Int, y: Int) {
+        val menu = JPopupMenu()
+        // 获取工作区根目录作为目标目录
+        val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
+        if (workspaceRoot != null) {
+            menu.add(JMenuItem("新建文件").apply {
+                addActionListener { createNewFileInDirectory(workspaceRoot) }
+            })
+            menu.add(JMenuItem("新建文件夹").apply {
+                addActionListener { createNewFolderInDirectory(workspaceRoot) }
+            })
+            menu.addSeparator()
+        }
+        menu.add(JMenuItem("刷新").apply {
+            addActionListener { refreshRootPreserveSelection() }
+        })
         menu.show(tree, x, y)
     }
 
@@ -648,7 +711,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     private fun refreshNode(node: FileNode) {
         setWait(true)
         try {
-            node.reload(showHiddenCheck.isSelected)
+            node.reload(true)
             treeModel.nodeStructureChanged(node)
         } finally {
             setWait(false)
@@ -738,7 +801,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         setWait(false)
         mainWindow.statusBar.setMessage("任务已取消")
     }
-    
+
     /**
      * 提示用户是否创建 Git 仓库
      */
@@ -750,12 +813,12 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE
         )
-        
+
         if (response == JOptionPane.YES_OPTION) {
             createGitRepository(outputDir)
         }
     }
-    
+
     /**
      * 创建 Git 仓库
      */
@@ -772,39 +835,58 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                 )
                 return
             }
-            
+
             // 在后台线程中创建 Git 仓库
-            Thread {
+            currentTask = Thread {
                 try {
+                    if (isTaskCancelled || Thread.currentThread().isInterrupted) return@Thread
+
                     setWait(true)
                     showProgress("正在创建 Git 仓库...", indeterminate = true)
-                    
-                    // 执行 git init
-                    val processBuilder = ProcessBuilder("git", "init")
-                    processBuilder.directory(outputDir)
-                    processBuilder.redirectErrorStream(true)
-                    
-                    val process = processBuilder.start()
-                    val output = process.inputStream.bufferedReader().use { it.readText() }
-                    val exitCode = process.waitFor()
-                    
-                    if (exitCode == 0) {
-                        // 创建 .gitignore 文件
-                        createGitIgnoreFile(outputDir)
-                        
-                        // 执行初始提交
-                        performInitialCommit(outputDir)
-                        
+
+                    // 检查 git 是否可用
+                    if (!isGitAvailable()) {
                         SwingUtilities.invokeLater {
                             hideProgress()
                             setWait(false)
                             JOptionPane.showMessageDialog(
                                 this,
-                                "Git 仓库创建成功！\n\n已自动添加 .gitignore 文件并执行初始提交。",
-                                "成功",
-                                JOptionPane.INFORMATION_MESSAGE
+                                "未找到 git 命令，请确保 git 已安装并在 PATH 中",
+                                "错误",
+                                JOptionPane.ERROR_MESSAGE
                             )
-                            mainWindow.statusBar.setMessage("Git 仓库创建完成")
+                        }
+                        return@Thread
+                    }
+
+                    if (isTaskCancelled || Thread.currentThread().isInterrupted) return@Thread
+
+                    // 执行 git init（带超时）
+                    val initResult = runGitCommand(listOf("git", "init"), outputDir, 10000)
+
+                    if (isTaskCancelled || Thread.currentThread().isInterrupted) return@Thread
+
+                    if (initResult.exitCode == 0) {
+                        // 创建 .gitignore 文件
+                        createGitIgnoreFile(outputDir)
+
+                        if (isTaskCancelled || Thread.currentThread().isInterrupted) return@Thread
+
+                        // 执行初始提交
+                        performInitialCommit(outputDir)
+
+                        SwingUtilities.invokeLater {
+                            if (!isTaskCancelled) {
+                                hideProgress()
+                                setWait(false)
+                                JOptionPane.showMessageDialog(
+                                    this,
+                                    "Git 仓库创建成功！\n\n已自动添加 .gitignore 文件并执行初始提交。",
+                                    "成功",
+                                    JOptionPane.INFORMATION_MESSAGE
+                                )
+                                mainWindow.statusBar.setMessage("Git 仓库创建完成")
+                            }
                         }
                     } else {
                         SwingUtilities.invokeLater {
@@ -812,12 +894,14 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             setWait(false)
                             JOptionPane.showMessageDialog(
                                 this,
-                                "Git 仓库创建失败：\n$output",
+                                "Git 仓库创建失败：\n${initResult.output}",
                                 "错误",
                                 JOptionPane.ERROR_MESSAGE
                             )
                         }
                     }
+                } catch (e: InterruptedException) {
+                    // 任务被取消，正常退出
                 } catch (e: Exception) {
                     SwingUtilities.invokeLater {
                         hideProgress()
@@ -829,6 +913,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             JOptionPane.ERROR_MESSAGE
                         )
                     }
+                } finally {
+                    SwingUtilities.invokeLater { hideProgress() }
                 }
             }.apply {
                 isDaemon = true
@@ -843,7 +929,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             )
         }
     }
-    
+
     /**
      * 创建 .gitignore 文件
      */
@@ -885,37 +971,114 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             tmp/
             cache/
         """.trimIndent()
-        
+
         val gitIgnoreFile = File(outputDir, ".gitignore")
         gitIgnoreFile.writeText(gitIgnoreContent)
     }
-    
+
     /**
      * 执行初始提交
      */
     private fun performInitialCommit(outputDir: File) {
         try {
+            if (isTaskCancelled || Thread.currentThread().isInterrupted) return
+
             // 添加所有文件
-            val addProcess = ProcessBuilder("git", "add", ".")
-            addProcess.directory(outputDir)
-            addProcess.redirectErrorStream(true)
-            addProcess.start().waitFor()
-            
+            val addResult = runGitCommand(listOf("git", "add", "."), outputDir, 30000)
+            if (addResult.exitCode != 0) {
+                return // 添加失败，跳过提交
+            }
+
+            if (isTaskCancelled || Thread.currentThread().isInterrupted) return
+
             // 检查是否有文件需要提交
-            val statusProcess = ProcessBuilder("git", "status", "--porcelain")
-            statusProcess.directory(outputDir)
-            statusProcess.redirectErrorStream(true)
-            val statusOutput = statusProcess.start().inputStream.bufferedReader().use { it.readText() }
-            
-            if (statusOutput.isNotBlank()) {
+            val statusResult = runGitCommand(listOf("git", "status", "--porcelain"), outputDir, 5000)
+
+            if (statusResult.output.isNotBlank()) {
+                if (isTaskCancelled || Thread.currentThread().isInterrupted) return
+
                 // 执行初始提交
-                val commitProcess = ProcessBuilder("git", "commit", "-m", "Initial commit: APK decompiled")
-                commitProcess.directory(outputDir)
-                commitProcess.redirectErrorStream(true)
-                commitProcess.start().waitFor()
+                runGitCommand(
+                    listOf("git", "commit", "-m", "Initial commit: APK decompiled"),
+                    outputDir,
+                    30000
+                )
             }
         } catch (e: Exception) {
             // 忽略提交错误，Git 仓库已经创建成功
+        }
+    }
+
+    /**
+     * 检查 git 是否可用
+     */
+    private fun isGitAvailable(): Boolean {
+        return try {
+            val process = ProcessBuilder("git", "--version").start()
+            val exitCode = process.waitFor(3000, java.util.concurrent.TimeUnit.MILLISECONDS)
+            exitCode && process.exitValue() == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 运行 git 命令（带超时和取消支持）
+     */
+    private data class GitCommandResult(val exitCode: Int, val output: String)
+
+    private fun runGitCommand(command: List<String>, workingDir: File, timeoutMs: Long): GitCommandResult {
+        val pb = ProcessBuilder(command)
+        pb.directory(workingDir)
+        pb.redirectErrorStream(true)
+
+        val process = try {
+            pb.start()
+        } catch (e: Exception) {
+            return GitCommandResult(-1, "无法启动进程: ${e.message}")
+        }
+
+        // 在后台线程读取输出，避免阻塞
+        val outputBuffer = StringBuilder()
+        val outputReader = Thread {
+            try {
+                process.inputStream.bufferedReader().use { reader ->
+                    reader.lineSequence().forEach { line ->
+                        if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
+                            outputBuffer.append(line).append("\n")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // 忽略读取错误
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+
+        // 等待进程完成（带超时）
+        val startTime = System.currentTimeMillis()
+        while (true) {
+            if (isTaskCancelled || Thread.currentThread().isInterrupted) {
+                process.destroy()
+                if (process.isAlive) process.destroyForcibly()
+                return GitCommandResult(-1, "操作已取消")
+            }
+
+            try {
+                val exitCode = process.exitValue()
+                outputReader.join(1000) // 等待输出读取完成
+                return GitCommandResult(exitCode, outputBuffer.toString().trim())
+            } catch (_: IllegalThreadStateException) {
+                // 进程仍在运行
+                if (System.currentTimeMillis() - startTime > timeoutMs) {
+                    process.destroy()
+                    if (process.isAlive) process.destroyForcibly()
+                    return GitCommandResult(-1, "命令执行超时（超过 ${timeoutMs}ms）")
+                }
+                Thread.sleep(100)
+            }
         }
     }
 
@@ -985,7 +1148,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             mainWindow.statusBar.updateNavigation(null)
                             refreshRoot()
                             mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
-                            
+
                             // 提示是否创建 Git 仓库
                             promptCreateGitRepository(outputDir)
                         }
@@ -1046,7 +1209,14 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         private fun File.visibleChildren(showHidden: Boolean): List<File> =
             listFiles()
                 ?.asSequence()
-                ?.filter { showHidden || !it.name.startsWith(".") }
+                ?.filter { file ->
+                    if (showHidden) {
+                        true // 显示所有文件
+                    } else {
+                        // 隐藏文件：以 . 开头（Unix/Linux/macOS）或 isHidden 为 true（Windows）
+                        !file.name.startsWith(".") && !file.isHidden
+                    }
+                }
                 ?.sortedWith(
                     compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() }
                 )

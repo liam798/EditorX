@@ -1,6 +1,6 @@
 package editorx.gui.main
 
-import editorx.plugin.CachedViewProvider
+import editorx.core.gui.CachedGuiViewProvider
 import editorx.gui.GuiEnvironment
 import editorx.gui.core.Constants
 import editorx.gui.main.activitybar.ActivityBar
@@ -10,7 +10,7 @@ import editorx.gui.main.menubar.MenuBar
 import editorx.gui.main.sidebar.SideBar
 import editorx.gui.main.statusbar.StatusBar
 import editorx.gui.main.toolbar.ToolBar
-import editorx.plugin.PluginManager
+import editorx.core.plugin.PluginManager
 import editorx.gui.util.NoLineSplitPaneUI
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -115,7 +115,7 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
             "explorer",
             "Explorer",
             "icons/folder.svg",
-            object : CachedViewProvider() {
+            object : CachedGuiViewProvider() {
                 override fun createView() = Explorer(this@MainWindow)
             }
         )

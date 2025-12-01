@@ -1,5 +1,5 @@
 package editorx.plugins.smali
 
-import editorx.lang.Language
+import editorx.core.lang.Language
 
 object SmaliLanguage : Language("smali")

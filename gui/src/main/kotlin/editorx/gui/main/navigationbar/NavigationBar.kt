@@ -2,9 +2,9 @@ package editorx.gui.main.navigationbar
 
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
-import editorx.filetype.FileTypeRegistry
+import editorx.core.filetype.FileTypeRegistry
 import editorx.gui.main.explorer.ExplorerIcons
-import editorx.util.IconUtils
+import editorx.core.util.IconUtils
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Font

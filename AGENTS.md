@@ -22,15 +22,15 @@
 - 顶级包名统一为：`editorx`
 - 重要命名空间：
   - GUI：`editorx.gui.*`
-  - 插件 API：`editorx.plugin.*`
-  - 工具类：`editorx.util.*`
+  - 插件 API：`editorx.core.plugin.*`
+  - 工具类：`editorx.core.util.*`
 - 应用入口类：`editorx.gui.EditorGuiKt`
 - 源码插件要求包前缀：`editorx`（ServiceLoader 发现后按此前缀过滤，见 `core/src/main/kotlin/editorx/plugin/PluginManager.kt`）
 
 ## 插件系统
 
 - 类型与来源（PF4J 思想的轻量实现）：
-  - 源码插件（SOURCE）：通过 `ServiceLoader<editorx.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤；需在资源文件添加 `META-INF/services/editorx.plugin.Plugin` 指向实现类。
+  - 源码插件（SOURCE）：通过 `ServiceLoader<editorx.core.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤；需在资源文件添加 `META-INF/services/editorx.core.plugin.Plugin` 指向实现类。
   - JAR 插件（JAR）：放入运行目录 `plugins/`；优先以 JAR Manifest 的 `Main-Class` 为主类，缺失时回退扫描实现 `Plugin` 的具体类；每个 JAR 使用独立 `URLClassLoader`。
 - 标识与状态：
   - 插件以 `PluginInfo.id` 为唯一键（全局唯一且稳定），重复 ID 会被拒绝加载。
@@ -39,7 +39,7 @@
 - 卸载：
   - 使用 `PluginManager.unloadPlugin(pluginId: String)`（以 ID 卸载）。
 - 插件上下文与交互：
-  - 接口：`editorx.plugin.PluginContext`
+  - 接口：`editorx.core.plugin.PluginContext`
   - 视图契约：`editorx.gui.ViewProvider` / `editorx.gui.CachedViewProvider`（ActivityBar 仅控制 SideBar）
   - GUI 侧实现：`editorx.gui.plugin.GuiPluginContext`
 

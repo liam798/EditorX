@@ -1,6 +1,6 @@
 package editorx.gui.main.editor
 
-import editorx.filetype.SyntaxHighlighterRegistry
+import editorx.core.filetype.SyntaxHighlighterRegistry
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants
 import java.awt.Font

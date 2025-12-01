@@ -1,6 +1,6 @@
 package editorx.plugins.smali
 
-import editorx.filetype.LanguageFileType
+import editorx.core.filetype.LanguageFileType
 import javax.swing.Icon
 
 object SmaliFileType : LanguageFileType(SmaliLanguage) {

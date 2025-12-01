@@ -1,6 +1,6 @@
 package editorx.plugins.smali
 
-import editorx.filetype.SyntaxHighlighter
+import editorx.core.filetype.SyntaxHighlighter
 
 object SmaliHighlighter : SyntaxHighlighter {
     override val syntaxStyleKey: String = "text/smali"

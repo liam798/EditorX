@@ -8,7 +8,7 @@ EditorX 是一个基于 Kotlin/JVM 的可扩展桌面编辑器，采用模块化
 - 构建所有模块：`./gradlew build`
 
 运行后会自动发现并加载：
-- 源码插件（同进程类路径）：使用 `ServiceLoader<editorx.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤。
+- 源码插件（同进程类路径）：使用 `ServiceLoader<editorx.core.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤。
 - JAR 插件（隔离类加载）：读取运行目录 `plugins/` 下的 JAR，优先使用 Manifest 的 `Main-Class` 作为插件主类；若缺失则回退扫描 JAR 内实现了 `Plugin` 的具体类。
 
 ## 主要特性
@@ -62,7 +62,7 @@ EditorX
 ## 插件开发
 
 ### 源码插件（ServiceLoader）
-1) 编写插件类并实现 `editorx.plugin.Plugin`
+1) 编写插件类并实现 `editorx.core.plugin.Plugin`
 ```kotlin
 class MyPlugin : Plugin {
     override fun getInfo(): PluginInfo {
@@ -82,7 +82,7 @@ class MyPlugin : Plugin {
     }
 }
 ```
-2) 在插件模块的资源目录添加服务声明文件：`META-INF/services/editorx.plugin.Plugin`
+2) 在插件模块的资源目录添加服务声明文件：`META-INF/services/editorx.core.plugin.Plugin`
    内容为实现类的完全限定名，例如：
 ```
 editorx.plugins.myplugin.MyPlugin

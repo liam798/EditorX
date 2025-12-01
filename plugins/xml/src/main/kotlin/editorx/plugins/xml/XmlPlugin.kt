@@ -1,9 +1,9 @@
 package editorx.plugins.xml
 
 import XmlFileType
-import editorx.plugin.Plugin
-import editorx.plugin.PluginContext
-import editorx.plugin.PluginInfo
+import editorx.core.plugin.Plugin
+import editorx.core.plugin.PluginContext
+import editorx.core.plugin.PluginInfo
 
 class XmlPlugin : Plugin {
     override fun getInfo(): PluginInfo = PluginInfo(
@@ -12,8 +12,8 @@ class XmlPlugin : Plugin {
         version = "0.0.1",
     )
 
-    override fun activate(context: PluginContext) {
-        context.registerFileType(XmlFileType)
+    override fun activate(pluginContext: PluginContext) {
+        pluginContext.gui()?.registerFileType(XmlFileType)
     }
 }
 

@@ -1,7 +1,7 @@
 package editorx.gui.main.explorer
 
-import editorx.util.IconRef
-import editorx.util.IconLoader
+import editorx.core.util.IconRef
+import editorx.core.util.IconLoader
 import javax.swing.Icon
 
 object ExplorerIcons {

@@ -1,3 +1,3 @@
-import editorx.lang.Language
+import editorx.core.lang.Language
 
 object XmlLanguage : Language("xml")
