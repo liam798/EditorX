@@ -32,13 +32,8 @@ class PluginLoaderImpl : PluginLoader {
 
     private fun loadInstalledPlugins(map: MutableMap<Class<out Plugin>, Plugin>) {
         val pluginDir = Path.of("plugins")
-        if (!pluginDir.toFile().exists()) {
-            pluginDir.toFile().mkdirs()
-            logger.info("插件目录不存在，已创建: ${pluginDir.toFile().absolutePath}")
-        } else {
-            pluginDir.toFile().listFiles()?.forEach { jar ->
-                loadFromJar(map, jar.toPath())
-            }
+        pluginDir.toFile().listFiles()?.forEach { jar ->
+            loadFromJar(map, jar.toPath())
         }
     }
 
