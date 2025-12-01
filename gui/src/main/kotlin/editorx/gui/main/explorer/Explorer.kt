@@ -671,7 +671,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                 }
             })
         }
-        menu.add(JMenuItem("在系统文件中显示").apply { addActionListener { reveal(node) } })
+        menu.add(JMenuItem("在系统中显示").apply { addActionListener { reveal(node) } })
         menu.addSeparator()
         menu.add(JMenuItem("删除").apply { addActionListener { deleteNode(node) } })
         menu.show(tree, x, y)
