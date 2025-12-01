@@ -1,7 +1,7 @@
 package editorx.filetype
 
 import editorx.lang.Language
-import editorx.util.FileUtil
+import editorx.util.FileUtils
 
 object FileTypeRegistry {
     private val myExtensionsMap: HashMap<String, FileType> = hashMapOf()
@@ -23,7 +23,7 @@ object FileTypeRegistry {
     }
 
     fun getFileTypeByFileName(fileName: String): FileType? {
-        return getFileTypeByExtension(FileUtil.getExtension(fileName));
+        return getFileTypeByExtension(FileUtils.getExtension(fileName));
     }
 
     fun getFileTypeByExtension(extension: String): FileType? {

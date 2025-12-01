@@ -4,7 +4,7 @@ import editorx.filetype.FileTypeRegistry
 import editorx.gui.core.theme.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
-import editorx.util.IconUtil
+import editorx.util.IconUtils
 import org.fife.ui.rtextarea.RTextScrollPane
 import java.awt.*
 import java.awt.dnd.*
@@ -671,13 +671,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     }
 
     private fun resolveTabIcon(file: File?): Icon? {
-        val target = file ?: return ExplorerIcons.AnyType?.let { IconUtil.resizeIcon(it, 16, 16) }
+        val target = file ?: return ExplorerIcons.AnyType?.let { IconUtils.resizeIcon(it, 16, 16) }
         if (target.isDirectory) {
-            return ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
+            return ExplorerIcons.Folder?.let { IconUtils.resizeIcon(it, 16, 16) }
         }
         val fileTypeIcon =
-            FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()?.let { IconUtil.resizeIcon(it, 16, 16) }
-        return fileTypeIcon ?: ExplorerIcons.AnyType?.let { IconUtil.resizeIcon(it, 16, 16) }
+            FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()?.let { IconUtils.resizeIcon(it, 16, 16) }
+        return fileTypeIcon ?: ExplorerIcons.AnyType?.let { IconUtils.resizeIcon(it, 16, 16) }
     }
 
     private fun updateTabTitle(index: Int) {

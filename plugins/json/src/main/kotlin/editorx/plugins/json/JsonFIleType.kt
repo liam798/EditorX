@@ -1,7 +1,6 @@
 package editorx.plugins.json
 
 import editorx.filetype.LanguageFileType
-import editorx.gui.IconRef
 import javax.swing.Icon
 
 object JsonFIleType : LanguageFileType(JsonLanguage) {

@@ -1,6 +1,6 @@
 package editorx.plugins.smali
 
-import editorx.gui.IconRef
+import editorx.util.IconRef
 import editorx.util.IconLoader
 import javax.swing.Icon
 

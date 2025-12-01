@@ -1,4 +1,4 @@
-package editorx.gui.toolchain
+package editorx.toolchain
 
 import java.io.File
 

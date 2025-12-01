@@ -1,7 +1,7 @@
 package editorx.gui.plugin
 
 import editorx.filetype.*
-import editorx.gui.ViewProvider
+import editorx.plugin.ViewProvider
 import editorx.gui.main.MainWindow
 import editorx.lang.Language
 import editorx.plugin.LoadedPlugin

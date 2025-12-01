@@ -1,11 +1,11 @@
 package editorx.gui.main.explorer
 
 import editorx.filetype.FileTypeRegistry
-import editorx.gui.IconRef
+import editorx.util.IconRef
 import editorx.gui.main.MainWindow
-import editorx.gui.toolchain.ApkTool
+import editorx.toolchain.ApkTool
 import editorx.util.IconLoader
-import editorx.util.IconUtil
+import editorx.util.IconUtils
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
@@ -738,6 +738,186 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         setWait(false)
         mainWindow.statusBar.setMessage("任务已取消")
     }
+    
+    /**
+     * 提示用户是否创建 Git 仓库
+     */
+    private fun promptCreateGitRepository(outputDir: File) {
+        val response = JOptionPane.showConfirmDialog(
+            this,
+            "APK 反编译完成！\n\n是否要为反编译的项目创建 Git 仓库？\n这将帮助您跟踪代码修改历史。",
+            "创建 Git 仓库",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        )
+        
+        if (response == JOptionPane.YES_OPTION) {
+            createGitRepository(outputDir)
+        }
+    }
+    
+    /**
+     * 创建 Git 仓库
+     */
+    private fun createGitRepository(outputDir: File) {
+        try {
+            // 检查是否已经存在 Git 仓库
+            val gitDir = File(outputDir, ".git")
+            if (gitDir.exists()) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "该目录已经存在 Git 仓库",
+                    "提示",
+                    JOptionPane.INFORMATION_MESSAGE
+                )
+                return
+            }
+            
+            // 在后台线程中创建 Git 仓库
+            Thread {
+                try {
+                    setWait(true)
+                    showProgress("正在创建 Git 仓库...", indeterminate = true)
+                    
+                    // 执行 git init
+                    val processBuilder = ProcessBuilder("git", "init")
+                    processBuilder.directory(outputDir)
+                    processBuilder.redirectErrorStream(true)
+                    
+                    val process = processBuilder.start()
+                    val output = process.inputStream.bufferedReader().use { it.readText() }
+                    val exitCode = process.waitFor()
+                    
+                    if (exitCode == 0) {
+                        // 创建 .gitignore 文件
+                        createGitIgnoreFile(outputDir)
+                        
+                        // 执行初始提交
+                        performInitialCommit(outputDir)
+                        
+                        SwingUtilities.invokeLater {
+                            hideProgress()
+                            setWait(false)
+                            JOptionPane.showMessageDialog(
+                                this,
+                                "Git 仓库创建成功！\n\n已自动添加 .gitignore 文件并执行初始提交。",
+                                "成功",
+                                JOptionPane.INFORMATION_MESSAGE
+                            )
+                            mainWindow.statusBar.setMessage("Git 仓库创建完成")
+                        }
+                    } else {
+                        SwingUtilities.invokeLater {
+                            hideProgress()
+                            setWait(false)
+                            JOptionPane.showMessageDialog(
+                                this,
+                                "Git 仓库创建失败：\n$output",
+                                "错误",
+                                JOptionPane.ERROR_MESSAGE
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    SwingUtilities.invokeLater {
+                        hideProgress()
+                        setWait(false)
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "创建 Git 仓库时出错：${e.message}",
+                            "错误",
+                            JOptionPane.ERROR_MESSAGE
+                        )
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                start()
+            }
+        } catch (e: Exception) {
+            JOptionPane.showMessageDialog(
+                this,
+                "无法创建 Git 仓库：${e.message}",
+                "错误",
+                JOptionPane.ERROR_MESSAGE
+            )
+        }
+    }
+    
+    /**
+     * 创建 .gitignore 文件
+     */
+    private fun createGitIgnoreFile(outputDir: File) {
+        val gitIgnoreContent = """
+            # APK 反编译相关文件
+            *.apk
+            *.dex
+            *.odex
+            *.vdex
+            *.art
+            
+            # 构建输出
+            build/
+            dist/
+            out/
+            bin/
+            gen/
+            
+            # IDE 文件
+            .idea/
+            .vscode/
+            *.iml
+            *.ipr
+            *.iws
+            
+            # 系统文件
+            .DS_Store
+            Thumbs.db
+            *.tmp
+            *.temp
+            
+            # 日志文件
+            *.log
+            logs/
+            
+            # 临时文件
+            temp/
+            tmp/
+            cache/
+        """.trimIndent()
+        
+        val gitIgnoreFile = File(outputDir, ".gitignore")
+        gitIgnoreFile.writeText(gitIgnoreContent)
+    }
+    
+    /**
+     * 执行初始提交
+     */
+    private fun performInitialCommit(outputDir: File) {
+        try {
+            // 添加所有文件
+            val addProcess = ProcessBuilder("git", "add", ".")
+            addProcess.directory(outputDir)
+            addProcess.redirectErrorStream(true)
+            addProcess.start().waitFor()
+            
+            // 检查是否有文件需要提交
+            val statusProcess = ProcessBuilder("git", "status", "--porcelain")
+            statusProcess.directory(outputDir)
+            statusProcess.redirectErrorStream(true)
+            val statusOutput = statusProcess.start().inputStream.bufferedReader().use { it.readText() }
+            
+            if (statusOutput.isNotBlank()) {
+                // 执行初始提交
+                val commitProcess = ProcessBuilder("git", "commit", "-m", "Initial commit: APK decompiled")
+                commitProcess.directory(outputDir)
+                commitProcess.redirectErrorStream(true)
+                commitProcess.start().waitFor()
+            }
+        } catch (e: Exception) {
+            // 忽略提交错误，Git 仓库已经创建成功
+        }
+    }
 
     private fun handleApkFile(apkFile: File) {
 
@@ -805,6 +985,9 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             mainWindow.statusBar.updateNavigation(null)
                             refreshRoot()
                             mainWindow.statusBar.setMessage("APK反编译完成: ${outputDir.name}")
+                            
+                            // 提示是否创建 Git 仓库
+                            promptCreateGitRepository(outputDir)
                         }
                     }
 
@@ -929,7 +1112,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             if (file.isDirectory) {
                 return fileIconCache.getOrPut("folder") {
                     val base: Icon = ExplorerIcons.Folder ?: createDefaultIcon()
-                    IconUtil.resizeIcon(base, 16, 16)
+                    IconUtils.resizeIcon(base, 16, 16)
                 }
             }
 
@@ -945,7 +1128,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
             return fileIconCache.getOrPut(key) {
                 val base: Icon = ExplorerIcons.AnyType ?: createDefaultIcon()
-                IconUtil.resizeIcon(base, 16, 16)
+                IconUtils.resizeIcon(base, 16, 16)
             }
         }
 

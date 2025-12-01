@@ -1,5 +1,4 @@
 import editorx.filetype.LanguageFileType
-import editorx.gui.IconRef
 import editorx.plugins.yaml.YamlIcons
 import javax.swing.Icon
 

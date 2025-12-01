@@ -1,4 +1,4 @@
-package editorx.gui
+package editorx.util
 
 /**
  * A lightweight, GUI-agnostic icon reference.

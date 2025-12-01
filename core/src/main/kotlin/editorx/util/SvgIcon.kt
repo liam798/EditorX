@@ -1,4 +1,4 @@
-package editorx.widget
+package editorx.util
 
 import java.awt.*
 import java.awt.geom.Path2D

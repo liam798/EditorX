@@ -1,6 +1,5 @@
 package editorx.plugin
 
-import editorx.gui.ViewProvider
 import editorx.filetype.FileType
 import editorx.filetype.SyntaxHighlighter
 import editorx.settings.SettingsStore

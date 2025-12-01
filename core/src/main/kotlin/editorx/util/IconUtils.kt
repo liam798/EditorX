@@ -6,7 +6,7 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import javax.swing.Icon
 
-object IconUtil {
+object IconUtils {
 
     fun resizeIcon(icon: Icon, width: Int, height: Int): Icon {
         // 若尺寸一致，直接返回原图标，避免不必要的绘制与 hint 处理

@@ -4,7 +4,7 @@ import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
 import editorx.filetype.FileTypeRegistry
 import editorx.gui.main.explorer.ExplorerIcons
-import editorx.util.IconUtil
+import editorx.util.IconUtils
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Font
@@ -134,14 +134,14 @@ class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     private fun resolveIcon(crumb: Crumb): Icon? {
-        val file = crumb.file ?: return ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
+        val file = crumb.file ?: return ExplorerIcons.Folder?.let { IconUtils.resizeIcon(it, 16, 16) }
         return if (file.isDirectory) {
 //            ExplorerIcons.Folder?.let { IconUtil.resizeIcon(it, 16, 16) }
             return null
         } else {
             val fileTypeIcon = FileTypeRegistry.getFileTypeByFileName(file.name)?.getIcon()
-            val resized = fileTypeIcon?.let { IconUtil.resizeIcon(it, 14, 14) }
-            resized ?: ExplorerIcons.AnyType?.let { IconUtil.resizeIcon(it, 14, 14) }
+            val resized = fileTypeIcon?.let { IconUtils.resizeIcon(it, 14, 14) }
+            resized ?: ExplorerIcons.AnyType?.let { IconUtils.resizeIcon(it, 14, 14) }
         }
     }
 

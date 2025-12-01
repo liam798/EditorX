@@ -1,6 +1,6 @@
 package editorx.util
 
-object FileUtil {
+object FileUtils {
 
     fun getExtension(fileName: String): String {
         val index = fileName.lastIndexOf('.')

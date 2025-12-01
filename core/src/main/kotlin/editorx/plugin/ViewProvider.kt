@@ -1,4 +1,4 @@
-package editorx.gui
+package editorx.plugin
 
 import javax.swing.JComponent
 

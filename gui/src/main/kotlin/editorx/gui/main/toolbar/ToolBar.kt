@@ -1,11 +1,11 @@
 package editorx.gui.main.toolbar
 
-import editorx.gui.IconRef
+import editorx.util.IconRef
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
 import editorx.gui.dialog.PluginManagerDialog
 import editorx.gui.main.navigationbar.NavigationBar
-import editorx.gui.toolchain.ApkTool
+import editorx.toolchain.ApkTool
 import editorx.util.IconLoader
 import java.awt.Insets
 import java.awt.Color

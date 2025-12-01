@@ -1,7 +1,7 @@
 package editorx.gui.main.activitybar
 
-import editorx.gui.IconRef
-import editorx.gui.ViewProvider
+import editorx.util.IconRef
+import editorx.plugin.ViewProvider
 import editorx.gui.core.Constants
 import editorx.gui.core.theme.ThemeManager
 import editorx.gui.main.MainWindow
