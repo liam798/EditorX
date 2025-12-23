@@ -29,6 +29,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private var isManifestMode = false
     private var manifestFile: File? = null
     private var manifestOriginalContent: String? = null
+    private val bottomContainer = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+    }
+    private val findReplaceBar = FindReplaceBar { getCurrentTextArea() }
+
+    private class TabContent(val scrollPane: RTextScrollPane) : JPanel(BorderLayout()) {
+        val topSlot: JPanel = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        }
+
+        init {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            add(topSlot, BorderLayout.NORTH)
+            add(scrollPane, BorderLayout.CENTER)
+        }
+    }
 
     init {
         // 设置JPanel的布局
@@ -68,6 +87,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
         // 将JTabbedPane添加到JPanel中
         add(tabbedPane, java.awt.BorderLayout.CENTER)
+        // 统一承载底部组件（查找条、AndroidManifest 视图等），避免多个 SOUTH 冲突
+        add(bottomContainer, java.awt.BorderLayout.SOUTH)
 
         // 切换标签时更新状态栏与事件
         tabbedPane.addChangeListener {
@@ -97,6 +118,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             
             // 检测是否为 AndroidManifest.xml，显示/隐藏底部视图标签
             updateManifestViewTabs(file)
+
+            // 文件内查找条：切换标签后同步高亮
+            if (findReplaceBar.isVisible) {
+                attachFindReplaceBarToCurrentTab()
+            }
+            findReplaceBar.onActiveEditorChanged()
         }
 
         // 设置拖放支持 - 确保整个Editor区域都支持拖放
@@ -352,7 +379,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 private fun recomputeDirty() {
                     if (getClientProperty("suppressDirty") == true) return
                     val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
-                    val index = tabbedPane.indexOfComponent(scrollComp)
+                    val index = getTabIndexForComponent(scrollComp)
                     if (index < 0) return
                     val original = originalTextByIndex[index]
                     val isDirty = original != this@apply.text
@@ -370,7 +397,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             actionMap.put("gotoDefinition", object : AbstractAction() {
                 override fun actionPerformed(e: java.awt.event.ActionEvent?) {
                     val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
-                    val index = tabbedPane.indexOfComponent(scrollComp)
+                    val index = getTabIndexForComponent(scrollComp)
                     val f = tabToFile[index] ?: return
                     attemptNavigate(f, this@apply)
                 }
@@ -401,7 +428,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         installFileDropTarget(scroll)
         installFileDropTarget(textArea)
         val title = file.name
-        tabbedPane.addTab(title, resolveTabIcon(file), scroll, null)
+        tabbedPane.addTab(title, resolveTabIcon(file), TabContent(scroll), null)
         val index = tabbedPane.tabCount - 1
         fileToTab[file] = index
         tabToFile[index] = file
@@ -428,6 +455,86 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         
         // 检测是否为 AndroidManifest.xml，显示/隐藏底部视图标签
         updateManifestViewTabs(file)
+    }
+
+    fun openFileAndSelect(file: File, line: Int, column: Int, length: Int) {
+        // 统一在 EDT 上执行，避免跨线程访问 Swing 组件
+        SwingUtilities.invokeLater {
+            openFile(file)
+            // 等 openFile 内部的默认“滚动到顶部”任务执行完毕后再定位
+            SwingUtilities.invokeLater {
+                val idx = fileToTab[file] ?: return@invokeLater
+                tabbedPane.selectedIndex = idx
+                val textArea = tabTextAreas[idx] ?: return@invokeLater
+
+                runCatching {
+                    val lineIndex = (line - 1).coerceAtLeast(0)
+                    val safeLineStart = textArea.getLineStartOffset(lineIndex)
+                    val docLen = textArea.document.length
+                    val start = (safeLineStart + column).coerceIn(0, docLen)
+                    val end = (start + length).coerceIn(0, docLen)
+                    textArea.caretPosition = start
+                    if (end > start) textArea.select(start, end)
+                    textArea.requestFocusInWindow()
+                    val rect = textArea.modelToView2D(start).bounds
+                    textArea.scrollRectToVisible(rect)
+                }
+            }
+        }
+    }
+
+    fun showFindBar() {
+        attachFindReplaceBarToCurrentTab()
+        val initial = getCurrentTextArea()?.selectedText
+            ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
+        findReplaceBar.open(FindReplaceBar.Mode.FIND, initial)
+    }
+
+    fun showReplaceBar() {
+        attachFindReplaceBarToCurrentTab()
+        val initial = getCurrentTextArea()?.selectedText
+            ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
+        findReplaceBar.open(FindReplaceBar.Mode.REPLACE, initial)
+    }
+
+    private fun attachFindReplaceBarToCurrentTab() {
+        val selectedIndex = tabbedPane.selectedIndex
+        val selectedComponent = if (selectedIndex >= 0) tabbedPane.getComponentAt(selectedIndex) else null
+        val targetSlot = (selectedComponent as? TabContent)?.topSlot
+        val oldParent = findReplaceBar.parent
+
+        if (targetSlot != null) {
+            if (oldParent !== targetSlot) {
+                (oldParent as? java.awt.Container)?.remove(findReplaceBar)
+                (oldParent as? java.awt.Container)?.revalidate()
+                (oldParent as? java.awt.Container)?.repaint()
+
+                targetSlot.removeAll()
+                targetSlot.add(findReplaceBar, BorderLayout.CENTER)
+                targetSlot.revalidate()
+                targetSlot.repaint()
+            }
+            return
+        }
+
+        // 无打开文件时：降级挂到 Editor 顶部（避免“找不到容器”导致不显示）
+        if (oldParent !== this) {
+            (oldParent as? java.awt.Container)?.remove(findReplaceBar)
+            (oldParent as? java.awt.Container)?.revalidate()
+            (oldParent as? java.awt.Container)?.repaint()
+
+            add(findReplaceBar, BorderLayout.NORTH)
+            revalidate()
+            repaint()
+        }
+    }
+
+    private fun getTabIndexForComponent(component: java.awt.Component): Int {
+        var current: java.awt.Component? = component
+        while (current != null && current.parent !== tabbedPane) {
+            current = current.parent
+        }
+        return if (current == null) -1 else tabbedPane.indexOfComponent(current)
     }
 
     private fun attemptNavigate(file: File, textArea: TextArea) {
@@ -609,23 +716,44 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             file?.let { fileToTab.remove(it) }
             tabToFile.remove(index)
             tabTextAreas.remove(index)
+            originalTextByIndex.remove(index)
             dirtyTabs.remove(index)
+
             val newTabToFile = mutableMapOf<Int, File>()
-            val newFileToTab = mutableMapOf<File, Int>()
-            val newTabTextAreas = mutableMapOf<Int, TextArea>()
-            val newOriginal = mutableMapOf<Int, String>()
-            for (i in 0 until tabbedPane.tabCount) {
-                val f = tabToFile[i]
-                if (f != null) {
-                    newTabToFile[i] = f; newFileToTab[f] = i
-                }
-                tabTextAreas[i]?.let { newTabTextAreas[i] = it }
-                originalTextByIndex[i]?.let { newOriginal[i] = it }
+            tabToFile.forEach { (oldIdx, f) ->
+                val newIdx = if (oldIdx > index) oldIdx - 1 else oldIdx
+                newTabToFile[newIdx] = f
             }
-            tabToFile.clear(); tabToFile.putAll(newTabToFile)
-            fileToTab.clear(); fileToTab.putAll(newFileToTab)
-            tabTextAreas.clear(); tabTextAreas.putAll(newTabTextAreas)
-            originalTextByIndex.clear(); originalTextByIndex.putAll(newOriginal)
+
+            val newTabTextAreas = mutableMapOf<Int, TextArea>()
+            tabTextAreas.forEach { (oldIdx, ta) ->
+                val newIdx = if (oldIdx > index) oldIdx - 1 else oldIdx
+                newTabTextAreas[newIdx] = ta
+            }
+
+            val newOriginal = mutableMapOf<Int, String>()
+            originalTextByIndex.forEach { (oldIdx, text) ->
+                val newIdx = if (oldIdx > index) oldIdx - 1 else oldIdx
+                newOriginal[newIdx] = text
+            }
+
+            val newDirty = mutableSetOf<Int>()
+            dirtyTabs.forEach { oldIdx ->
+                newDirty.add(if (oldIdx > index) oldIdx - 1 else oldIdx)
+            }
+
+            tabToFile.clear()
+            tabToFile.putAll(newTabToFile)
+            tabTextAreas.clear()
+            tabTextAreas.putAll(newTabTextAreas)
+            originalTextByIndex.clear()
+            originalTextByIndex.putAll(newOriginal)
+            dirtyTabs.clear()
+            dirtyTabs.addAll(newDirty)
+
+            fileToTab.clear()
+            newTabToFile.forEach { (i, f) -> fileToTab[f] = i }
+
             mainWindow.statusBar.updateNavigation(getCurrentFile())
         }
     }
@@ -1051,8 +1179,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 manifestViewTabs!!.addTab("Provider (${manifestData.providersXml.size})", JPanel())
             }
             
-            // 将底部标签面板添加到主面板的南侧
-            add(manifestViewTabs, java.awt.BorderLayout.SOUTH)
+            // 将底部标签面板添加到统一容器中，避免与查找条冲突
+            bottomContainer.add(manifestViewTabs!!, BorderLayout.SOUTH)
             
             isManifestMode = true
             revalidate()
@@ -1114,7 +1242,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun removeManifestViewTabs() {
         if (manifestViewTabs != null) {
             // 移除底部标签面板
-            remove(manifestViewTabs)
+            bottomContainer.remove(manifestViewTabs!!)
             manifestViewTabs = null
             isManifestMode = false
             manifestFile = null

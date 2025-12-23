@@ -161,11 +161,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
     private fun showFindDialog() {
-        JOptionPane.showMessageDialog(this, "查找功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        mainWindow.editor.showFindBar()
     }
 
     private fun showReplaceDialog() {
-        JOptionPane.showMessageDialog(this, "替换功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        mainWindow.editor.showReplaceBar()
     }
 
     private fun showSettings() {

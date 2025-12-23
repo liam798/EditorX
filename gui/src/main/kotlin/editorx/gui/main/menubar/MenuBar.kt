@@ -85,9 +85,17 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
                 addActionListener { showFindDialog() }
             })
             add(JMenuItem("替换...").apply {
-                mnemonic = KeyEvent.VK_H
-                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_H, shortcut)
+                mnemonic = KeyEvent.VK_R
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcut)
                 addActionListener { showReplaceDialog() }
+            })
+
+            addSeparator()
+
+            add(JMenuItem("全局搜索...").apply {
+                mnemonic = KeyEvent.VK_S
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcut or InputEvent.SHIFT_DOWN_MASK)
+                addActionListener { mainWindow.showGlobalSearch() }
             })
         }
     }
@@ -135,11 +143,11 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
     }
 
     private fun showFindDialog() {
-        JOptionPane.showMessageDialog(this, "查找功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        mainWindow.editor.showFindBar()
     }
 
     private fun showReplaceDialog() {
-        JOptionPane.showMessageDialog(this, "替换功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        mainWindow.editor.showReplaceBar()
     }
 
     private fun toggleSidebar() {

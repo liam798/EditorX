@@ -6,6 +6,7 @@ import editorx.gui.core.Constants
 import editorx.gui.main.activitybar.ActivityBar
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
+import editorx.gui.main.search.SearchView
 import editorx.gui.main.menubar.MenuBar
 import editorx.gui.main.sidebar.SideBar
 import editorx.gui.main.statusbar.StatusBar
@@ -119,6 +120,27 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
                 override fun createView() = Explorer(this@MainWindow)
             }
         )
+
+        // 全局搜索（参考 jadx）
+        activityBar.addItem(
+            "search",
+            "搜索",
+            "icons/search.svg",
+            object : CachedGuiViewProvider() {
+                override fun createView() = SearchView(this@MainWindow)
+            }
+        )
+    }
+
+    fun showGlobalSearch() {
+        // 若已处于搜索视图，仅聚焦输入框，不触发 ActivityBar 的“再次点击关闭”逻辑
+        if (sideBar.getCurrentViewId() == "search" && sideBar.isActuallyVisible()) {
+            (sideBar.getView("search") as? SearchView)?.focusQuery()
+            return
+        }
+        sideBar.preserveNextDividerOnShow()
+        activityBar.activateItem("search", userInitiated = false)
+        (sideBar.getView("search") as? SearchView)?.focusQuery()
     }
 
     fun openFileChooserAndOpen() {

@@ -1,0 +1,602 @@
+package editorx.gui.main.editor
+
+import editorx.core.util.IconLoader
+import editorx.core.util.IconRef
+import editorx.gui.core.theme.ThemeManager
+import org.fife.ui.rtextarea.SearchContext
+import org.fife.ui.rtextarea.SearchEngine
+import org.fife.ui.rtextarea.SearchResult
+import org.fife.ui.rsyntaxtextarea.DocumentRange
+import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities
+import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Dimension
+import java.awt.Font
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import java.awt.Insets
+import java.awt.event.ActionEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import javax.swing.AbstractAction
+import javax.swing.BorderFactory
+import javax.swing.Box
+import javax.swing.BoxLayout
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.JTextField
+import javax.swing.JToggleButton
+import javax.swing.KeyStroke
+import javax.swing.SwingUtilities
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
+import java.util.regex.Pattern
+import java.util.regex.PatternSyntaxException
+
+/**
+ * 文件内查找/替换条（参考 IDEA：在编辑器内展示，不弹窗）。
+ */
+class FindReplaceBar(
+    private val currentTextAreaProvider: () -> TextArea?,
+) : JPanel(BorderLayout()) {
+
+    enum class Mode { FIND, REPLACE }
+
+    private var mode: Mode = Mode.FIND
+    private var lastTextArea: TextArea? = null
+    private var lastCriteriaKey: String = ""
+    private var totalMatches: Int = 0
+    private var currentMatchIndex: Int = 0
+
+    private data class Match(val start: Int, val end: Int)
+
+    private val findField = JTextField()
+    private val replaceField = JTextField()
+    private val statusLabel = JLabel("0 个结果").apply {
+        foreground = Color(0x66, 0x66, 0x66)
+        font = font.deriveFont(Font.PLAIN, 12f)
+    }
+
+    private val expandIconCollapsed = IconLoader.getIcon(IconRef("icons/chevron-right.svg"), 16)
+    private val expandIconExpanded = IconLoader.getIcon(IconRef("icons/chevron-down.svg"), 16)
+    private val prevIcon = IconLoader.getIcon(IconRef("icons/arrow-up.svg"), 16)
+    private val nextIcon = IconLoader.getIcon(IconRef("icons/arrow-down.svg"), 16)
+    private val closeIcon = IconLoader.getIcon(IconRef("icons/close.svg"), 16)
+    private val expandButton = createIconButton(expandIconCollapsed, "展开替换", fallbackText = "▸") {
+        toggleReplaceRow()
+    }
+    private val matchCase = createToggleButton("Cc", "区分大小写")
+    private val wholeWord = createToggleButton("W", "全词匹配")
+    private val regex = createToggleButton(".*", "正则表达式")
+
+    private val replaceButton = createToolButton("替换", "替换当前匹配") { replaceOne() }
+    private val replaceAllButton = createToolButton("全部替换", "替换所有匹配") { replaceAll() }
+
+    private val findPrevButton = createIconButton(prevIcon, "上一个（Shift+Enter）", fallbackText = "↑") { findNext(forward = false) }
+    private val findNextButton = createIconButton(nextIcon, "下一个（Enter）", fallbackText = "↓") { findNext(forward = true) }
+    private val closeButton = createIconButton(closeIcon, "关闭", fallbackText = "×") { close() }
+
+    private val replaceIndent = JPanel().apply {
+        isOpaque = false
+    }
+    private val searchControls = JPanel().apply {
+        isOpaque = false
+        layout = BoxLayout(this, BoxLayout.X_AXIS)
+    }
+    private val replaceControls = JPanel().apply {
+        isOpaque = false
+        layout = BoxLayout(this, BoxLayout.X_AXIS)
+    }
+
+    init {
+        isVisible = false
+        background = ThemeManager.activityBarBackground
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.separator),
+            BorderFactory.createEmptyBorder(6, 8, 6, 8),
+        )
+
+        // FlatLaf：占位提示
+        findField.putClientProperty("JTextField.placeholderText", "搜索")
+        replaceField.putClientProperty("JTextField.placeholderText", "替换")
+
+        // 基础输入尺寸（更贴近 IDEA 的紧凑感）
+        val fieldHeight = 28
+        findField.preferredSize = Dimension(260, fieldHeight)
+        findField.maximumSize = Dimension(Int.MAX_VALUE, fieldHeight)
+        replaceField.preferredSize = Dimension(260, fieldHeight)
+        replaceField.maximumSize = Dimension(Int.MAX_VALUE, fieldHeight)
+
+        // 右侧控制区（放到单独列，确保“搜索/替换”输入框左右对齐）
+        searchControls.add(statusLabel)
+        searchControls.add(Box.createHorizontalStrut(12))
+        searchControls.add(matchCase)
+        searchControls.add(Box.createHorizontalStrut(4))
+        searchControls.add(wholeWord)
+        searchControls.add(Box.createHorizontalStrut(4))
+        searchControls.add(regex)
+        searchControls.add(Box.createHorizontalStrut(8))
+        searchControls.add(findPrevButton)
+        searchControls.add(Box.createHorizontalStrut(2))
+        searchControls.add(findNextButton)
+        searchControls.add(Box.createHorizontalStrut(8))
+        searchControls.add(closeButton)
+
+        replaceControls.add(replaceButton)
+        replaceControls.add(Box.createHorizontalStrut(8))
+        replaceControls.add(replaceAllButton)
+
+        val grid = JPanel(GridBagLayout()).apply { isOpaque = false }
+        val gc = GridBagConstraints().apply {
+            anchor = GridBagConstraints.WEST
+            fill = GridBagConstraints.NONE
+            weightx = 0.0
+        }
+        fun addCell(
+            x: Int,
+            y: Int,
+            comp: java.awt.Component,
+            weightX: Double = 0.0,
+            fill: Int = GridBagConstraints.NONE,
+            anchor: Int = GridBagConstraints.WEST,
+            insets: Insets,
+        ) {
+            gc.gridx = x
+            gc.gridy = y
+            gc.weightx = weightX
+            gc.fill = fill
+            gc.anchor = anchor
+            gc.insets = insets
+            grid.add(comp, gc)
+        }
+
+        // 行 1：搜索
+        addCell(0, 0, expandButton, insets = Insets(0, 0, 0, 6))
+        addCell(1, 0, findField, weightX = 1.0, fill = GridBagConstraints.HORIZONTAL, insets = Insets(0, 0, 0, 8))
+        addCell(2, 0, searchControls, anchor = GridBagConstraints.EAST, insets = Insets(0, 0, 0, 0))
+
+        // 行 2：替换（默认隐藏）
+        addCell(0, 1, replaceIndent, insets = Insets(6, 0, 0, 6))
+        addCell(1, 1, replaceField, weightX = 1.0, fill = GridBagConstraints.HORIZONTAL, insets = Insets(6, 0, 0, 8))
+        addCell(2, 1, replaceControls, anchor = GridBagConstraints.EAST, insets = Insets(6, 0, 0, 0))
+
+        add(grid, BorderLayout.CENTER)
+
+        // 监听输入变化：实时高亮所有匹配
+        findField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) = refreshMarkAll()
+            override fun removeUpdate(e: DocumentEvent?) = refreshMarkAll()
+            override fun changedUpdate(e: DocumentEvent?) = refreshMarkAll()
+        })
+
+        // 监听选项变化
+        val optionListener = java.awt.event.ActionListener { refreshMarkAll() }
+        matchCase.addActionListener(optionListener)
+        regex.addActionListener(optionListener)
+        wholeWord.addActionListener(optionListener)
+
+        installKeyBindings()
+        setMode(Mode.FIND)
+
+        // 计算替换行的对齐缩进：与展开按钮对齐
+        SwingUtilities.invokeLater {
+            val w = expandButton.preferredSize.width
+            replaceIndent.preferredSize = Dimension(w, 1)
+            replaceIndent.minimumSize = Dimension(w, 1)
+        }
+    }
+
+    fun open(mode: Mode, initialQuery: String? = null) {
+        setMode(mode)
+        isVisible = true
+
+        if (!initialQuery.isNullOrBlank()) {
+            findField.text = initialQuery
+        }
+
+        // 聚焦查找框，便于直接输入
+        SwingUtilities.invokeLater {
+            findField.requestFocusInWindow()
+            findField.selectAll()
+            refreshMarkAll()
+        }
+    }
+
+    fun close() {
+        isVisible = false
+        lastCriteriaKey = ""
+        totalMatches = 0
+        currentMatchIndex = 0
+        statusLabel.text = "0 个结果"
+        clearHighlights()
+        currentTextAreaProvider()?.requestFocusInWindow()
+    }
+
+    /**
+     * 当编辑器切换标签页时调用：把高亮应用到当前文件，并清理旧文件的高亮。
+     */
+    fun onActiveEditorChanged() {
+        if (!isVisible) return
+        refreshMarkAll()
+    }
+
+    private fun installKeyBindings() {
+        val nextKey = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0)
+        val prevKey = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK)
+        val escKey = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0)
+
+        findField.getInputMap(JComponent.WHEN_FOCUSED).put(nextKey, "findNext")
+        findField.actionMap.put("findNext", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) = findNext(forward = true)
+        })
+        findField.getInputMap(JComponent.WHEN_FOCUSED).put(prevKey, "findPrev")
+        findField.actionMap.put("findPrev", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) = findNext(forward = false)
+        })
+
+        // 替换输入框 Enter：替换一次
+        replaceField.getInputMap(JComponent.WHEN_FOCUSED).put(nextKey, "replaceOne")
+        replaceField.actionMap.put("replaceOne", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) = replaceOne()
+        })
+
+        // Esc：关闭
+        listOf(findField, replaceField).forEach { field ->
+            field.getInputMap(JComponent.WHEN_FOCUSED).put(escKey, "closeFindBar")
+            field.actionMap.put("closeFindBar", object : AbstractAction() {
+                override fun actionPerformed(e: ActionEvent?) = close()
+            })
+        }
+    }
+
+    private fun setMode(mode: Mode) {
+        this.mode = mode
+        val replaceVisible = mode == Mode.REPLACE
+        replaceIndent.isVisible = replaceVisible
+        replaceField.isVisible = replaceVisible
+        replaceControls.isVisible = replaceVisible
+        expandButton.icon = if (replaceVisible) expandIconExpanded else expandIconCollapsed
+        // 兼容：若 SVG 不可用，则回退使用字符
+        if (expandButton.icon == null) {
+            expandButton.text = if (replaceVisible) "▾" else "▸"
+        } else {
+            expandButton.text = null
+        }
+        expandButton.toolTipText = if (replaceVisible) "收起替换" else "展开替换"
+        revalidate()
+        repaint()
+    }
+
+    private fun toggleReplaceRow() {
+        setMode(if (mode == Mode.REPLACE) Mode.FIND else Mode.REPLACE)
+        SwingUtilities.invokeLater {
+            if (mode == Mode.REPLACE) replaceField.requestFocusInWindow() else findField.requestFocusInWindow()
+        }
+    }
+
+    private fun clearHighlights() {
+        lastTextArea?.clearMarkAllHighlights()
+        lastTextArea = null
+    }
+
+    private fun criteriaKey(): String {
+        return buildString {
+            append(findField.text ?: "")
+            append('\u0001')
+            append(matchCase.isSelected)
+            append('\u0001')
+            append(wholeWord.isSelected)
+            append('\u0001')
+            append(regex.isSelected)
+        }
+    }
+
+    private fun updateStatusLabel() {
+        statusLabel.text =
+            if (totalMatches <= 0) "0 个结果" else "${currentMatchIndex.coerceIn(1, totalMatches)}/${totalMatches}"
+    }
+
+    private fun isRegexValidOrShowError(): Boolean {
+        if (!regex.isSelected) return true
+        val query = findField.text ?: ""
+        if (query.isBlank()) return true
+
+        val patternText = if (wholeWord.isSelected) "\\b${query}\\b" else query
+        val flags = RSyntaxUtilities.getPatternFlags(matchCase.isSelected, Pattern.MULTILINE)
+        return try {
+            Pattern.compile(patternText, flags)
+            true
+        } catch (_: PatternSyntaxException) {
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "正则表达式不合法"
+            clearHighlights()
+            false
+        }
+    }
+
+    private fun collectMatches(text: String): List<Match> {
+        val query = findField.text ?: ""
+        if (query.isBlank()) return emptyList()
+
+        return if (regex.isSelected) {
+            val patternText = if (wholeWord.isSelected) "\\b${query}\\b" else query
+            val flags = RSyntaxUtilities.getPatternFlags(matchCase.isSelected, Pattern.MULTILINE)
+            val pattern = Pattern.compile(patternText, flags)
+            val matcher = pattern.matcher(text)
+            buildList {
+                while (matcher.find()) {
+                    val start = matcher.start()
+                    val end = matcher.end()
+                    if (start != end) add(Match(start, end))
+                }
+            }
+        } else {
+            val wholeWordEnabled = wholeWord.isSelected
+            var searchIn = text
+            var searchFor = query
+            var matchCaseEnabled = matchCase.isSelected
+            if (!matchCaseEnabled) {
+                searchIn = searchIn.lowercase()
+                searchFor = searchFor.lowercase()
+                matchCaseEnabled = true
+            }
+
+            val matches = ArrayList<Match>()
+            var offset = 0
+            val len = searchFor.length
+            while (offset <= searchIn.length - len) {
+                val pos = SearchEngine.getNextMatchPos(searchFor, searchIn.substring(offset), true, matchCaseEnabled, wholeWordEnabled)
+                if (pos < 0) break
+                val start = offset + pos
+                val end = start + len
+                matches.add(Match(start, end))
+                offset = end
+            }
+            matches
+        }
+    }
+
+    private fun indexFromRange(matches: List<Match>, range: DocumentRange?): Int {
+        if (range == null || range.isZeroLength || matches.isEmpty()) return 0
+        val start = range.startOffset
+        val end = range.endOffset
+        val idx = matches.indexOfFirst { it.start == start && it.end == end }
+        if (idx >= 0) return idx + 1
+        val after = matches.indexOfFirst { it.start > start }
+        return when {
+            after > 0 -> after
+            after == 0 -> 1
+            else -> matches.size
+        }
+    }
+
+    private fun refreshMarkAll() {
+        val textArea = currentTextAreaProvider()
+        if (textArea != lastTextArea) {
+            lastTextArea?.clearMarkAllHighlights()
+            lastTextArea = textArea
+        }
+
+        val query = findField.text ?: ""
+        if (textArea == null || query.isBlank()) {
+            textArea?.clearMarkAllHighlights()
+            lastCriteriaKey = ""
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "0 个结果"
+            return
+        }
+
+        if (!isRegexValidOrShowError()) return
+
+        val key = criteriaKey()
+        lastCriteriaKey = key
+
+        runCatching {
+            val context = buildContext(searchForward = true).apply { setMarkAll(true) }
+            SearchEngine.markAll(textArea, context)
+        }.onFailure {
+            // 兜底：理论上正则错误已提前处理，这里仅保证 UI 不崩溃
+            statusLabel.text = "搜索失败"
+            return
+        }
+
+        val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
+            statusLabel.text = "正则表达式不合法"
+            clearHighlights()
+            totalMatches = 0
+            currentMatchIndex = 0
+            return
+        }
+        totalMatches = matches.size
+
+        if (totalMatches <= 0) {
+            currentMatchIndex = 0
+            updateStatusLabel()
+            return
+        }
+
+        // 参考 IDEA：输入变化时自动定位到“下一个匹配”，并显示 index/count
+        val findResult = runCatching {
+            val ctx = buildContext(searchForward = true).apply {
+                setMarkAll(false)
+                setSearchWrap(true)
+            }
+            SearchEngine.find(textArea, ctx)
+        }.getOrElse {
+            statusLabel.text = "搜索失败"
+            return
+        }
+
+        currentMatchIndex =
+            if (findResult.wasFound()) indexFromRange(matches, findResult.matchRange) else 0
+        if (currentMatchIndex <= 0) currentMatchIndex = 1
+        updateStatusLabel()
+    }
+
+    private fun findNext(forward: Boolean) {
+        val textArea = currentTextAreaProvider()
+        val query = findField.text ?: ""
+        if (textArea == null) {
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "0 个结果"
+            return
+        }
+        if (query.isBlank()) {
+            return
+        }
+
+        if (!isRegexValidOrShowError()) return
+
+        runCatching {
+            val context = buildContext(searchForward = forward).apply {
+                setMarkAll(true)
+                setSearchWrap(true)
+            }
+            SearchEngine.find(textArea, context)
+        }.onSuccess { result ->
+            lastCriteriaKey = criteriaKey()
+
+            val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
+                statusLabel.text = "正则表达式不合法"
+                clearHighlights()
+                totalMatches = 0
+                currentMatchIndex = 0
+                return@onSuccess
+            }
+            totalMatches = matches.size
+            currentMatchIndex = if (result.wasFound()) indexFromRange(matches, result.matchRange) else 0
+            updateStatusLabel()
+        }.onFailure {
+            statusLabel.text = "搜索失败"
+        }
+    }
+
+    private fun replaceOne() {
+        val textArea = currentTextAreaProvider()
+        val query = findField.text ?: ""
+        if (textArea == null) {
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "0 个结果"
+            return
+        }
+        if (query.isBlank()) {
+            return
+        }
+
+        if (!isRegexValidOrShowError()) return
+
+        runCatching {
+            val context = buildContext(searchForward = true).apply {
+                setReplaceWith(replaceField.text ?: "")
+                setMarkAll(true)
+                setSearchWrap(true)
+            }
+            SearchEngine.replace(textArea, context)
+        }.onSuccess { result ->
+            lastCriteriaKey = criteriaKey()
+
+            val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
+                statusLabel.text = "正则表达式不合法"
+                clearHighlights()
+                totalMatches = 0
+                currentMatchIndex = 0
+                return@onSuccess
+            }
+            totalMatches = matches.size
+            currentMatchIndex = if (result.wasFound()) indexFromRange(matches, result.matchRange) else 0
+            updateStatusLabel()
+        }.onFailure {
+            statusLabel.text = "替换失败"
+        }
+    }
+
+    private fun replaceAll() {
+        val textArea = currentTextAreaProvider()
+        val query = findField.text ?: ""
+        if (textArea == null) {
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "0 个结果"
+            return
+        }
+        if (query.isBlank()) {
+            return
+        }
+
+        if (!isRegexValidOrShowError()) return
+
+        runCatching {
+            val context = buildContext(searchForward = true).apply {
+                setReplaceWith(replaceField.text ?: "")
+                setMarkAll(false)
+            }
+            SearchEngine.replaceAll(textArea, context)
+        }.onSuccess { _ ->
+            // replaceAll 后以 refreshMarkAll() 的结果为准，这里先重置
+            totalMatches = 0
+            currentMatchIndex = 0
+            statusLabel.text = "0 个结果"
+        }.onFailure {
+            statusLabel.text = "替换失败"
+            return
+        }
+        // 替换后刷新高亮（如果查找条仍在）
+        refreshMarkAll()
+    }
+
+    private fun buildContext(searchForward: Boolean): SearchContext {
+        return SearchContext().apply {
+            setSearchFor(findField.text ?: "")
+            setMatchCase(this@FindReplaceBar.matchCase.isSelected)
+            setWholeWord(this@FindReplaceBar.wholeWord.isSelected)
+            setRegularExpression(this@FindReplaceBar.regex.isSelected)
+            setSearchForward(searchForward)
+        }
+    }
+
+    private fun updateStatus(result: SearchResult, searching: Boolean) = Unit
+
+    private fun createToggleButton(text: String, tooltip: String): JToggleButton {
+        return JToggleButton(text).apply {
+            toolTipText = tooltip
+            isFocusable = false
+            font = font.deriveFont(Font.PLAIN, 12f)
+            margin = Insets(2, 8, 2, 8)
+            putClientProperty("JButton.buttonType", "toolBarButton")
+            putClientProperty("JButton.squareSize", true)
+        }
+    }
+
+    private fun createToolButton(text: String, tooltip: String, onClick: () -> Unit): JButton {
+        return JButton(text).apply {
+            toolTipText = tooltip
+            isFocusable = false
+            font = font.deriveFont(Font.PLAIN, 12f)
+            margin = Insets(2, 8, 2, 8)
+            putClientProperty("JButton.buttonType", "toolBarButton")
+            addActionListener { onClick() }
+        }
+    }
+
+    private fun createIconButton(icon: javax.swing.Icon?, tooltip: String, fallbackText: String, onClick: () -> Unit): JButton {
+        return JButton(fallbackText).apply {
+            this.icon = icon
+            toolTipText = tooltip
+            isFocusable = false
+            font = font.deriveFont(Font.PLAIN, 12f)
+            margin = Insets(2, 6, 2, 6)
+            putClientProperty("JButton.buttonType", "toolBarButton")
+            putClientProperty("JButton.squareSize", true)
+            if (icon != null) {
+                text = null
+            }
+            addActionListener { onClick() }
+        }
+    }
+}
