@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":plugins:json"))
     implementation(project(":plugins:yaml"))
     implementation(project(":plugins:xml"))
+    implementation(project(":plugins:git"))
 
     implementation("com.fifesoft:rsyntaxtextarea:3.4.0")
     implementation("com.formdev:flatlaf:3.4")

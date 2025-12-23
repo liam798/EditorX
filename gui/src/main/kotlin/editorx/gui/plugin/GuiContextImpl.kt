@@ -31,4 +31,8 @@ class GuiContextImpl(
     override fun registerSyntaxHighlighter(language: Language, syntaxHighlighter: SyntaxHighlighter) {
         SyntaxHighlighterRegistry.registerSyntaxHighlighter(language, syntaxHighlighter)
     }
+    
+    override fun getWorkspaceRoot(): java.io.File? {
+        return mainWindow.guiControl.workspace.getWorkspaceRoot()
+    }
 }
