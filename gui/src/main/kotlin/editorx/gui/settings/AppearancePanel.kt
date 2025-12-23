@@ -1,6 +1,7 @@
 package editorx.gui.settings
 
 import editorx.core.i18n.I18n
+import editorx.core.settings.SettingsStore
 import java.awt.BorderLayout
 import java.awt.Font
 import java.util.Locale
@@ -12,7 +13,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JRadioButton
 
-class AppearancePanel : JPanel(BorderLayout()) {
+class AppearancePanel(private val settings: SettingsStore) : JPanel(BorderLayout()) {
     private val zhButton = JRadioButton()
     private val enButton = JRadioButton()
     private val headerLabel = JLabel()
@@ -33,8 +34,8 @@ class AppearancePanel : JPanel(BorderLayout()) {
         languagePanel.layout = BoxLayout(languagePanel, BoxLayout.Y_AXIS)
         zhButton.alignmentX = LEFT_ALIGNMENT
         enButton.alignmentX = LEFT_ALIGNMENT
-        zhButton.addActionListener { I18n.setLocale(Locale.SIMPLIFIED_CHINESE) }
-        enButton.addActionListener { I18n.setLocale(Locale.ENGLISH) }
+        zhButton.addActionListener { changeLocale(Locale.SIMPLIFIED_CHINESE) }
+        enButton.addActionListener { changeLocale(Locale.ENGLISH) }
         languagePanel.add(zhButton)
         languagePanel.add(Box.createVerticalStrut(8))
         languagePanel.add(enButton)
@@ -65,5 +66,22 @@ class AppearancePanel : JPanel(BorderLayout()) {
             languagePanel.border = BorderFactory.createTitledBorder("语言")
             footerLabel.text = "提示：语言切换立即生效，部分插件文案需对应语言包支持。"
         }
+    }
+
+    private fun changeLocale(locale: Locale) {
+        if (I18n.locale() == locale) return
+        I18n.setLocale(locale)
+        settings.put(LOCALE_KEY, locale.toLanguageTag())
+        settings.sync()
+    }
+
+    fun resetToDefault() {
+        zhButton.isSelected = true
+        changeLocale(Locale.SIMPLIFIED_CHINESE)
+        refresh()
+    }
+
+    companion object {
+        private const val LOCALE_KEY = "ui.locale"
     }
 }

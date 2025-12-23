@@ -59,6 +59,11 @@ class KeymapPanel : JPanel(BorderLayout()) {
         }
     }
 
+    private val headerLabel = JLabel()
+    private val hintLabel = JLabel()
+    private val noteButton = JButton()
+    private val exportButton = JButton()
+
     private val table = JTable(tableModel).apply {
         rowHeight = 28
         setShowGrid(false)
@@ -68,48 +73,58 @@ class KeymapPanel : JPanel(BorderLayout()) {
     init {
         border = BorderFactory.createEmptyBorder(16, 16, 16, 16)
 
-        val header = JLabel(if (isEnglish()) "Keymap (Planned)" else "快捷键（规划中）").apply {
-            font = font.deriveFont(Font.BOLD, 16f)
-            border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
-        }
+        headerLabel.font = headerLabel.font.deriveFont(Font.BOLD, 16f)
+        headerLabel.border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
 
-        val hintText = if (isEnglish()) {
-            "Current list shows default shortcuts. Customization/export is under planning."
-        } else {
-            "当前列表展示默认快捷键，自定义与导出功能规划中。"
-        }
-        val hint = JLabel("<html>$hintText</html>", SwingConstants.LEFT).apply {
-            border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
-        }
+        hintLabel.horizontalAlignment = SwingConstants.LEFT
+        hintLabel.border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
+
+        noteButton.isEnabled = false
+        exportButton.isEnabled = false
 
         val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
-            add(JButton(if (isEnglish()) "Add Note…" else "添加备注…").apply {
-                isEnabled = false
-                toolTipText = if (isEnglish()) "Shortcut customization is under development" else "快捷键自定义功能开发中"
-            })
-            add(JButton(if (isEnglish()) "Export…" else "导出配置…").apply {
-                isEnabled = false
-                toolTipText = if (isEnglish()) "Feature under development" else "功能开发中"
-            })
+            add(noteButton)
+            add(exportButton)
         }
 
-        add(header, BorderLayout.NORTH)
+        add(headerLabel, BorderLayout.NORTH)
         add(JScrollPane(table).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
         add(
             JPanel(BorderLayout()).apply {
                 border = BorderFactory.createEmptyBorder(12, 0, 0, 0)
-                add(hint, BorderLayout.NORTH)
+                add(hintLabel, BorderLayout.NORTH)
                 add(buttonBar, BorderLayout.CENTER)
             },
             BorderLayout.SOUTH
         )
+
+        applyTexts()
     }
 
     fun refresh() {
         tableModel.fireTableDataChanged()
+        applyTexts()
     }
 
     private fun isEnglish(): Boolean = I18n.locale().language == java.util.Locale.ENGLISH.language
+
+    private fun applyTexts() {
+        if (isEnglish()) {
+            headerLabel.text = "Keymap (Planned)"
+            hintLabel.text = "<html>Current list shows default shortcuts. Customization/export is under planning.</html>"
+            noteButton.text = "Add Note…"
+            noteButton.toolTipText = "Shortcut customization is under development"
+            exportButton.text = "Export…"
+            exportButton.toolTipText = "Feature under development"
+        } else {
+            headerLabel.text = "快捷键（规划中）"
+            hintLabel.text = "<html>当前列表展示默认快捷键，自定义与导出功能规划中。</html>"
+            noteButton.text = "添加备注…"
+            noteButton.toolTipText = "快捷键自定义功能开发中"
+            exportButton.text = "导出配置…"
+            exportButton.toolTipText = "功能开发中"
+        }
+    }
 
     companion object {
         private fun keyStroke(keyCode: Int, modifiers: Int = 0): String {

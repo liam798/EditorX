@@ -28,7 +28,6 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private val navigationBar = NavigationBar(mainWindow)
     private var toggleSideBarButton: JButton? = null
     private var compileTask: Thread? = null
-    private var titleLabel: JLabel? = null
 
     init {
         isFloatable = false
@@ -39,7 +38,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         )
         layout = BoxLayout(this, BoxLayout.X_AXIS)
         buildActions()
-        
+
         // 添加双击空白处全屏功能
         addMouseListener(object : java.awt.event.MouseAdapter() {
             override fun mouseClicked(e: java.awt.event.MouseEvent) {
@@ -52,7 +51,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             }
         })
     }
-    
+
     private fun isMacOS(): Boolean {
         return System.getProperty("os.name").lowercase().contains("mac")
     }
@@ -69,62 +68,36 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
     private fun buildActions() {
-        if (isMacOS()) {
-            // macOS 模式：左侧留空（给系统控制按钮），中间显示标题，右侧显示按钮
-            add(Box.createHorizontalStrut(80)) // 为 macOS 交通灯按钮留空间
-            
-            add(Box.createHorizontalGlue())
-            
-            // 中间标题
-            titleLabel = JLabel("EditorX").apply {
-                font = font.deriveFont(13f)
-                foreground = Color(0x33, 0x33, 0x33)
-            }
-            add(titleLabel)
-            
-            add(Box.createHorizontalGlue())
-            
-            // 右侧按钮
-            add(JButton(IconLoader.getIcon(IconRef("icons/build.svg"), ICON_SIZE)).compact("构建") {
-                compileWorkspaceApk()
-            })
-            
-            add(Box.createHorizontalStrut(12))
-            addSeparator()
-            add(Box.createHorizontalStrut(12))
-            
-            toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") {
-                toggleSideBar()
-            }
-            add(toggleSideBarButton)
-            
-            add(JButton(IconLoader.getIcon(IconRef("icons/settings.svg"), ICON_SIZE)).compact("设置") {
-                showSettings()
-            })
-            
-            add(Box.createHorizontalStrut(8))
-        } else {
-            // 非 macOS 模式：保持原有布局
-            add(navigationBar)
-            add(Box.createHorizontalStrut(8))
-            add(Box.createHorizontalGlue())
+        setupLeftActions()
+        add(Box.createHorizontalGlue())
+        setupRightActions()
+    }
 
-            add(JButton(IconLoader.getIcon(IconRef("icons/build.svg"), ICON_SIZE)).compact("构建") {
-                compileWorkspaceApk()
-            })
+    private fun setupLeftActions() {
+        // TODO 左侧按钮可以添加一些快捷操作的按钮，如解密字符串等
+    }
 
-            add(Box.createHorizontalStrut(12))
-            addSeparator()
-            add(Box.createHorizontalStrut(12))
+    private fun setupRightActions() {
+        add(JButton(IconLoader.getIcon(IconRef("icons/build.svg"), ICON_SIZE)).compact("构建") {
+            compileWorkspaceApk()
+        })
 
-            toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") {
-                toggleSideBar()
-            }
-            add(toggleSideBarButton)
-            add(JButton(IconLoader.getIcon(IconRef("icons/settings.svg"), ICON_SIZE)).compact("设置") {
-                showSettings()
-            })
+        add(Box.createHorizontalStrut(12))
+        addSeparator()
+        add(Box.createHorizontalStrut(12))
+
+        toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") {
+            toggleSideBar()
         }
+        add(toggleSideBarButton)
+
+        add(Box.createHorizontalStrut(6))
+
+        add(JButton(IconLoader.getIcon(IconRef("icons/settings.svg"), ICON_SIZE)).compact("设置") {
+            showSettings()
+        })
+
+        add(Box.createHorizontalStrut(12))
     }
 
     private fun openFolder() {
@@ -170,9 +143,9 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             JOptionPane.showMessageDialog(this, "插件系统尚未初始化", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
-        SettingsDialog(mainWindow, pm, SettingsDialog.Section.KEYMAP).isVisible = true
+        SettingsDialog(mainWindow, mainWindow.guiControl, pm, SettingsDialog.Section.APPEARANCE).isVisible = true
     }
-    
+
     private fun toggleFullScreen() {
         val frame = mainWindow
         if (frame.extendedState and JFrame.MAXIMIZED_BOTH == JFrame.MAXIMIZED_BOTH) {
@@ -259,6 +232,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                                 )
                             }
                         }
+
                         ApkTool.Status.NOT_FOUND -> {
                             mainWindow.statusBar.showError("未找到 apktool")
                             JOptionPane.showMessageDialog(
@@ -268,9 +242,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                                 JOptionPane.ERROR_MESSAGE
                             )
                         }
+
                         ApkTool.Status.CANCELLED -> {
                             mainWindow.statusBar.setMessage("APK 编译被取消", persistent = true)
                         }
+
                         ApkTool.Status.FAILED -> {
                             mainWindow.statusBar.showError("APK 编译失败 (exit=${buildResult.exitCode})")
                             JOptionPane.showMessageDialog(
@@ -306,7 +282,10 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         val keystore = ensureDebugKeystore()
             ?: return SignResult(false, "未找到或无法创建 ~/.android/debug.keystore")
         val apksigner = locateApkSigner()
-            ?: return SignResult(false, "未找到 apksigner，请设置 ANDROID_HOME/ANDROID_SDK_ROOT 或将 apksigner 加入 PATH")
+            ?: return SignResult(
+                false,
+                "未找到 apksigner，请设置 ANDROID_HOME/ANDROID_SDK_ROOT 或将 apksigner 加入 PATH"
+            )
 
         val processBuilder =
             ProcessBuilder(
@@ -410,7 +389,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (!sdkRoot.isNullOrBlank()) {
             val buildTools = File(sdkRoot, "build-tools")
             if (buildTools.isDirectory) {
-                val candidates = buildTools.listFiles()?.filter { it.isDirectory }?.sortedByDescending { it.name.lowercase(Locale.getDefault()) }
+                val candidates = buildTools.listFiles()?.filter { it.isDirectory }
+                    ?.sortedByDescending { it.name.lowercase(Locale.getDefault()) }
                 if (candidates != null) {
                     for (dir in candidates) {
                         val exe = File(dir, "apksigner")

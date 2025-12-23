@@ -1,14 +1,16 @@
 package editorx.gui
 
 import com.formdev.flatlaf.FlatLightLaf
-import editorx.gui.core.theme.ThemeManager
-import editorx.gui.main.MainWindow
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.loader.PluginLoaderImpl
+import editorx.gui.core.theme.ThemeManager
+import editorx.gui.main.MainWindow
 import editorx.gui.plugin.GuiContextImpl
 import java.io.File
-import org.slf4j.LoggerFactory
+import java.util.Locale
 import javax.swing.SwingUtilities
+import org.slf4j.LoggerFactory
+import editorx.core.settings.SettingsStore
 
 /**
  * GUI 主入口点
@@ -64,6 +66,17 @@ private fun initializeMainWindow() {
     val appDir = File(System.getProperty("user.home"), ".editorx")
     val environment = GuiEnvironment(appDir)
 
+    environment.settings.get("ui.locale", null)?.let { tag ->
+        runCatching { Locale.forLanguageTag(tag) }
+            .getOrNull()
+            ?.takeIf { it.language.isNotBlank() }
+            ?.let { locale ->
+                if (editorx.core.i18n.I18n.locale() != locale) {
+                    editorx.core.i18n.I18n.setLocale(locale)
+                }
+            }
+    }
+
     val mv = MainWindow(environment)
 
     // 显示主窗口
@@ -76,6 +89,22 @@ private fun initializeMainWindow() {
         pluginContext.setGuiContext(guiContext)
     }
     pluginManager.loadAll(PluginLoaderImpl())
-    pluginManager.startAll()
+    val disabled = loadDisabledSet(environment.settings)
+    pluginManager.listPlugins().forEach { record ->
+        if (disabled.contains(record.id)) {
+            pluginManager.stopPlugin(record.id)
+        } else {
+            pluginManager.startPlugin(record.id)
+        }
+    }
     mv.pluginManager = pluginManager
+}
+
+private fun loadDisabledSet(settings: SettingsStore): Set<String> {
+    return settings.get("plugins.disabled", "")
+        ?.split(',')
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        ?.toSet()
+        ?: emptySet()
 }

@@ -26,6 +26,12 @@ class CachePanel(private val guiEnv: GuiEnvironment) : JPanel(BorderLayout()) {
         )
     }
 
+    private val headerLabel = JLabel()
+    private val hintLabel = JLabel()
+    private val refreshButton = JButton()
+    private val clearButton = JButton()
+    private val openButton = JButton()
+
     private val tableModel = object : AbstractTableModel() {
         private var sizes: List<Long> = entries.map { computeSize(it.dir) }
 
@@ -64,37 +70,38 @@ class CachePanel(private val guiEnv: GuiEnvironment) : JPanel(BorderLayout()) {
 
     init {
         border = BorderFactory.createEmptyBorder(16, 16, 16, 16)
-        val header = JLabel(if (isEnglish()) "Cache" else "缓存").apply {
-            font = font.deriveFont(java.awt.Font.BOLD, 16f)
-            border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
-        }
-        val hint = JLabel(
-            if (isEnglish()) "Clear cache only when no background decompile tasks are running."
-            else "清理缓存前请确认不存在正在运行的反编译或插件任务。"
-        ).apply {
-            border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
-        }
+        headerLabel.font = headerLabel.font.deriveFont(java.awt.Font.BOLD, 16f)
+        headerLabel.border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
+
+        hintLabel.border = BorderFactory.createEmptyBorder(0, 0, 12, 0)
+
+        refreshButton.addActionListener { refresh() }
+        clearButton.addActionListener { clearSelected() }
+        openButton.addActionListener { openSelectedDir() }
 
         val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
-            add(JButton(if (isEnglish()) "Refresh" else "刷新").apply { addActionListener { refresh() } })
-            add(JButton(if (isEnglish()) "Clear Selected" else "清理所选").apply { addActionListener { clearSelected() } })
-            add(JButton(if (isEnglish()) "Open Folder" else "打开所在目录").apply { addActionListener { openSelectedDir() } })
+            add(refreshButton)
+            add(clearButton)
+            add(openButton)
         }
 
-        add(header, BorderLayout.NORTH)
+        add(headerLabel, BorderLayout.NORTH)
         add(JScrollPane(table).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
         add(
             JPanel(BorderLayout()).apply {
                 border = BorderFactory.createEmptyBorder(12, 0, 0, 0)
-                add(hint, BorderLayout.NORTH)
+                add(hintLabel, BorderLayout.NORTH)
                 add(buttonBar, BorderLayout.CENTER)
             },
             BorderLayout.SOUTH
         )
+
+        applyTexts()
     }
 
     fun refresh() {
         tableModel.refreshSizes()
+        applyTexts()
     }
 
     private fun clearSelected() {
@@ -109,12 +116,12 @@ class CachePanel(private val guiEnv: GuiEnvironment) : JPanel(BorderLayout()) {
         }
         val entry = entries[idx]
         if (!entry.dir.exists()) {
-            JOptionPane.showMessageDialog(
-                this,
-                if (isEnglish()) "Directory not found: ${entry.dir.absolutePath}" else "目录不存在：${entry.dir.absolutePath}",
-                infoTitle(),
-                JOptionPane.INFORMATION_MESSAGE
-            )
+                JOptionPane.showMessageDialog(
+                    this,
+                    if (isEnglish()) "Directory not found: ${entry.dir.absolutePath}" else "目录不存在：${entry.dir.absolutePath}",
+                    infoTitle(),
+                    JOptionPane.INFORMATION_MESSAGE
+                )
             tableModel.refreshSizes()
             return
         }
@@ -193,4 +200,23 @@ class CachePanel(private val guiEnv: GuiEnvironment) : JPanel(BorderLayout()) {
 
     private fun infoTitle(): String = if (isEnglish()) "Info" else "提示"
     private fun isEnglish(): Boolean = editorx.core.i18n.I18n.locale().language == java.util.Locale.ENGLISH.language
+
+    private fun applyTexts() {
+        if (isEnglish()) {
+            headerLabel.text = "Cache"
+            hintLabel.text = "Clear cache only when no background decompile tasks are running."
+            refreshButton.text = "Refresh"
+            refreshButton.toolTipText = null
+            clearButton.text = "Clear Selected"
+            clearButton.toolTipText = null
+            openButton.text = "Open Folder"
+            openButton.toolTipText = null
+        } else {
+            headerLabel.text = "缓存"
+            hintLabel.text = "清理缓存前请确认不存在正在运行的反编译或插件任务。"
+            refreshButton.text = "刷新"
+            clearButton.text = "清理所选"
+            openButton.text = "打开所在目录"
+        }
+    }
 }
