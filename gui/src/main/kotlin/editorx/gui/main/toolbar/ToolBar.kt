@@ -3,7 +3,7 @@ package editorx.gui.main.toolbar
 import editorx.core.util.IconRef
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
-import editorx.gui.dialog.PluginManagerDialog
+import editorx.gui.settings.SettingsDialog
 import editorx.gui.main.navigationbar.NavigationBar
 import editorx.core.toolchain.ApkTool
 import editorx.core.util.IconLoader
@@ -157,11 +157,6 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         toggleSideBarButton?.icon = getSideBarIcon()
     }
 
-    private fun showPluginManager() {
-        val pm = mainWindow.pluginManager ?: return
-        PluginManagerDialog(mainWindow, pm).isVisible = true
-    }
-
     private fun showFindDialog() {
         mainWindow.editor.showFindBar()
     }
@@ -171,7 +166,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
     private fun showSettings() {
-        JOptionPane.showMessageDialog(this, "设置界面待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        val pm = mainWindow.pluginManager ?: run {
+            JOptionPane.showMessageDialog(this, "插件系统尚未初始化", "提示", JOptionPane.INFORMATION_MESSAGE)
+            return
+        }
+        SettingsDialog(mainWindow, pm, SettingsDialog.Section.KEYMAP).isVisible = true
     }
     
     private fun toggleFullScreen() {

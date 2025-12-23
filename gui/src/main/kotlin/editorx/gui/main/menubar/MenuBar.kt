@@ -3,10 +3,8 @@ package editorx.gui.main.menubar
 import editorx.core.i18n.I18n
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
-import editorx.gui.dialog.PluginManagerDialog
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
-import java.util.Locale
 import javax.swing.*
 
 class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
@@ -23,8 +21,6 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
         removeAll()
         add(createFileMenu())
         add(createEditMenu())
-        add(createPluginMenu())
-        add(createLanguageMenu())
         add(createHelpMenu())
         revalidate()
         repaint()
@@ -118,36 +114,6 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
         }
     }
 
-    private fun createPluginMenu(): JMenu {
-        return JMenu(t("menu.plugins", "插件")).apply {
-            mnemonic = KeyEvent.VK_T
-
-            val pluginManagerItem =
-                JMenuItem(t("action.pluginManager", "插件管理")).apply { addActionListener { showPluginManager() } }
-
-            add(pluginManagerItem)
-        }
-    }
-
-    private fun createLanguageMenu(): JMenu {
-        val menu = JMenu(t("menu.language", "语言")).apply {
-            mnemonic = KeyEvent.VK_L
-        }
-
-        val group = ButtonGroup()
-        val zh = JRadioButtonMenuItem(t("lang.zh", "中文")).apply {
-            isSelected = I18n.locale().language == Locale.SIMPLIFIED_CHINESE.language
-            addActionListener { I18n.setLocale(Locale.SIMPLIFIED_CHINESE) }
-        }
-        val en = JRadioButtonMenuItem(t("lang.en", "English")).apply {
-            isSelected = I18n.locale().language == Locale.ENGLISH.language
-            addActionListener { I18n.setLocale(Locale.ENGLISH) }
-        }
-        group.add(zh); group.add(en)
-        menu.add(zh); menu.add(en)
-        return menu
-    }
-
     private fun createHelpMenu(): JMenu {
         return JMenu(t("menu.help", "帮助")).apply {
             mnemonic = KeyEvent.VK_H
@@ -199,14 +165,6 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
     //     if (panel.isPanelVisible()) panel.hidePanel() else panel.getCurrentViewId()?.let {
     // panel.showView(it) }
     // }
-    private fun showPluginManager() {
-        val pm = mainWindow.pluginManager ?: return
-        PluginManagerDialog(mainWindow, pm).isVisible = true
-    }
-
-    private fun showSettings() {
-        JOptionPane.showMessageDialog(this, "设置界面待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
-    }
 
     private fun showAbout() {
         val aboutMessage =

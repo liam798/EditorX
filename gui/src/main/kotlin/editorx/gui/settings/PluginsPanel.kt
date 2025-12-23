@@ -1,4 +1,4 @@
-package editorx.gui.dialog
+package editorx.gui.settings
 
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginOrigin
@@ -8,15 +8,28 @@ import editorx.core.plugin.loader.PluginLoaderImpl
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
-import java.awt.event.WindowAdapter
-import java.awt.event.WindowEvent
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import javax.swing.*
+import javax.swing.BorderFactory
+import javax.swing.Box
+import javax.swing.JButton
+import javax.swing.JFileChooser
+import javax.swing.JLabel
+import javax.swing.JOptionPane
+import javax.swing.JPanel
+import javax.swing.JScrollPane
+import javax.swing.JSeparator
+import javax.swing.JTable
+import javax.swing.ListSelectionModel
+import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 import javax.swing.table.AbstractTableModel
 
-class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManager) : JDialog(owner, "插件管理", true) {
+/**
+ * 插件管理面板：用于扫描、启停与安装插件。
+ */
+class PluginsPanel(private val pluginManager: PluginManager) : JPanel(BorderLayout()) {
     private val tableModel = PluginTableModel(pluginManager)
     private val table = JTable(tableModel).apply {
         selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -35,7 +48,6 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
     private val unloadBtn = JButton("卸载").apply { addActionListener { unloadSelected() } }
     private val installBtn = JButton("安装 JAR…").apply { addActionListener { installJar() } }
     private val openDirBtn = JButton("打开插件目录").apply { addActionListener { openPluginDir() } }
-    private val closeBtn = JButton("关闭").apply { addActionListener { dispose() } }
 
     private val listener = object : PluginManager.Listener {
         override fun onPluginChanged(pluginId: String) {
@@ -54,7 +66,7 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
     }
 
     init {
-        layout = BorderLayout()
+        border = BorderFactory.createEmptyBorder(12, 12, 12, 12)
         add(JScrollPane(table).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
 
         val actions = JPanel(FlowLayout(FlowLayout.LEFT, 8, 8)).apply {
@@ -66,27 +78,21 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
             add(stopBtn)
             add(unloadBtn)
             add(Box.createHorizontalStrut(8))
-            add(closeBtn)
         }
         add(actions, BorderLayout.NORTH)
         add(statusLabel, BorderLayout.SOUTH)
 
-        setSize(860, 520)
-        setLocationRelativeTo(owner)
-
-        pluginManager.addListener(listener)
-        addWindowListener(object : WindowAdapter() {
-            override fun windowClosed(e: WindowEvent?) {
-                pluginManager.removeListener(listener)
-            }
-        })
-
         table.selectionModel.addListSelectionListener { updateButtons() }
+        pluginManager.addListener(listener)
         updateButtons()
         scanPlugins()
     }
 
-    private fun scanPlugins() {
+    fun disposePanel() {
+        pluginManager.removeListener(listener)
+    }
+
+    fun scanPlugins() {
         val before = pluginManager.listPlugins().map { it.id }.toSet()
         pluginManager.loadAll(PluginLoaderImpl())
         tableModel.reload()
@@ -94,10 +100,10 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
 
         val after = pluginManager.listPlugins()
         val newlyLoaded = after.map { it.id }.filterNot { before.contains(it) }
-        if (newlyLoaded.isNotEmpty()) {
-            statusLabel.text = "发现新插件：${newlyLoaded.joinToString(", ")}（未自动启动）"
+        statusLabel.text = if (newlyLoaded.isNotEmpty()) {
+            "发现新插件：${newlyLoaded.joinToString(", ")}（未自动启动）"
         } else {
-            statusLabel.text = "扫描完成"
+            "扫描完成"
         }
     }
 
@@ -139,7 +145,7 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
         val id = rec.id
         val confirm =
             JOptionPane.showConfirmDialog(
-                this,
+                SwingUtilities.getWindowAncestor(this),
                 "确定要卸载插件：${rec.name}（$id）？\n\n提示：若是 JAR 插件，同时建议从 plugins/ 目录删除对应 JAR。",
                 "确认卸载",
                 JOptionPane.YES_NO_OPTION
@@ -154,10 +160,11 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
             fileSelectionMode = JFileChooser.FILES_ONLY
             dialogTitle = "选择插件 JAR"
         }
-        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return
+        val parent = SwingUtilities.getWindowAncestor(this)
+        if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return
         val selected = chooser.selectedFile ?: return
         if (!selected.isFile || !selected.name.endsWith(".jar", ignoreCase = true)) {
-            JOptionPane.showMessageDialog(this, "请选择 .jar 文件", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(parent, "请选择 .jar 文件", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -168,7 +175,7 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
         if (Files.exists(target)) {
             val overwrite =
                 JOptionPane.showConfirmDialog(
-                    this,
+                    parent,
                     "插件目录已存在同名文件：${target.fileName}\n是否覆盖？",
                     "确认覆盖",
                     JOptionPane.YES_NO_OPTION
@@ -179,7 +186,7 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
         runCatching {
             Files.copy(selected.toPath(), target, StandardCopyOption.REPLACE_EXISTING)
         }.onFailure { e ->
-            JOptionPane.showMessageDialog(this, "复制失败：${e.message}", "错误", JOptionPane.ERROR_MESSAGE)
+            JOptionPane.showMessageDialog(parent, "复制失败：${e.message}", "错误", JOptionPane.ERROR_MESSAGE)
             return
         }
 
@@ -190,18 +197,21 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
         newIds.forEach { pluginManager.startPlugin(it) }
 
         tableModel.reload()
-        statusLabel.text =
-            if (newIds.isEmpty()) "已复制到 plugins/，但未发现新的插件入口（请检查 META-INF/services 配置）"
-            else "安装成功并已启动：${newIds.joinToString(", ")}"
+        statusLabel.text = if (newIds.isEmpty()) {
+            "已复制到 plugins/，但未发现新的插件入口（请检查 META-INF/services 配置）"
+        } else {
+            "安装成功并已启动：${newIds.joinToString(", ")}"
+        }
     }
 
     private fun openPluginDir() {
         val dir = Path.of("plugins").toFile()
         if (!dir.exists()) dir.mkdirs()
+        val parent = SwingUtilities.getWindowAncestor(this)
         runCatching {
             java.awt.Desktop.getDesktop().open(dir)
         }.onFailure {
-            JOptionPane.showMessageDialog(this, "无法打开目录：${dir.absolutePath}", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(parent, "无法打开目录：${dir.absolutePath}", "提示", JOptionPane.INFORMATION_MESSAGE)
         }
     }
 
@@ -246,5 +256,4 @@ class PluginManagerDialog(owner: JFrame, private val pluginManager: PluginManage
             }
         }
     }
-
 }

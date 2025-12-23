@@ -9,6 +9,7 @@ import org.fife.ui.rtextarea.RTextScrollPane
 import org.slf4j.LoggerFactory
 import java.awt.*
 import java.awt.dnd.*
+import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -405,6 +406,31 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val index = getTabIndexForComponent(scrollComp)
                     val f = tabToFile[index] ?: return
                     attemptNavigate(f, this@apply)
+                }
+            })
+
+            val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcutMask), "editor.find")
+            actionMap.put("editor.find", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    this@Editor.showFindBar()
+                }
+            })
+
+            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask), "editor.replace")
+            actionMap.put("editor.replace", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    this@Editor.showReplaceBar()
+                }
+            })
+
+            getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcutMask or InputEvent.SHIFT_DOWN_MASK),
+                "editor.globalSearch"
+            )
+            actionMap.put("editor.globalSearch", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    mainWindow.showGlobalSearch()
                 }
             })
         }
