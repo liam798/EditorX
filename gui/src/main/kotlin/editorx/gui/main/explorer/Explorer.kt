@@ -1250,8 +1250,9 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
             when (result.status) {
                 ApkTool.Status.SUCCESS -> {
-                    // 从 APK 中提取 DEX 文件到输出目录（用于实时 smali to java）
-                    extractDexFilesFromApk(apkFile, outputDir)
+                    // 从 APK 中提取 DEX 文件到输出目录
+                    val originalDir = File(outputDir, "original")
+                    extractDexFilesFromApk(apkFile, originalDir)
                     
                     if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
                         SwingUtilities.invokeLater {
