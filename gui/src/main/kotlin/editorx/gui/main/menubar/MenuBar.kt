@@ -142,6 +142,7 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
             mainWindow.guiControl.workspace.openWorkspace(selectedFolder)
 //            mainWindow.statusBar.setMessage("已打开文件夹: ${selectedFolder.name}")
             (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
+            mainWindow.toolBar.updateProjectDisplay()
         }
     }
 

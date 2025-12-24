@@ -8,6 +8,8 @@ import editorx.gui.main.navigationbar.NavigationBar
 import editorx.core.toolchain.ApkTool
 import editorx.core.util.IconLoader
 import org.slf4j.LoggerFactory
+import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.Insets
 import java.awt.Color
 import java.awt.event.ActionListener
@@ -29,6 +31,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private val navigationBar = NavigationBar(mainWindow)
     private var toggleSideBarButton: JButton? = null
     private var compileTask: Thread? = null
+    private var projectSelectorLabel: JLabel? = null
 
     init {
         isFloatable = false
@@ -57,6 +60,211 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         return System.getProperty("os.name").lowercase().contains("mac")
     }
 
+    /**
+     * 设置项目选择框（参考 IDEA/Android Studio 的效果）
+     */
+    private fun setupProjectSelector() {
+        // 创建一个面板，包含项目名称标签和下拉箭头
+        val selectorPanel = JPanel(BorderLayout()).apply {
+            // 设置边框和样式，使其看起来像一个下拉框
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color(0xCC, 0xCC, 0xCC), 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+            )
+            preferredSize = Dimension(100, 28)
+            maximumSize = Dimension(300, 28)
+            background = Color.WHITE
+            
+            // 项目名称标签（左侧）
+            val label = JLabel().apply {
+                font = font.deriveFont(java.awt.Font.PLAIN, 13f)
+                horizontalAlignment = SwingConstants.LEFT
+            }
+            projectSelectorLabel = label
+            add(label, BorderLayout.CENTER)
+            
+            // 下拉箭头图标（右侧）
+            val arrowLabel = JLabel("▼").apply {
+                font = font.deriveFont(java.awt.Font.PLAIN, 10f)
+                foreground = Color(0x66, 0x66, 0x66)
+                horizontalAlignment = SwingConstants.CENTER
+                preferredSize = Dimension(16, 16)
+                toolTipText = "选择项目"
+            }
+            add(arrowLabel, BorderLayout.EAST)
+            
+            // 添加鼠标监听器，点击整个面板时显示弹出菜单，并添加悬停效果
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mousePressed(e: java.awt.event.MouseEvent) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
+                        showProjectPopupMenu(this@apply)
+                    }
+                }
+                
+                override fun mouseEntered(e: java.awt.event.MouseEvent) {
+                    background = Color(0xF5, 0xF5, 0xF5)
+                    repaint()
+                }
+                
+                override fun mouseExited(e: java.awt.event.MouseEvent) {
+                    background = Color.WHITE
+                    repaint()
+                }
+            })
+            
+            // 初始更新项目显示
+            updateProjectDisplay()
+        }
+        add(selectorPanel)
+    }
+
+    /**
+     * 更新项目选择框的显示内容（显示 git 分支）
+     */
+    fun updateProjectDisplay() {
+        val label = projectSelectorLabel ?: return
+        val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
+        
+        if (workspaceRoot == null || !workspaceRoot.exists()) {
+            // 未打开工作区时显示提示
+            label.text = "未打开项目"
+            label.toolTipText = "点击选择项目文件夹"
+            return
+        }
+        
+        // 先显示"版本控制"作为临时显示（参考 IDEA）
+        label.text = "版本控制"
+        label.toolTipText = workspaceRoot.absolutePath
+        
+        // 在后台线程中获取 git 分支
+        Thread {
+            try {
+                val branchName = getCurrentGitBranch(workspaceRoot)
+                SwingUtilities.invokeLater {
+                    if (branchName != null) {
+                        // 是 git 仓库，显示分支名称
+                        label.text = branchName
+                        label.toolTipText = "分支: $branchName\n路径: ${workspaceRoot.absolutePath}"
+                    } else {
+                        // 不是 git 仓库，显示"版本控制"（参考 IDEA）
+                        label.text = "版本控制"
+                        label.toolTipText = workspaceRoot.absolutePath
+                    }
+                }
+            } catch (e: Exception) {
+                logger.debug("获取 git 分支失败", e)
+                // 出错时显示"版本控制"
+                SwingUtilities.invokeLater {
+                    label.text = "版本控制"
+                    label.toolTipText = workspaceRoot.absolutePath
+                }
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+    }
+    
+    /**
+     * 获取当前 git 分支名称
+     * @return 分支名称，如果不是 git 仓库或获取失败则返回 null
+     */
+    private fun getCurrentGitBranch(workspaceRoot: File): String? {
+        try {
+            // 检查是否是 git 仓库
+            val gitDir = File(workspaceRoot, ".git")
+            if (!gitDir.exists()) {
+                return null
+            }
+            
+            // 使用 git rev-parse --abbrev-ref HEAD 获取当前分支名称
+            val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+                .directory(workspaceRoot)
+                .redirectErrorStream(true)
+                .start()
+            
+            val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+            val exitCode = process.waitFor()
+            
+            if (exitCode == 0 && output.isNotBlank()) {
+                return output
+            }
+        } catch (e: Exception) {
+            logger.debug("执行 git 命令失败", e)
+        }
+        return null
+    }
+
+    /**
+     * 显示项目弹出菜单（点击项目选择框时）
+     */
+    private fun showProjectPopupMenu(invoker: java.awt.Component) {
+        val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
+        val popupMenu = JPopupMenu()
+        
+        if (workspaceRoot != null && workspaceRoot.exists()) {
+            // 获取当前分支（同步获取，用于菜单显示）
+            val branchName = getCurrentGitBranchSync(workspaceRoot)
+            
+            if (branchName != null) {
+                // 显示当前分支
+                popupMenu.add(JMenuItem("分支: $branchName").apply {
+                    isEnabled = false
+                    font = font.deriveFont(font.size - 1f)
+                    foreground = Color.GRAY
+                })
+            } else {
+                // 显示当前项目路径（非 git 仓库时）
+                popupMenu.add(JMenuItem("路径: ${workspaceRoot.absolutePath}").apply {
+                    isEnabled = false
+                    font = font.deriveFont(font.size - 1f)
+                    foreground = Color.GRAY
+                })
+            }
+            popupMenu.addSeparator()
+        }
+        
+        // 添加"打开文件夹..."选项
+        popupMenu.add(JMenuItem("打开文件夹...").apply {
+            addActionListener {
+                openFolder()
+                updateProjectDisplay()
+            }
+        })
+        
+        // 显示弹出菜单，位置在项目选择框下方
+        popupMenu.show(invoker, 0, invoker.height)
+    }
+    
+    /**
+     * 同步获取当前 git 分支名称（用于菜单显示，避免阻塞 UI）
+     * @return 分支名称，如果不是 git 仓库或获取失败则返回 null
+     */
+    private fun getCurrentGitBranchSync(workspaceRoot: File): String? {
+        return try {
+            val gitDir = File(workspaceRoot, ".git")
+            if (!gitDir.exists()) {
+                return null
+            }
+            
+            val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+                .directory(workspaceRoot)
+                .redirectErrorStream(true)
+                .start()
+            
+            val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+            val exitCode = process.waitFor()
+            
+            if (exitCode == 0 && output.isNotBlank()) {
+                output
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun updateNavigation(currentFile: File?) {
         navigationBar.update(currentFile)
     }
@@ -77,8 +285,13 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun setupLeftActions() {
         if (isMacOS()) {
             // macOS 模式：左侧留空（给系统控制按钮），中间显示标题，右侧显示按钮
-            add(Box.createHorizontalStrut(80)) // 为 macOS 交通灯按钮留空间
+            add(Box.createHorizontalStrut(70)) // 为 macOS 交通灯按钮留空间
         }
+
+        // 项目选择框（最左侧）
+        setupProjectSelector()
+
+        add(Box.createHorizontalStrut(12))
 
         // Android 项目快速跳转按钮
         add(
@@ -138,6 +351,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             val selected = chooser.selectedFile
             mainWindow.guiControl.workspace.openWorkspace(selected)
             (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
+            updateProjectDisplay()
         }
     }
 

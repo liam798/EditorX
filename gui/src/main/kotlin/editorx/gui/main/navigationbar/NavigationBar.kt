@@ -168,6 +168,7 @@ class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
                     mainWindow.guiControl.workspace.openWorkspace(file)
                     update(null)
                     (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
+                    mainWindow.toolBar.updateProjectDisplay()
                 }
             })
             menu.add(JMenuItem("在侧栏中选中").apply {
