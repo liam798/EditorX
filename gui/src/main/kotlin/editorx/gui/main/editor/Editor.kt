@@ -48,6 +48,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private var smaliFile: File? = null
     private var smaliOriginalContent: String? = null
     private var smaliJavaContent: String? = null
+    private val smaliTabState = mutableMapOf<File, Int>()
     
     private val bottomContainer = JPanel(BorderLayout()).apply {
         isOpaque = false
@@ -1255,7 +1256,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             // 如果已有 smaliViewTabs，需要处理布局
             if (smaliViewTabs != null) {
                 // 检查是否已经有容器
-                val existingContainer = bottomContainer.getComponent(0) as? JPanel
+                val existingContainer = if (bottomContainer.componentCount > 0) {
+                    bottomContainer.getComponent(0) as? JPanel
+                } else {
+                    null
+                }
                 if (existingContainer != null && existingContainer.layout is BorderLayout) {
                     // 已有容器，直接添加到容器中
                     existingContainer.add(manifestViewTabs!!, BorderLayout.NORTH)
@@ -1271,7 +1276,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
             } else {
                 // 检查是否已有容器
-                val existingContainer = bottomContainer.getComponent(0) as? JPanel
+                val existingContainer = if (bottomContainer.componentCount > 0) {
+                    bottomContainer.getComponent(0) as? JPanel
+                } else {
+                    null
+                }
                 if (existingContainer != null && existingContainer.layout is BorderLayout) {
                     existingContainer.add(manifestViewTabs!!, BorderLayout.NORTH)
                 } else {
@@ -1339,7 +1348,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun removeManifestViewTabs() {
         if (manifestViewTabs != null) {
             // 移除底部标签面板
-            val container = bottomContainer.getComponent(0) as? JPanel
+            val container = if (bottomContainer.componentCount > 0) {
+                bottomContainer.getComponent(0) as? JPanel
+            } else {
+                null
+            }
             if (container != null && container.layout is BorderLayout) {
                 // 从容器中移除
                 container.remove(manifestViewTabs!!)
@@ -1525,6 +1538,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             } else {
                 // 如果已经是 smali 模式，但文件不同，需要更新
                 if (smaliFile != file) {
+                    // 先保存当前文件的 tab 状态
+                    smaliFile?.let { currentFile ->
+                        smaliViewTabs?.let { tabs ->
+                            smaliTabState[currentFile] = tabs.selectedIndex
+                            logger.debug("保存 smali 文件 ${currentFile.name} 的 tab 状态: ${tabs.selectedIndex}")
+                        }
+                    }
                     logger.debug("切换到新的 smali 文件: ${file.name}")
                     removeSmaliViewTabs()
                     createSmaliViewTabs(file)
@@ -1533,6 +1553,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         } else {
             // 隐藏底部视图标签
             if (isSmaliMode) {
+                // 保存当前文件的 tab 状态
+                smaliFile?.let { currentFile ->
+                    smaliViewTabs?.let { tabs ->
+                        smaliTabState[currentFile] = tabs.selectedIndex
+                        logger.debug("保存 smali 文件 ${currentFile.name} 的 tab 状态: ${tabs.selectedIndex}")
+                    }
+                }
                 logger.debug("隐藏 smali 底部 tab")
                 removeSmaliViewTabs()
             }
@@ -1542,6 +1569,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     // 创建 Smali 底部视图标签
     private fun createSmaliViewTabs(file: File) {
         try {
+            // 读取并保存上一次的视图状态（每个文件独立）
+            val savedTabIndex = smaliTabState[file] ?: 0
+
             // 保存文件引用和原始内容
             smaliFile = file
             val content = Files.readString(file.toPath())
@@ -1604,14 +1634,6 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 })
                 
                 font = Font("Dialog", Font.PLAIN, 12)
-                
-                // 监听标签切换事件
-                addChangeListener {
-                    val selectedIndex = selectedIndex
-                    if (selectedIndex >= 0) {
-                        switchSmaliView(selectedIndex)
-                    }
-                }
             }
             
             // 添加 "Smali" 标签（默认选中）
@@ -1620,14 +1642,30 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             // 添加 "Code" 标签
             smaliViewTabs!!.addTab("Code", JPanel())
             
-            // 默认选中 Smali 标签
-            smaliViewTabs!!.selectedIndex = 0
+            // 恢复之前保存的 tab 状态，如果没有则默认选中 Smali (0)
+            val safeTabIndex = savedTabIndex.coerceIn(0, smaliViewTabs!!.tabCount - 1)
+            smaliViewTabs!!.selectedIndex = safeTabIndex
+
+            // 监听标签切换事件（放在 addTab + restore 之后，避免创建过程触发 change 导致状态被覆盖）
+            smaliViewTabs!!.addChangeListener {
+                val selected = smaliViewTabs?.selectedIndex ?: return@addChangeListener
+                if (selected >= 0 && smaliFile != null && smaliFile == file) {
+                    switchSmaliView(selected)
+                }
+            }
+
+            // 初始化内容（因为监听器在 restore 之后才安装）
+            switchSmaliView(safeTabIndex)
             
             // 将底部标签面板添加到统一容器中，避免与查找条冲突
             // 如果已有 manifestViewTabs，需要处理布局
             if (manifestViewTabs != null) {
                 // 检查是否已经有容器
-                val existingContainer = bottomContainer.getComponent(0) as? JPanel
+                val existingContainer = if (bottomContainer.componentCount > 0) {
+                    bottomContainer.getComponent(0) as? JPanel
+                } else {
+                    null
+                }
                 if (existingContainer != null && existingContainer.layout is BorderLayout) {
                     // 已有容器，直接添加到容器中
                     existingContainer.add(smaliViewTabs!!, BorderLayout.SOUTH)
@@ -1678,6 +1716,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         // 获取当前 smali 文件的编辑器索引
         val fileIndex = smaliFile?.let { fileToTab[it] } ?: return
         val textArea = tabTextAreas[fileIndex] ?: return
+
+        // 保存当前选择的 tab 状态（用于在切换文件后恢复）
+        smaliFile?.let { file ->
+            smaliTabState[file] = tabIndex
+            logger.debug("保存 smali 文件 ${file.name} 的 tab 状态: $tabIndex")
+        }
         
         // 暂时禁用脏检测
         textArea.putClientProperty("suppressDirty", true)
@@ -1993,7 +2037,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun removeSmaliViewTabs() {
         if (smaliViewTabs != null) {
             // 移除底部标签面板
-            val container = bottomContainer.getComponent(0) as? JPanel
+            val container = if (bottomContainer.componentCount > 0) {
+                bottomContainer.getComponent(0) as? JPanel
+            } else {
+                null
+            }
             if (container != null && container.layout is BorderLayout) {
                 // 从容器中移除
                 container.remove(smaliViewTabs!!)
