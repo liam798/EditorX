@@ -47,8 +47,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private var isSmaliMode = false
     private var smaliFile: File? = null
     private var smaliOriginalContent: String? = null
-    private var smaliJavaContent: String? = null
     private val smaliTabState = mutableMapOf<File, Int>()
+    private data class SmaliJavaCacheEntry(
+        val sourceLastModified: Long,
+        val sourceLength: Long,
+        val javaContent: String
+    )
+
+    private val smaliJavaContentCache = mutableMapOf<File, SmaliJavaCacheEntry>()
     
     private val bottomContainer = JPanel(BorderLayout()).apply {
         isOpaque = false
@@ -786,7 +792,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         if (index >= 0 && index < tabbedPane.tabCount) {
             val file = tabToFile[index]
             tabbedPane.removeTabAt(index)
-            file?.let { fileToTab.remove(it) }
+            file?.let {
+                fileToTab.remove(it)
+                smaliTabState.remove(it)
+                smaliJavaContentCache.remove(it)
+            }
             tabToFile.remove(index)
             tabTextAreas.remove(index)
             originalTextByIndex.remove(index)
@@ -1759,10 +1769,15 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun getJavaCodeForSmali(smaliFile: File): String {
         logger.info("开始获取 Java 代码，smali 文件: ${smaliFile.absolutePath}")
         
-        // 如果已经缓存了 Java 内容，直接返回
-        if (smaliJavaContent != null) {
-            logger.info("使用缓存的 Java 内容")
-            return smaliJavaContent!!
+        // 如果已经缓存了 Java 内容且源文件未变化，直接返回（文件级缓存）
+        val cached = smaliJavaContentCache[smaliFile]
+        if (cached != null) {
+            val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
+            val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
+            if (cached.sourceLastModified == lm && cached.sourceLength == len) {
+                logger.info("使用缓存的 Java 内容（文件: ${smaliFile.name}）")
+                return cached.javaContent
+            }
         }
         
         try {
@@ -1780,7 +1795,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 val javaFile = File(javaPath)
                 if (javaFile.exists() && javaFile.canRead()) {
                     val content = Files.readString(javaFile.toPath())
-                    smaliJavaContent = content
+                    smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                        sourceLastModified = smaliFile.lastModified(),
+                        sourceLength = smaliFile.length(),
+                        javaContent = content
+                    )
                     return content
                 }
             }
@@ -1791,7 +1810,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 val javaFile = File(currentDir, smaliFile.nameWithoutExtension + ".java")
                 if (javaFile.exists() && javaFile.canRead()) {
                     val content = Files.readString(javaFile.toPath())
-                    smaliJavaContent = content
+                    smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                        sourceLastModified = smaliFile.lastModified(),
+                        sourceLength = smaliFile.length(),
+                        javaContent = content
+                    )
                     return content
                 }
                 // 检查是否有 sources 或 java_src 目录
@@ -1801,7 +1824,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val javaFile2 = File(sourcesDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
-                        smaliJavaContent = content
+                        smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                            sourceLastModified = smaliFile.lastModified(),
+                            sourceLength = smaliFile.length(),
+                            javaContent = content
+                        )
                         return content
                     }
                 }
@@ -1811,7 +1838,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val javaFile2 = File(javaSrcDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
-                        smaliJavaContent = content
+                        smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                            sourceLastModified = smaliFile.lastModified(),
+                            sourceLength = smaliFile.length(),
+                            javaContent = content
+                        )
                         return content
                     }
                 }
@@ -1823,13 +1854,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             val decompiledJava = tryDecompileWithJadx(smaliFile)
             if (decompiledJava != null) {
                 logger.info("实时反编译成功")
-                smaliJavaContent = decompiledJava
+                smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                    sourceLastModified = smaliFile.lastModified(),
+                    sourceLength = smaliFile.length(),
+                    javaContent = decompiledJava
+                )
                 return decompiledJava
             }
             logger.warn("实时反编译失败")
             
             // 策略4: 如果找不到，显示提示信息
-            smaliJavaContent = """
+            val failureMessage = """
                 // 未找到对应的 Java 源码文件
                 // 
                 // 提示：
@@ -1842,12 +1877,22 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 //
                 // 当前 smali 文件路径: ${smaliFile.absolutePath}
             """.trimIndent()
-            return smaliJavaContent!!
+            smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                sourceLastModified = smaliFile.lastModified(),
+                sourceLength = smaliFile.length(),
+                javaContent = failureMessage
+            )
+            return failureMessage
             
         } catch (e: Exception) {
             logger.warn("获取 Java 代码失败", e)
-            smaliJavaContent = "// 获取 Java 代码时出错: ${e.message}"
-            return smaliJavaContent!!
+            val errorMessage = "// 获取 Java 代码时出错: ${e.message}"
+            smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                sourceLastModified = smaliFile.lastModified(),
+                sourceLength = smaliFile.length(),
+                javaContent = errorMessage
+            )
+            return errorMessage
         }
     }
     
@@ -2061,7 +2106,6 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             isSmaliMode = false
             smaliFile = null
             smaliOriginalContent = null
-            smaliJavaContent = null
             revalidate()
             repaint()
         }
