@@ -86,8 +86,7 @@ class PluginsPanel(
         border = BorderFactory.createEmptyBorder(6, 8, 6, 8)
     }
 
-    private val refreshBtn = JButton("扫描").apply { addActionListener { scanPlugins() } }
-    private val installBtn = JButton("安装 JAR…").apply { addActionListener { installJar() } }
+    private val installBtn = JButton("安装插件").apply { addActionListener { installPlugin() } }
     private val openDirBtn = JButton("打开插件目录").apply { addActionListener { openPluginDir() } }
 
     private val enableBtn = JButton().apply { addActionListener { enableSelected() } }
@@ -120,7 +119,6 @@ class PluginsPanel(
         }
 
         val actionRow = JPanel(FlowLayout(FlowLayout.LEFT, 8, 8)).apply {
-            add(refreshBtn)
             add(installBtn)
             add(openDirBtn)
         }
@@ -132,12 +130,12 @@ class PluginsPanel(
             add(uninstallBtn)
         }
 
-            val detailGrid = JPanel(java.awt.GridLayout(0, 1, 0, 6)).apply {
-                add(detailId)
-                add(detailVersion)
-                add(detailOrigin)
-                add(detailState)
-            }
+        val detailGrid = JPanel(java.awt.GridLayout(0, 1, 0, 6)).apply {
+            add(detailId)
+            add(detailVersion)
+            add(detailOrigin)
+            add(detailState)
+        }
 
         val detailPanel = JPanel(BorderLayout()).apply {
             border = BorderFactory.createEmptyBorder(12, 20, 12, 12)
@@ -156,7 +154,10 @@ class PluginsPanel(
             )
             add(
                 JPanel(BorderLayout()).apply {
-                    add(detailErrorLabel.apply { border = BorderFactory.createEmptyBorder(8, 0, 4, 0) }, BorderLayout.NORTH)
+                    add(
+                        detailErrorLabel.apply { border = BorderFactory.createEmptyBorder(8, 0, 4, 0) },
+                        BorderLayout.NORTH
+                    )
                     add(controlRow, BorderLayout.SOUTH)
                 },
                 BorderLayout.SOUTH
@@ -267,7 +268,11 @@ class PluginsPanel(
         val after = pluginManager.listPlugins().map { it.id }
         val newlyLoaded = after.filterNot { before.contains(it) }
         statusLabel.text = if (newlyLoaded.isNotEmpty()) {
-            if (isEnglish()) "Found new plugins: ${newlyLoaded.joinToString(", ")} (not started)" else "发现新插件：${newlyLoaded.joinToString(", ")}（未自动启动）"
+            if (isEnglish()) "Found new plugins: ${newlyLoaded.joinToString(", ")} (not started)" else "发现新插件：${
+                newlyLoaded.joinToString(
+                    ", "
+                )
+            }（未自动启动）"
         } else {
             if (isEnglish()) "Scan completed" else "扫描完成"
         }
@@ -313,7 +318,7 @@ class PluginsPanel(
         reloadList()
     }
 
-    private fun installJar() {
+    private fun installPlugin() {
         val chooser = JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_ONLY
             dialogTitle = "选择插件 JAR"
@@ -361,7 +366,11 @@ class PluginsPanel(
         statusLabel.text = if (newRecords.isEmpty()) {
             if (isEnglish()) "Copied to plugins/, but no new plugin entry detected (check META-INF/services)." else "已复制到 plugins/，但未发现新的插件入口（请检查 META-INF/services 配置）"
         } else {
-            if (isEnglish()) "Installed and started: ${newRecords.joinToString(", ") { it.id }}" else "安装成功并已启动：${newRecords.joinToString(", ") { it.id }}"
+            if (isEnglish()) "Installed and started: ${newRecords.joinToString(", ") { it.id }}" else "安装成功并已启动：${
+                newRecords.joinToString(
+                    ", "
+                ) { it.id }
+            }"
         }
     }
 
@@ -407,9 +416,8 @@ class PluginsPanel(
     private fun isEnglish(): Boolean = I18n.locale().language == Locale.ENGLISH.language
 
     private fun applyTexts() {
-        refreshBtn.text = if (isEnglish()) "Scan" else "扫描"
-        installBtn.text = if (isEnglish()) "Install JAR…" else "安装 JAR…"
-        openDirBtn.text = if (isEnglish()) "Open Folder" else "打开插件目录"
+        installBtn.text = if (isEnglish()) "Install Plugin" else "安装插件"
+        openDirBtn.text = if (isEnglish()) "Open Plugins Folder" else "打开插件目录"
 
         enableBtn.text = if (isEnglish()) "Enable" else "启用"
         disableBtn.text = if (isEnglish()) "Disable" else "禁用"
