@@ -71,17 +71,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         }
     }
     private var smaliProgressVisible = false
-    private val smaliLoadingPlaceholder = """
-        // 正在将 Smali 转换为 Java...
-        // 可以继续操作，完成后会自动刷新此视图。
-    """.trimIndent()
     
     private val bottomContainer = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
         isVisible = true
     }
-    private val findReplaceBar = FindReplaceBar { getCurrentTextArea() }
+    private val findReplaceBars = mutableMapOf<File, FindReplaceBar>()
+    private val smaliLoadingPanels = mutableMapOf<File, JPanel>()
 
     private class TabContent(val scrollPane: RTextScrollPane) : JPanel(BorderLayout()) {
         val topSlot: JPanel = JPanel(BorderLayout()).apply {
@@ -171,10 +168,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             updateSmaliViewTabs(file)
 
             // 文件内查找条：切换标签后同步高亮
-            if (findReplaceBar.isVisible) {
-                attachFindReplaceBarToCurrentTab()
+            file?.let { currentFile ->
+                val bar = findReplaceBars[currentFile]
+                if (bar?.isVisible == true) {
+                    attachFindBar(currentFile, bar)
+                    bar.onActiveEditorChanged()
+                }
             }
-            findReplaceBar.onActiveEditorChanged()
         }
 
         // 设置拖放支持 - 确保整个Editor区域都支持拖放
@@ -569,19 +569,23 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-
+    
     fun showFindBar() {
-        attachFindReplaceBarToCurrentTab()
+        val file = getCurrentFile() ?: return
+        val findBar = getFindBar(file)
+        attachFindBar(file, findBar)
         val initial = getCurrentTextArea()?.selectedText
             ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
-        findReplaceBar.open(FindReplaceBar.Mode.FIND, initial)
+        findBar.open(FindReplaceBar.Mode.FIND, initial)
     }
-
+    
     fun showReplaceBar() {
-        attachFindReplaceBarToCurrentTab()
+        val file = getCurrentFile() ?: return
+        val findBar = getFindBar(file)
+        attachFindBar(file, findBar)
         val initial = getCurrentTextArea()?.selectedText
             ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
-        findReplaceBar.open(FindReplaceBar.Mode.REPLACE, initial)
+        findBar.open(FindReplaceBar.Mode.REPLACE, initial)
     }
 
     /**
@@ -593,38 +597,6 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 val file = tabToFile[idx] ?: return@forEach
                 runCatching { textArea.detectSyntax(file) }
             }
-        }
-    }
-
-    private fun attachFindReplaceBarToCurrentTab() {
-        val selectedIndex = tabbedPane.selectedIndex
-        val selectedComponent = if (selectedIndex >= 0) tabbedPane.getComponentAt(selectedIndex) else null
-        val targetSlot = (selectedComponent as? TabContent)?.topSlot
-        val oldParent = findReplaceBar.parent
-
-        if (targetSlot != null) {
-            if (oldParent !== targetSlot) {
-                (oldParent as? java.awt.Container)?.remove(findReplaceBar)
-                (oldParent as? java.awt.Container)?.revalidate()
-                (oldParent as? java.awt.Container)?.repaint()
-
-                targetSlot.removeAll()
-                targetSlot.add(findReplaceBar, BorderLayout.CENTER)
-                targetSlot.revalidate()
-                targetSlot.repaint()
-            }
-            return
-        }
-
-        // 无打开文件时：降级挂到 Editor 顶部（避免“找不到容器”导致不显示）
-        if (oldParent !== this) {
-            (oldParent as? java.awt.Container)?.remove(findReplaceBar)
-            (oldParent as? java.awt.Container)?.revalidate()
-            (oldParent as? java.awt.Container)?.repaint()
-
-            add(findReplaceBar, BorderLayout.NORTH)
-            revalidate()
-            repaint()
         }
     }
 
@@ -817,6 +789,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 smaliTabState.remove(it)
                 smaliJavaContentCache.remove(it)
                 cancelSmaliConversion(it)
+                findReplaceBars.remove(it)?.let { bar ->
+                    (bar.parent as? Container)?.remove(bar)
+                }
+                smaliLoadingPanels.remove(it)?.let { panel ->
+                    (panel.parent as? Container)?.remove(panel)
+                }
             }
             tabToFile.remove(index)
             tabTextAreas.remove(index)
@@ -1587,6 +1565,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun cancelSmaliConversion(file: File) {
         val future = smaliConversionTasks.remove(file)
         future?.cancel(true)
+        hideSmaliLoadingOverlay(file)
         hideSmaliLoadingIndicatorIfIdle()
     }
 
@@ -1595,6 +1574,66 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
         val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
         return if (cached.sourceLastModified == lm && cached.sourceLength == len) cached.javaContent else null
+    }
+
+    private fun getFindBar(file: File): FindReplaceBar {
+        return findReplaceBars.getOrPut(file) {
+            FindReplaceBar {
+                fileToTab[file]?.let { index -> tabTextAreas[index] }
+            }
+        }
+    }
+
+    private fun attachFindBar(file: File, bar: FindReplaceBar) {
+        val index = fileToTab[file] ?: return
+        val tabContent = tabbedPane.getComponentAt(index) as? TabContent ?: return
+        val topSlot = tabContent.topSlot
+        val parent = bar.parent as? Container
+        if (parent !== topSlot) {
+            parent?.remove(bar)
+            topSlot.add(bar, BorderLayout.CENTER)
+        }
+        topSlot.revalidate()
+        topSlot.repaint()
+    }
+
+    private fun showSmaliLoadingOverlay(file: File) {
+        val index = fileToTab[file] ?: return
+        val tabContent = tabbedPane.getComponentAt(index) as? TabContent ?: return
+        var panel = smaliLoadingPanels[file]
+        if (panel == null) {
+            val progressBar = JProgressBar().apply {
+                isOpaque = false
+                isIndeterminate = true
+                border = BorderFactory.createEmptyBorder()
+                preferredSize = Dimension(160, 6)
+                maximumSize = Dimension(Int.MAX_VALUE, 6)
+                minimumSize = Dimension(80, 6)
+            }
+            panel = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = BorderFactory.createEmptyBorder(4, 0, 4, 0)
+                add(progressBar, BorderLayout.CENTER)
+            }
+            smaliLoadingPanels[file] = panel
+        }
+
+        val topSlot = tabContent.topSlot
+        if (panel.parent != topSlot) {
+            topSlot.add(panel, BorderLayout.NORTH)
+            topSlot.revalidate()
+            topSlot.repaint()
+        }
+        panel.isVisible = true
+    }
+
+    private fun hideSmaliLoadingOverlay(file: File) {
+        val panel = smaliLoadingPanels[file] ?: return
+        val parent = panel.parent as? Container ?: return
+        parent.remove(panel)
+        parent.revalidate()
+        parent.repaint()
+        smaliLoadingPanels.remove(file)
     }
     
     // 检测并更新 Smali 底部视图标签
@@ -1825,9 +1864,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     }
                 } else {
                     textArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
-                    textArea.text = smaliLoadingPlaceholder
+                    textArea.text = ""
                     textArea.putClientProperty("suppressDirty", false)
                     showSmaliLoadingIndicator()
+                    showSmaliLoadingOverlay(currentFile)
                     scheduleSmaliConversion(currentFile, tabIndex, textArea)
                 }
             }
@@ -1846,6 +1886,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 val javaContent = getJavaCodeForSmali(file)
                 runOnEdt {
                     smaliConversionTasks.remove(file)
+                    hideSmaliLoadingOverlay(file)
                     val stillCurrentFile = smaliFile == file
                     val currentTabs = smaliViewTabs
                     val shouldUpdateTextArea = stillCurrentFile &&
@@ -1871,12 +1912,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             } catch (_: CancellationException) {
                 runOnEdt {
                     smaliConversionTasks.remove(file)
+                    hideSmaliLoadingOverlay(file)
                     hideSmaliLoadingIndicatorIfIdle()
                 }
             } catch (e: Exception) {
                 logger.warn("Smali 异步转换失败: ${file.name}", e)
                 runOnEdt {
                     smaliConversionTasks.remove(file)
+                    hideSmaliLoadingOverlay(file)
                     val stillCurrentFile = smaliFile == file
                     val currentTabs = smaliViewTabs
                     val shouldUpdateTextArea = stillCurrentFile &&

@@ -151,7 +151,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             tree.updateUI()
         } catch (_: Exception) {
         }
-        tree.cellRenderer = FileTreeCellRenderer()
+        tree.cellRenderer = FileTreeCellRenderer(mainWindow)
     }
 
     private fun locateCurrentFile() {
@@ -1412,7 +1412,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     /** 自定义渲染：为目录和常见后缀的文件展示系统图标（带缓存）。 */
-    private class FileTreeCellRenderer : javax.swing.tree.DefaultTreeCellRenderer() {
+    private class FileTreeCellRenderer(private val mainWindow: MainWindow) : javax.swing.tree.DefaultTreeCellRenderer() {
         private val fileIconCache = mutableMapOf<String, Icon>()
 
         override fun getTreeCellRendererComponent(
@@ -1445,6 +1445,28 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
 
         private fun getIconForFile(file: File): Icon? {
             if (file.isDirectory) {
+                // 检查是否是根目录（assets、res、smali）
+                val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
+                if (workspaceRoot != null && file.parentFile?.absolutePath == workspaceRoot.absolutePath) {
+                    val dirName = file.name.lowercase()
+                    when {
+                        dirName == "assets" || dirName == "res" -> {
+                            // 使用 resourcesRoot 图标
+                            return fileIconCache.getOrPut("resourcesRoot") {
+                                val base: Icon = ExplorerIcons.ResourcesRoot ?: ExplorerIcons.Folder ?: createDefaultIcon()
+                                IconUtils.resizeIcon(base, 16, 16)
+                            }
+                        }
+                        dirName == "smali" || dirName.startsWith("smali_") -> {
+                            // 使用 sourceRoot 图标（包括 smali、smali_classes2 等）
+                            return fileIconCache.getOrPut("sourceRoot") {
+                                val base: Icon = ExplorerIcons.SourceRoot ?: ExplorerIcons.Folder ?: createDefaultIcon()
+                                IconUtils.resizeIcon(base, 16, 16)
+                            }
+                        }
+                    }
+                }
+                // 普通目录
                 return fileIconCache.getOrPut("folder") {
                     val base: Icon = ExplorerIcons.Folder ?: createDefaultIcon()
                     IconUtils.resizeIcon(base, 16, 16)

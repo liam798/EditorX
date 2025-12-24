@@ -41,6 +41,11 @@ import java.util.regex.PatternSyntaxException
 class FindReplaceBar(
     private val currentTextAreaProvider: () -> TextArea?,
 ) : JPanel(BorderLayout()) {
+    companion object {
+        private const val MIN_FIELD_WIDTH = 220
+        private const val MAX_FIELD_WIDTH = 600
+        private const val FIELD_PADDING = 36
+    }
 
     enum class Mode { FIND, REPLACE }
 
@@ -63,7 +68,7 @@ class FindReplaceBar(
     private val expandIconExpanded = IconLoader.getIcon(IconRef("icons/chevron-down.svg"), 16)
     private val prevIcon = IconLoader.getIcon(IconRef("icons/arrow-up.svg"), 16)
     private val nextIcon = IconLoader.getIcon(IconRef("icons/arrow-down.svg"), 16)
-    private val closeIcon = IconLoader.getIcon(IconRef("icons/close.svg"), 16)
+    private val closeIcon = IconLoader.getIcon(IconRef("icons/close.svg"), 24)
     private val expandButton = createIconButton(expandIconCollapsed, "展开替换", fallbackText = "▸") {
         toggleReplaceRow()
     }
@@ -71,8 +76,8 @@ class FindReplaceBar(
     private val wholeWord = createToggleButton("W", "全词匹配")
     private val regex = createToggleButton(".*", "正则表达式")
 
-    private val replaceButton = createToolButton("替换", "替换当前匹配") { replaceOne() }
-    private val replaceAllButton = createToolButton("全部替换", "替换所有匹配") { replaceAll() }
+    private val replaceButton = createGhostButton("替换", "替换当前匹配") { replaceOne() }
+    private val replaceAllButton = createGhostButton("全部替换", "替换所有匹配") { replaceAll() }
 
     private val findPrevButton = createIconButton(prevIcon, "上一个（Shift+Enter）", fallbackText = "↑") { findNext(forward = false) }
     private val findNextButton = createIconButton(nextIcon, "下一个（Enter）", fallbackText = "↓") { findNext(forward = true) }
@@ -81,13 +86,17 @@ class FindReplaceBar(
     private val replaceIndent = JPanel().apply {
         isOpaque = false
     }
-    private val searchControls = JPanel().apply {
+    private val searchControls = JPanel(BorderLayout()).apply {
+        isOpaque = false
+    }
+    private val searchLeftControls = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.X_AXIS)
     }
     private val replaceControls = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.X_AXIS)
+        alignmentX = LEFT_ALIGNMENT
     }
 
     init {
@@ -104,28 +113,33 @@ class FindReplaceBar(
 
         // 基础输入尺寸（更贴近 IDEA 的紧凑感）
         val fieldHeight = 28
-        findField.preferredSize = Dimension(260, fieldHeight)
-        findField.maximumSize = Dimension(Int.MAX_VALUE, fieldHeight)
-        replaceField.preferredSize = Dimension(260, fieldHeight)
-        replaceField.maximumSize = Dimension(Int.MAX_VALUE, fieldHeight)
+        val minFieldWidth = MIN_FIELD_WIDTH
+        val maxFieldWidth = MAX_FIELD_WIDTH
+        val minDimension = Dimension(minFieldWidth, fieldHeight)
+        findField.minimumSize = minDimension
+        findField.preferredSize = minDimension
+        findField.maximumSize = Dimension(maxFieldWidth, fieldHeight)
+        replaceField.minimumSize = minDimension
+        replaceField.preferredSize = minDimension
+        replaceField.maximumSize = Dimension(maxFieldWidth, fieldHeight)
 
         // 右侧控制区（放到单独列，确保“搜索/替换”输入框左右对齐）
-        searchControls.add(statusLabel)
-        searchControls.add(Box.createHorizontalStrut(12))
-        searchControls.add(matchCase)
-        searchControls.add(Box.createHorizontalStrut(4))
-        searchControls.add(wholeWord)
-        searchControls.add(Box.createHorizontalStrut(4))
-        searchControls.add(regex)
-        searchControls.add(Box.createHorizontalStrut(8))
-        searchControls.add(findPrevButton)
-        searchControls.add(Box.createHorizontalStrut(2))
-        searchControls.add(findNextButton)
-        searchControls.add(Box.createHorizontalStrut(8))
-        searchControls.add(closeButton)
+        searchLeftControls.add(statusLabel)
+        searchLeftControls.add(Box.createHorizontalStrut(12))
+        searchLeftControls.add(matchCase)
+        searchLeftControls.add(Box.createHorizontalStrut(4))
+        searchLeftControls.add(wholeWord)
+        searchLeftControls.add(Box.createHorizontalStrut(4))
+        searchLeftControls.add(regex)
+        searchLeftControls.add(Box.createHorizontalStrut(8))
+        searchLeftControls.add(findPrevButton)
+        searchLeftControls.add(Box.createHorizontalStrut(2))
+        searchLeftControls.add(findNextButton)
+        searchControls.add(searchLeftControls, BorderLayout.WEST)
+        searchControls.add(closeButton, BorderLayout.EAST)
 
         replaceControls.add(replaceButton)
-        replaceControls.add(Box.createHorizontalStrut(8))
+        replaceControls.add(Box.createHorizontalStrut(6))
         replaceControls.add(replaceAllButton)
 
         val grid = JPanel(GridBagLayout()).apply { isOpaque = false }
@@ -154,15 +168,27 @@ class FindReplaceBar(
 
         // 行 1：搜索
         addCell(0, 0, expandButton, insets = Insets(0, 0, 0, 6))
-        addCell(1, 0, findField, weightX = 1.0, fill = GridBagConstraints.HORIZONTAL, insets = Insets(0, 0, 0, 8))
-        addCell(2, 0, searchControls, anchor = GridBagConstraints.EAST, insets = Insets(0, 0, 0, 0))
+        addCell(1, 0, findField, weightX = 0.0, fill = GridBagConstraints.NONE, insets = Insets(0, 0, 0, 8))
+        addCell(2, 0, searchLeftControls, weightX = 0.0, anchor = GridBagConstraints.WEST, insets = Insets(0, 0, 0, 0))
 
         // 行 2：替换（默认隐藏）
         addCell(0, 1, replaceIndent, insets = Insets(6, 0, 0, 6))
-        addCell(1, 1, replaceField, weightX = 1.0, fill = GridBagConstraints.HORIZONTAL, insets = Insets(6, 0, 0, 8))
-        addCell(2, 1, replaceControls, anchor = GridBagConstraints.EAST, insets = Insets(6, 0, 0, 0))
+        addCell(1, 1, replaceField, weightX = 0.0, fill = GridBagConstraints.NONE, insets = Insets(6, 0, 0, 8))
+        addCell(2, 1, replaceControls, anchor = GridBagConstraints.WEST, insets = Insets(6, 0, 0, 0))
 
-        add(grid, BorderLayout.CENTER)
+        val topRow = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            add(grid, BorderLayout.WEST)
+            val buttonHolder = JPanel().apply {
+                isOpaque = false
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                add(Box.createVerticalStrut(2))
+                add(closeButton)
+                add(Box.createVerticalGlue())
+            }
+            add(buttonHolder, BorderLayout.EAST)
+        }
+        add(topRow, BorderLayout.CENTER)
 
         // 监听输入变化：实时高亮所有匹配
         findField.document.addDocumentListener(object : DocumentListener {
@@ -170,6 +196,19 @@ class FindReplaceBar(
             override fun removeUpdate(e: DocumentEvent?) = refreshMarkAll()
             override fun changedUpdate(e: DocumentEvent?) = refreshMarkAll()
         })
+        findField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) = adjustFieldWidth(findField)
+            override fun removeUpdate(e: DocumentEvent?) = adjustFieldWidth(findField)
+            override fun changedUpdate(e: DocumentEvent?) = adjustFieldWidth(findField)
+        })
+        replaceField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) = adjustFieldWidth(replaceField)
+            override fun removeUpdate(e: DocumentEvent?) = adjustFieldWidth(replaceField)
+            override fun changedUpdate(e: DocumentEvent?) = adjustFieldWidth(replaceField)
+        })
+        // 初始化宽度
+        adjustFieldWidth(findField)
+        adjustFieldWidth(replaceField)
 
         // 监听选项变化
         val optionListener = java.awt.event.ActionListener { refreshMarkAll() }
@@ -561,6 +600,23 @@ class FindReplaceBar(
     }
 
     private fun updateStatus(result: SearchResult, searching: Boolean) = Unit
+    
+    private fun adjustFieldWidth(field: JTextField) {
+        val fm = field.getFontMetrics(field.font)
+        val textSample = field.text.ifEmpty {
+            field.getClientProperty("JTextField.placeholderText") as? String ?: ""
+        }
+        val desiredWidth = (fm.stringWidth(textSample) + FIELD_PADDING)
+            .coerceIn(MIN_FIELD_WIDTH, MAX_FIELD_WIDTH)
+        val height = field.preferredSize.height.takeIf { it > 0 } ?: field.minimumSize.height
+        val newSize = Dimension(desiredWidth, height)
+        field.preferredSize = newSize
+        field.minimumSize = Dimension(MIN_FIELD_WIDTH, height)
+        field.maximumSize = Dimension(MAX_FIELD_WIDTH, height)
+        field.revalidate()
+        field.parent?.revalidate()
+        field.parent?.repaint()
+    }
 
     private fun createToggleButton(text: String, tooltip: String): JToggleButton {
         return JToggleButton(text).apply {
@@ -583,7 +639,20 @@ class FindReplaceBar(
             addActionListener { onClick() }
         }
     }
-
+    
+    private fun createGhostButton(text: String, tooltip: String, onClick: () -> Unit): JButton {
+        return JButton(text).apply {
+            toolTipText = tooltip
+            isFocusable = false
+            font = font.deriveFont(Font.PLAIN, 12f)
+            margin = Insets(4, 14, 4, 14)
+            border = BorderFactory.createLineBorder(Color(0xCC, 0xCC, 0xCC))
+            background = Color.WHITE
+            isContentAreaFilled = false
+            addActionListener { onClick() }
+        }
+    }
+    
     private fun createIconButton(icon: javax.swing.Icon?, tooltip: String, fallbackText: String, onClick: () -> Unit): JButton {
         return JButton(fallbackText).apply {
             this.icon = icon
