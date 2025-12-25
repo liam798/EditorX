@@ -6,7 +6,7 @@ import editorx.core.filetype.Formatter
 import editorx.core.filetype.FormatterRegistry
 import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.filetype.SyntaxHighlighterRegistry
-import editorx.core.lang.Language
+import editorx.core.filetype.Language
 import editorx.core.plugin.PluginContext
 import editorx.core.plugin.gui.PluginGuiClient
 import editorx.gui.main.MainWindow

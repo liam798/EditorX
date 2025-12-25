@@ -1,6 +1,5 @@
 package editorx.core.filetype
 
-import editorx.core.lang.Language
 import java.io.File
 
 object FormatterRegistry {

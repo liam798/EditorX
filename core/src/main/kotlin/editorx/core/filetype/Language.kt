@@ -1,8 +1,5 @@
-package editorx.core.lang
+package editorx.core.filetype
 
-import editorx.core.filetype.FileType
-import editorx.core.filetype.FileTypeRegistry
-import editorx.core.filetype.LanguageFileType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 

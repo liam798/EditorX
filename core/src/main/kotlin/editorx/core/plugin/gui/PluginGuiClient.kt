@@ -3,7 +3,7 @@ package editorx.core.plugin.gui
 import editorx.core.filetype.FileType
 import editorx.core.filetype.Formatter
 import editorx.core.filetype.SyntaxHighlighter
-import editorx.core.lang.Language
+import editorx.core.filetype.Language
 import java.io.File
 
 interface PluginGuiClient {

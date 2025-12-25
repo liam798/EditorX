@@ -1,6 +1,5 @@
 package editorx.core.filetype
 
-import editorx.core.lang.Language
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory
 import java.io.File
