@@ -3,7 +3,7 @@ package editorx.gui.main.explorer
 import editorx.core.filetype.FileTypeRegistry
 import editorx.core.util.IconRef
 import editorx.gui.main.MainWindow
-import editorx.core.services.DecompilerService
+import editorx.core.service.DecompilerService
 import editorx.core.toolchain.ApkTool
 import editorx.core.toolchain.JadxTool
 import editorx.core.util.IconLoader

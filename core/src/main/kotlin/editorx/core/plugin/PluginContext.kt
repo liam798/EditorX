@@ -1,7 +1,7 @@
 package editorx.core.plugin
 
 import editorx.core.plugin.gui.PluginGuiClient
-import editorx.core.services.ServiceRegistry
+import editorx.core.service.ServiceRegistry
 
 interface PluginContext {
 

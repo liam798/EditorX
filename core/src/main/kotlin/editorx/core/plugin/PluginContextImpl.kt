@@ -1,7 +1,7 @@
 package editorx.core.plugin
 
 import editorx.core.plugin.gui.PluginGuiClient
-import editorx.core.services.MutableServiceRegistry
+import editorx.core.service.MutableServiceRegistry
 
 class PluginContextImpl(
     private val plugin: Plugin,

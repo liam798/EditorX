@@ -1,4 +1,4 @@
-package editorx.core.services
+package editorx.core.service
 
 /**
  * 全局搜索/索引服务抽象。

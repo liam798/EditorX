@@ -5,8 +5,8 @@ import editorx.core.filetype.SyntaxHighlighterRegistry
 import editorx.core.i18n.I18n
 import editorx.core.plugin.loader.DiscoveredPlugin
 import editorx.core.plugin.loader.PluginLoader
-import editorx.core.services.MutableServiceRegistry
-import editorx.core.services.ServiceRegistry
+import editorx.core.service.MutableServiceRegistry
+import editorx.core.service.ServiceRegistry
 import org.slf4j.LoggerFactory
 import java.util.IdentityHashMap
 import java.util.SortedMap

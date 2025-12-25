@@ -1,4 +1,4 @@
-package editorx.core.services
+package editorx.core.service
 
 import java.io.File
 
