@@ -300,7 +300,7 @@ class PluginManager {
     private fun cleanupOwner(ownerId: String) {
         FileTypeRegistry.unregisterByOwner(ownerId)
         SyntaxHighlighterRegistry.unregisterByOwner(ownerId)
-        I18n.unregisterByOwner(ownerId)
+        // I18n 现在由插件在 deactivate 时自己管理清理
     }
 
     private fun notifyChanged(pluginId: String) {

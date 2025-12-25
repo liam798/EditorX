@@ -7,7 +7,7 @@ import editorx.core.plugin.PluginInfo
 
 class YamlPlugin : Plugin {
 
-    override fun getInfo(): PluginInfo = PluginInfo(
+    override fun getInfo() = PluginInfo(
         id = "yaml",
         name = "YAML",
         version = "0.0.1",

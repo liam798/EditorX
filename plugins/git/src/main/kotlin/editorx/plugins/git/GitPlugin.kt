@@ -5,7 +5,7 @@ import editorx.core.plugin.PluginContext
 import editorx.core.plugin.PluginInfo
 
 class GitPlugin : Plugin {
-    override fun getInfo(): PluginInfo = PluginInfo(
+    override fun getInfo() = PluginInfo(
         id = "git",
         name = "Git",
         version = "0.0.1",

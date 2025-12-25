@@ -1,15 +1,14 @@
 package editorx.core.i18n
 
-import java.util.Locale
-
 /**
- * 翻译提供器：返回指定 Locale 下的 key -> 文案 映射。
+ * 翻译提供器：提供单个 key 的翻译。
  *
  * 约定：
- * - 返回的 Map 应尽量是不可变的；
+ * - 每个 TranslationProvider 只对应一种语言（在注册时指定）；
+ * - 如果 key 不存在，返回 null；
  * - key 建议使用点分层级（如 "menu.file" / "action.find"）。
  */
 fun interface TranslationProvider {
-    fun translations(locale: Locale): Map<String, String>
+    fun translate(key: String): String?
 }
 
