@@ -65,7 +65,7 @@ private fun initializeApplication(timer: StartupTimer) {
     // 设置应用图标（使用 Taskbar API，支持 Java 9+）
     runCatching {
         val classLoader = Thread.currentThread().contextClassLoader ?: ClassLoader.getSystemClassLoader()
-        val iconUrl = classLoader.getResource("icon.png")
+        val iconUrl = classLoader.getResource("icon_round_128.png")
         if (iconUrl != null) {
             val image = java.awt.Toolkit.getDefaultToolkit().getImage(iconUrl)
             // 使用 Taskbar API（Java 9+），这是跨平台的现代方法
