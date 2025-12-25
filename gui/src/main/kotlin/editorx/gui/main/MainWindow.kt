@@ -12,12 +12,16 @@ import editorx.core.plugin.PluginState
 import editorx.gui.util.NoLineSplitPaneUI
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseMotionAdapter
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JSplitPane
+import javax.swing.SwingUtilities
+import editorx.gui.main.search.GlobalSearchDialog
 
 class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
 
@@ -61,11 +65,16 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
         }
     }
 
+    // 双击 Shift 快捷键相关
+    private var lastShiftPressTime = 0L
+    private val doubleShiftInterval = 500L // 500ms 内的两次 Shift 视为双击
+
     init {
         setupWindow()
         setupLayout()
         tuneSplitPanes()
         setupExplorer()
+        setupDoubleShiftShortcut()
     }
 
     private fun setupWindow() {
@@ -230,5 +239,42 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
             editor.openFile(file)
             guiControl.workspace.addRecentFile(file)
         }
+    }
+
+    /**
+     * 设置双击 Shift 快捷键（打开全局搜索）
+     */
+    private fun setupDoubleShiftShortcut() {
+        // 使用 KeyboardFocusManager 来全局捕获键盘事件
+        val focusManager = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        focusManager.addKeyEventDispatcher { e ->
+            // 只处理 Shift 键按下事件
+            if (e.id == KeyEvent.KEY_PRESSED && e.keyCode == KeyEvent.VK_SHIFT && !e.isConsumed) {
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastPress = currentTime - lastShiftPressTime
+
+                // 如果两次按下间隔在指定时间内，视为双击
+                if (timeSinceLastPress > 0 && timeSinceLastPress < doubleShiftInterval) {
+                    // 触发全局搜索
+                    SwingUtilities.invokeLater { showGlobalSearch() }
+                    lastShiftPressTime = 0 // 重置，避免连续触发
+                    true // 消费事件
+                } else {
+                    // 记录本次按下时间
+                    lastShiftPressTime = currentTime
+                    false // 不消费事件，让其他组件正常处理
+                }
+            } else {
+                false // 不消费事件
+            }
+        }
+    }
+
+    /**
+     * 显示全局搜索对话框
+     */
+    fun showGlobalSearch() {
+        val dialog = GlobalSearchDialog(this, this)
+        dialog.showDialog()
     }
 }

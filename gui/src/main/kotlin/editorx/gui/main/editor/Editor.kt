@@ -45,6 +45,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val tabTextAreas = mutableMapOf<Int, TextArea>()
     private val dirtyTabs = mutableSetOf<Int>()
     private val originalTextByIndex = mutableMapOf<Int, String>()
+    private var untitledCounter = 1
     
     // AndroidManifest 底部视图
     private var manifestViewTabs: JTabbedPane? = null
@@ -269,7 +270,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun updateEditorContent() {
         removeAll()
         val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
-        if (workspaceRoot == null) {
+        // 如果没有工作区且没有打开的标签页，显示欢迎界面
+        if (workspaceRoot == null && tabbedPane.tabCount == 0) {
             welcomeView.refreshContent()
             add(welcomeView, BorderLayout.CENTER)
         } else {
@@ -609,6 +611,123 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         
         // 检测是否为 smali 文件，显示/隐藏底部视图标签
         updateSmaliViewTabs(file)
+        
+        // 打开文件后显示编辑器内容（隐藏欢迎界面）
+        showEditorContent()
+    }
+
+    fun newUntitledFile() {
+        // 创建一个临时的未命名文件标识
+        val untitledFile = File.createTempFile("Untitled-${untitledCounter++}", ".tmp").apply {
+            deleteOnExit()
+        }
+        // 立即删除临时文件，我们只需要它的路径作为标识
+        untitledFile.delete()
+        
+        val textArea = TextArea().apply {
+            font = Font("Consolas", Font.PLAIN, 14)
+            text = ""  // 空内容
+            addCaretListener {
+                val caretPos = caretPosition
+                val line = try {
+                    getLineOfOffset(caretPos) + 1
+                } catch (_: Exception) {
+                    1
+                }
+                val col = caretPos - getLineStartOffsetOfCurrentLine(this) + 1
+                mainWindow.statusBar.setLineColumn(line, col)
+            }
+            document.addDocumentListener(object : javax.swing.event.DocumentListener {
+                override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                private fun recomputeDirty() {
+                    if (getClientProperty("suppressDirty") == true) return
+                    val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
+                    val index = getTabIndexForComponent(scrollComp)
+                    if (index < 0) return
+                    val original = originalTextByIndex[index]
+                    val isDirty = original != this@apply.text
+                    if (isDirty) dirtyTabs.add(index) else dirtyTabs.remove(index)
+                    updateTabTitle(index)
+                    updateTabHeaderStyles()
+                }
+            })
+
+            val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcutMask), "editor.find")
+            actionMap.put("editor.find", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    this@Editor.showFindBar()
+                }
+            })
+
+            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask), "editor.replace")
+            actionMap.put("editor.replace", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    this@Editor.showReplaceBar()
+                }
+            })
+
+            // 安装右键菜单
+            val textAreaForMenu = this
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showTextAreaContextMenu(textAreaForMenu, e.x, e.y)
+                    }
+                }
+
+                override fun mouseReleased(e: MouseEvent) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showTextAreaContextMenu(textAreaForMenu, e.x, e.y)
+                    }
+                }
+            })
+        }
+        
+        val scroll = RTextScrollPane(textArea).apply {
+            border = javax.swing.BorderFactory.createEmptyBorder()
+            background = Color.WHITE
+            viewport.background = Color.WHITE
+        }
+        installFileDropTarget(scroll)
+        installFileDropTarget(textArea)
+        
+        val title = "未命名-${untitledCounter - 1}"
+        tabbedPane.addTab(title, resolveTabIcon(untitledFile), TabContent(scroll), null)
+        val index = tabbedPane.tabCount - 1
+        fileToTab[untitledFile] = index
+        tabToFile[index] = untitledFile
+        tabTextAreas[index] = textArea
+        val closeButton = createVSCodeTabHeader(untitledFile)
+        tabbedPane.setTabComponentAt(index, closeButton)
+        attachPopupToHeader(closeButton)
+        tabbedPane.selectedIndex = index
+        
+        SwingUtilities.invokeLater {
+            runCatching {
+                textArea.caretPosition = 0
+                textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                scroll.verticalScrollBar.value = 0
+                scroll.horizontalScrollBar.value = 0
+            }
+        }
+        
+        originalTextByIndex[index] = ""
+        dirtyTabs.remove(index)
+        textArea.putClientProperty("suppressDirty", false)
+        updateTabHeaderStyles()
+        mainWindow.statusBar.setFileInfo(title, "0 B")
+        mainWindow.statusBar.setLineColumn(1, 1)
+        
+        // 聚焦到编辑器
+        SwingUtilities.invokeLater {
+            textArea.requestFocusInWindow()
+        }
+        
+        // 新建文件后显示编辑器内容（隐藏欢迎界面）
+        showEditorContent()
     }
 
     fun openFileAndSelect(file: File, line: Int, column: Int, length: Int) {
@@ -947,6 +1066,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             newTabToFile.forEach { (i, f) -> fileToTab[f] = i }
 
             mainWindow.statusBar.updateNavigation(getCurrentFile())
+            
+            // 如果所有标签都关闭了，显示欢迎界面
+            if (tabbedPane.tabCount == 0) {
+                updateEditorContent()
+            }
         }
     }
 

@@ -29,6 +29,7 @@ class KeymapPanel : JPanel(BorderLayout()) {
     )
 
     private val shortcuts = listOf(
+        ShortcutItem("全局搜索", "Global Search", if (isEnglish()) "Double Shift" else "双击Shift", "打开全局搜索对话框", "Open global search dialog"),
         ShortcutItem("查找", "Find", keyStroke(KeyEvent.VK_F), "聚焦顶部搜索栏", "Focus search bar"),
         ShortcutItem("替换", "Replace", keyStroke(KeyEvent.VK_R), "展开替换行", "Expand replace row"),
         ShortcutItem("保存文件", "Save File", keyStroke(KeyEvent.VK_S), "保存当前编辑内容", "Save current content"),

@@ -1,5 +1,6 @@
 package editorx.gui.main.toolbar
 
+import editorx.core.i18n.I18n
 import editorx.core.toolchain.ApkTool
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
@@ -367,6 +368,16 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         addActionListener(l)
     }
 
+    /**
+     * 创建带快捷键提示的紧凑按钮
+     */
+    private fun JButton.compactWithShortcut(textLabel: String, shortcut: String, l: ActionListener): JButton = apply {
+        toolTipText = "$textLabel ($shortcut)"
+        isFocusable = false
+        margin = Insets(4, 4, 4, 4)
+        addActionListener(l)
+    }
+
     private fun buildActions() {
         setupLeftActions()
         add(Box.createHorizontalGlue())
@@ -426,8 +437,9 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
 
         add(Box.createHorizontalStrut(6))
 
-        // 全局搜索按钮
-        add(JButton(IconLoader.getIcon(IconRef("icons/search.svg"), ICON_SIZE)).compact("全局搜索") {
+        // 全局搜索按钮（双击 Shift）
+        val doubleShiftText = if (I18n.locale().language == Locale.ENGLISH.language) "Double Shift" else "双击Shift"
+        add(JButton(IconLoader.getIcon(IconRef("icons/search.svg"), ICON_SIZE)).compactWithShortcut("全局搜索", doubleShiftText) {
             showGlobalSearch()
         })
 

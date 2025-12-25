@@ -120,33 +120,33 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
             alignmentX = CENTER_ALIGNMENT
         }
         
-        // Open file 按钮
+        // 新建文件 按钮
+        val newFileBtn = createActionButton(
+            icon = IconLoader.getIcon(IconRef("icons/addFile.svg"), 24),
+            text = "新建文件",
+            onClick = { newFile() }
+        )
+        panel.add(newFileBtn)
+        
+        panel.add(Box.createHorizontalStrut(24))
+        
+        // 打开文件 按钮
         val openFileBtn = createActionButton(
             icon = IconLoader.getIcon(IconRef("icons/anyType.svg"), 24),
-            text = "Open file",
+            text = "打开文件",
             onClick = { openFile() }
         )
         panel.add(openFileBtn)
         
         panel.add(Box.createHorizontalStrut(24))
         
-        // Open project 按钮
+        // 打开项目 按钮
         val openProjectBtn = createActionButton(
             icon = IconLoader.getIcon(IconRef("icons/folder.svg"), 24),
-            text = "Open project",
+            text = "打开项目",
             onClick = { openProject() }
         )
         panel.add(openProjectBtn)
-        
-        panel.add(Box.createHorizontalStrut(24))
-        
-        // Clone repo 按钮
-        val cloneRepoBtn = createActionButton(
-            icon = IconLoader.getIcon(IconRef("icons/git-branch.svg"), 24),
-            text = "Clone repo",
-            onClick = { cloneRepo() }
-        )
-        panel.add(cloneRepoBtn)
         
         return panel
     }
@@ -463,14 +463,9 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         }
     }
     
-    private fun cloneRepo() {
-        // TODO: 实现 Git clone 功能
-        JOptionPane.showMessageDialog(
-            mainWindow,
-            "Git clone 功能待实现",
-            "提示",
-            JOptionPane.INFORMATION_MESSAGE
-        )
+    private fun newFile() {
+        mainWindow.editor.newUntitledFile()
+        mainWindow.editor.showEditorContent()
     }
     
     private fun openWorkspace(workspace: File) {
