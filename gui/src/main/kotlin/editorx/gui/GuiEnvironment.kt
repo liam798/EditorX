@@ -11,7 +11,7 @@ class GuiEnvironment(private val appDir: File) {
         val settingsFile = File(appDir, "settings.properties")
         PropertiesSettingsStore(settingsFile)
     }
-    val workspace: editorx.core.workspace.WorkspaceManager = editorx.core.workspace.DefaultWorkspaceManager(settings)
+    val workspace: WorkspaceManager = DefaultWorkspaceManager(settings)
 
     fun appDirectory(): File = appDir
 }

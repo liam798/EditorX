@@ -2,7 +2,7 @@ package editorx.gui.main.welcome
 
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
-import editorx.gui.core.theme.ThemeManager
+import editorx.gui.core.ui.ThemeManager
 import editorx.gui.main.MainWindow
 import java.awt.BorderLayout
 import java.awt.Color

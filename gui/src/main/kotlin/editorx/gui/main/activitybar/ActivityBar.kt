@@ -3,7 +3,7 @@ package editorx.gui.main.activitybar
 import editorx.core.util.IconRef
 import editorx.core.gui.GuiViewProvider
 import editorx.gui.core.Constants
-import editorx.gui.core.theme.ThemeManager
+import editorx.gui.core.ui.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.core.util.IconLoader
 import java.awt.*

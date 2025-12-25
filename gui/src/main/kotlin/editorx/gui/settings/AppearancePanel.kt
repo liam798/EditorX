@@ -2,8 +2,8 @@ package editorx.gui.settings
 
 import editorx.core.i18n.I18n
 import editorx.core.settings.SettingsStore
-import editorx.gui.core.theme.Theme
-import editorx.gui.core.theme.ThemeManager
+import editorx.gui.core.ui.Theme
+import editorx.gui.core.ui.ThemeManager
 import java.awt.BorderLayout
 import java.awt.Font
 import java.util.Locale

@@ -1,9 +1,8 @@
 package editorx.gui.main.sidebar
 
-import editorx.gui.core.theme.ThemeManager
+import editorx.gui.core.ui.ThemeManager
 import editorx.gui.main.MainWindow
 import java.awt.CardLayout
-import java.awt.Color
 import java.awt.Dimension
 import javax.swing.*
 

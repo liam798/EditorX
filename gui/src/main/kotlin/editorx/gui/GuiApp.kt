@@ -5,7 +5,7 @@ import editorx.core.plugin.PluginManager
 import editorx.core.plugin.loader.PluginLoaderImpl
 import editorx.core.settings.SettingsStore
 import editorx.core.util.StartupTimer
-import editorx.gui.core.theme.ThemeManager
+import editorx.gui.core.ui.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.plugin.GuiContextImpl
 import java.io.File
