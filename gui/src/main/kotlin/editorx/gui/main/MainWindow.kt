@@ -72,7 +72,7 @@ class MainWindow(val guiControl: GuiEnvironment) : JFrame() {
         // 窗口属性
         title = "EditorX"
         defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-        size = Dimension(1400, 900)
+        size = Dimension(1280, 800)
         setLocationRelativeTo(null)
         minimumSize = Dimension(800, 600)
 
