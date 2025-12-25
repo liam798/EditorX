@@ -640,18 +640,62 @@ class FindReplaceBar(
         }
     }
     
-    private fun createGhostButton(text: String, tooltip: String, onClick: () -> Unit): JButton {
-        return JButton(text).apply {
-            toolTipText = tooltip
-            isFocusable = false
-            font = font.deriveFont(Font.PLAIN, 12f)
-            margin = Insets(4, 16, 4, 16)
-            border = BorderFactory.createLineBorder(Color(0xCC, 0xCC, 0xCC))
-            background = Color(0, 0, 0, 0)
-            isContentAreaFilled = false
-            isBorderPainted = true
-            isOpaque = false
-            addActionListener { onClick() }
+    private fun createGhostButton(text: String, tooltip: String, onClick: () -> Unit): java.awt.Component {
+        return object : JPanel() {
+            private var isHovered = false
+            
+            init {
+                toolTipText = tooltip
+                isOpaque = false
+                border = BorderFactory.createEmptyBorder(6, 20, 6, 20)  // padding
+                preferredSize = Dimension(
+                    getFontMetrics(font.deriveFont(Font.PLAIN, 12f)).stringWidth(text) + 40,
+                    28
+                )
+                
+                addMouseListener(object : java.awt.event.MouseAdapter() {
+                    override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                        onClick()
+                    }
+                    
+                    override fun mouseEntered(e: java.awt.event.MouseEvent) {
+                        isHovered = true
+                        repaint()
+                    }
+                    
+                    override fun mouseExited(e: java.awt.event.MouseEvent) {
+                        isHovered = false
+                        repaint()
+                    }
+                })
+                
+                cursor = java.awt.Cursor(java.awt.Cursor.HAND_CURSOR)
+            }
+            
+            override fun paintComponent(g: java.awt.Graphics) {
+                val g2 = g.create() as java.awt.Graphics2D
+                try {
+                    g2.setRenderingHint(
+                        java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON
+                    )
+                    // 绘制圆角边框
+                    g2.color = Color(0xCC, 0xCC, 0xCC)
+                    g2.drawRoundRect(0, 0, width - 1, height - 1, 4, 4)
+                    
+                    // 绘制文本
+                    g2.font = font.deriveFont(Font.PLAIN, 12f)
+                    g2.color = Color(0x33, 0x33, 0x33)
+                    val fm = g2.fontMetrics
+                    val textWidth = fm.stringWidth(text)
+                    val textHeight = fm.height
+                    val x = (width - textWidth) / 2
+                    val y = (height - textHeight) / 2 + fm.ascent
+                    g2.drawString(text, x, y)
+                } finally {
+                    g2.dispose()
+                }
+            }
         }
     }
     
