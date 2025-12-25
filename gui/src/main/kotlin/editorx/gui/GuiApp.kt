@@ -108,6 +108,13 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
     val disabled = loadDisabledSet(guiContext.settings)
     startupTimer.mark("environment.ready")
 
+    // 加载保存的主题
+    guiContext.settings.get("ui.theme", null)?.let { themeName ->
+        val theme = ThemeManager.loadTheme(themeName)
+        ThemeManager.currentTheme = theme
+    }
+
+    // 加载保存的语言
     guiContext.settings.get("ui.locale", null)?.let { tag ->
         runCatching { Locale.forLanguageTag(tag) }
             .getOrNull()
@@ -119,40 +126,33 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
             }
     }
 
-    // 加载保存的主题
-    guiContext.settings.get("ui.theme", null)?.let { themeName ->
-        val theme = ThemeManager.loadTheme(themeName)
-        ThemeManager.currentTheme = theme
-    }
-
-    val mv = MainWindow(guiContext)
-
-    // 显示主窗口
-    mv.isVisible = true
-    startupTimer.mark("window.visible")
-
-    // 初始化插件
+    // 初始化插件框架
     val pluginManager = PluginManager()
     pluginManager.setInitialDisabled(disabled)
     pluginManager.registerContextInitializer { pluginContext ->
         val pluginGuiClient = PluginGuiClientImpl(pluginContext.pluginId(), guiContext)
         pluginContext.setGuiClient(pluginGuiClient)
     }
-    mv.pluginManager = pluginManager
     val loadLogger = LoggerFactory.getLogger("StartupTimer")
-    Thread {
-        val loadTimer = StartupTimer("PluginLoad")
-        pluginManager.loadAll(PluginLoaderImpl())
-        loadTimer.mark("scanned")
-        SwingUtilities.invokeLater {
-            startupTimer.mark("plugins.loaded")
-            pluginManager.triggerStartup()
-            startupTimer.mark("plugins.started")
-            loadTimer.mark("started")
-            loadTimer.dump(loadLogger)
-            startupTimer.dump(loadLogger)
-        }
-    }.apply { name = "plugin-loader"; isDaemon = true }.start()
+    val loadTimer = StartupTimer("PluginLoad")
+    pluginManager.loadAll(PluginLoaderImpl())
+    loadTimer.mark("scanned")
+
+    SwingUtilities.invokeLater {
+        // 在打开主窗口前，初始化需要在启动时机激活的插件
+        startupTimer.mark("plugins.loaded")
+        pluginManager.triggerStartup()
+        startupTimer.mark("plugins.started")
+        loadTimer.mark("started")
+        loadTimer.dump(loadLogger)
+        startupTimer.dump(loadLogger)
+
+        // 显示主窗口
+        val mv = MainWindow(guiContext)
+        mv.pluginManager = pluginManager
+        mv.isVisible = true
+        startupTimer.mark("window.visible")
+    }
 }
 
 private fun loadDisabledSet(settings: Store): Set<String> {

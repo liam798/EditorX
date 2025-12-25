@@ -6,117 +6,117 @@ import editorx.core.plugin.PluginInfo
 import java.util.Locale
 import kotlin.collections.buildMap
 
-private val dictionary = buildMap<String, String> {
-    I18nKeys.Menu.FILE to "File"
-    I18nKeys.Menu.EDIT to "Edit"
-    I18nKeys.Menu.PLUGINS to "Plugins"
-    I18nKeys.Menu.HELP to "Help"
-    I18nKeys.Menu.LANGUAGE to "Language"
+private val dictionary = buildMap {
+    put(I18nKeys.Menu.FILE, "File")
+    put(I18nKeys.Menu.EDIT, "Edit")
+    put(I18nKeys.Menu.PLUGINS, "Plugins")
+    put(I18nKeys.Menu.HELP, "Help")
+    put(I18nKeys.Menu.LANGUAGE, "Language")
 
-    I18nKeys.Action.OPEN_FILE to "Open File…"
-    I18nKeys.Action.OPEN_FOLDER to "Open Folder…"
-    I18nKeys.Action.RECENT to "Recent Files"
-    I18nKeys.Action.SAVE to "Save"
-    I18nKeys.Action.SAVE_AS to "Save As…"
-    I18nKeys.Action.EXIT to "Quit"
-    I18nKeys.Action.UNDO to "Undo"
-    I18nKeys.Action.REDO to "Redo"
-    I18nKeys.Action.FIND to "Find…"
-    I18nKeys.Action.REPLACE to "Replace…"
-    I18nKeys.Action.GLOBAL_SEARCH to "Search in Files…"
-    I18nKeys.Action.PLUGIN_MANAGER to "Plugin Manager"
-    I18nKeys.Action.ABOUT to "About"
-    I18nKeys.Action.HELP to "Help"
-    I18nKeys.Action.NEW_FILE to "New File"
-    I18nKeys.Action.NEW_FOLDER to "New Folder"
-    I18nKeys.Action.DELETE to "Delete"
-    I18nKeys.Action.REFRESH to "Refresh"
-    I18nKeys.Action.REVEAL_IN_SYSTEM to "Reveal in System"
-    I18nKeys.Action.COPY_PATH to "Copy Path"
-    I18nKeys.Action.SELECT_IN_SIDEBAR to "Select in Sidebar"
-    I18nKeys.Action.REVEAL_IN_EXPLORER to "Reveal in Explorer"
-    I18nKeys.Action.CLOSE to "Close"
-    I18nKeys.Action.CLOSE_OTHERS to "Close Others"
-    I18nKeys.Action.CLOSE_ALL to "Close All"
-    I18nKeys.Action.CLOSE_LEFT to "Close Left"
-    I18nKeys.Action.CLOSE_RIGHT to "Close Right"
-    I18nKeys.Action.CLOSE_UNMODIFIED to "Close Unmodified"
-    I18nKeys.Action.FORMAT_FILE to "Format File"
-    I18nKeys.Action.RESET to "Reset"
-    I18nKeys.Action.CANCEL to "Cancel"
-    I18nKeys.Action.CONFIRM to "Confirm"
-    I18nKeys.Action.INSTALL_PLUGIN to "Install Plugin"
-    I18nKeys.Action.OPEN_PLUGINS_FOLDER to "Open Plugins Folder"
-    I18nKeys.Action.ENABLE to "Enable"
-    I18nKeys.Action.DISABLE to "Disable"
-    I18nKeys.Action.UNINSTALL to "Uninstall"
+    put(I18nKeys.Action.OPEN_FILE, "Open File…")
+    put(I18nKeys.Action.OPEN_FOLDER, "Open Folder…")
+    put(I18nKeys.Action.RECENT, "Recent Files")
+    put(I18nKeys.Action.SAVE, "Save")
+    put(I18nKeys.Action.SAVE_AS, "Save As…")
+    put(I18nKeys.Action.EXIT, "Quit")
+    put(I18nKeys.Action.UNDO, "Undo")
+    put(I18nKeys.Action.REDO, "Redo")
+    put(I18nKeys.Action.FIND, "Find…")
+    put(I18nKeys.Action.REPLACE, "Replace…")
+    put(I18nKeys.Action.GLOBAL_SEARCH, "Search in Files…")
+    put(I18nKeys.Action.PLUGIN_MANAGER, "Plugin Manager")
+    put(I18nKeys.Action.ABOUT, "About")
+    put(I18nKeys.Action.HELP, "Help")
+    put(I18nKeys.Action.NEW_FILE, "New File")
+    put(I18nKeys.Action.NEW_FOLDER, "New Folder")
+    put(I18nKeys.Action.DELETE, "Delete")
+    put(I18nKeys.Action.REFRESH, "Refresh")
+    put(I18nKeys.Action.REVEAL_IN_SYSTEM, "Reveal in System")
+    put(I18nKeys.Action.COPY_PATH, "Copy Path")
+    put(I18nKeys.Action.SELECT_IN_SIDEBAR, "Select in Sidebar")
+    put(I18nKeys.Action.REVEAL_IN_EXPLORER, "Reveal in Explorer")
+    put(I18nKeys.Action.CLOSE, "Close")
+    put(I18nKeys.Action.CLOSE_OTHERS, "Close Others")
+    put(I18nKeys.Action.CLOSE_ALL, "Close All")
+    put(I18nKeys.Action.CLOSE_LEFT, "Close Left")
+    put(I18nKeys.Action.CLOSE_RIGHT, "Close Right")
+    put(I18nKeys.Action.CLOSE_UNMODIFIED, "Close Unmodified")
+    put(I18nKeys.Action.FORMAT_FILE, "Format File")
+    put(I18nKeys.Action.RESET, "Reset")
+    put(I18nKeys.Action.CANCEL, "Cancel")
+    put(I18nKeys.Action.CONFIRM, "Confirm")
+    put(I18nKeys.Action.INSTALL_PLUGIN, "Install Plugin")
+    put(I18nKeys.Action.OPEN_PLUGINS_FOLDER, "Open Plugins Folder")
+    put(I18nKeys.Action.ENABLE, "Enable")
+    put(I18nKeys.Action.DISABLE, "Disable")
+    put(I18nKeys.Action.UNINSTALL, "Uninstall")
 
-    I18nKeys.Settings.TITLE to "Preferences"
-    I18nKeys.Settings.PREFERENCES to "Preferences"
-    I18nKeys.Settings.APPEARANCE to "Appearance"
-    I18nKeys.Settings.LANGUAGE to "Language"
-    I18nKeys.Settings.THEME to "Theme"
-    I18nKeys.Settings.APPEARANCE_TIP to "Tip: language and theme changes apply immediately."
-    I18nKeys.Settings.KEYMAP to "Keymap"
-    I18nKeys.Settings.PLUGINS to "Plugins"
-    I18nKeys.Settings.CACHE to "Cache"
-    I18nKeys.Settings.KEYMAP_TITLE to "Keymap (Planned)"
-    I18nKeys.Settings.KEYMAP_HINT to "<html>Current list shows default shortcuts. Customization/export is under planning.</html>"
-    I18nKeys.Settings.ADD_NOTE to "Add Note…"
-    I18nKeys.Settings.ADD_NOTE_TOOLTIP to "Shortcut customization is under development"
-    I18nKeys.Settings.EXPORT to "Export…"
-    I18nKeys.Settings.EXPORT_TOOLTIP to "Feature under development"
-    I18nKeys.Settings.CACHE_TITLE to "Cache"
-    I18nKeys.Settings.CACHE_HINT to "Clear cache only when no background decompile tasks are running."
-    I18nKeys.Settings.REFRESH_CACHE to "Refresh"
-    I18nKeys.Settings.CLEAR_SELECTED to "Clear Selected"
-    I18nKeys.Settings.OPEN_FOLDER to "Open Folder"
-    I18nKeys.Settings.PLUGIN_STATE_DISABLED to "Disabled"
-    I18nKeys.Settings.PLUGIN_STATE_ENABLED to "Enabled"
-    I18nKeys.Settings.PLUGIN_STATE_FAILED to "Failed"
+    put(I18nKeys.Settings.TITLE, "Preferences")
+    put(I18nKeys.Settings.PREFERENCES, "Preferences")
+    put(I18nKeys.Settings.APPEARANCE, "Appearance")
+    put(I18nKeys.Settings.LANGUAGE, "Language")
+    put(I18nKeys.Settings.THEME, "Theme")
+    put(I18nKeys.Settings.APPEARANCE_TIP, "Tip: language and theme changes apply immediately.")
+    put(I18nKeys.Settings.KEYMAP, "Keymap")
+    put(I18nKeys.Settings.PLUGINS, "Plugins")
+    put(I18nKeys.Settings.CACHE, "Cache")
+    put(I18nKeys.Settings.KEYMAP_TITLE, "Keymap (Planned)")
+    put(I18nKeys.Settings.KEYMAP_HINT, "<html>Current list shows default shortcuts. Customization/export is under planning.</html>")
+    put(I18nKeys.Settings.ADD_NOTE, "Add Note…")
+    put(I18nKeys.Settings.ADD_NOTE_TOOLTIP, "Shortcut customization is under development")
+    put(I18nKeys.Settings.EXPORT, "Export…")
+    put(I18nKeys.Settings.EXPORT_TOOLTIP, "Feature under development")
+    put(I18nKeys.Settings.CACHE_TITLE, "Cache")
+    put(I18nKeys.Settings.CACHE_HINT, "Clear cache only when no background decompile tasks are running.")
+    put(I18nKeys.Settings.REFRESH_CACHE, "Refresh")
+    put(I18nKeys.Settings.CLEAR_SELECTED, "Clear Selected")
+    put(I18nKeys.Settings.OPEN_FOLDER, "Open Folder")
+    put(I18nKeys.Settings.PLUGIN_STATE_DISABLED, "Disabled")
+    put(I18nKeys.Settings.PLUGIN_STATE_ENABLED, "Enabled")
+    put(I18nKeys.Settings.PLUGIN_STATE_FAILED, "Failed")
 
-    I18nKeys.CacheTable.NAME to "Name"
-    I18nKeys.CacheTable.PATH to "Path"
-    I18nKeys.CacheTable.SIZE to "Size"
-    I18nKeys.CacheTable.DESCRIPTION to "Description"
+    put(I18nKeys.CacheTable.NAME, "Name")
+    put(I18nKeys.CacheTable.PATH, "Path")
+    put(I18nKeys.CacheTable.SIZE, "Size")
+    put(I18nKeys.CacheTable.DESCRIPTION, "Description")
 
-    I18nKeys.Theme.LIGHT to "Light"
-    I18nKeys.Theme.DARK to "Dark"
+    put(I18nKeys.Theme.LIGHT, "Light")
+    put(I18nKeys.Theme.DARK, "Dark")
 
-    I18nKeys.Status.READY to "Ready"
-    I18nKeys.Status.CANCEL to "Cancel"
-    I18nKeys.Status.GOTO_LINE_COLUMN to "Go to Line/Column"
-    I18nKeys.Status.ERROR to "Error"
-    I18nKeys.Status.WARNING to "Warning"
-    I18nKeys.Status.SUCCESS to "Success"
-    I18nKeys.Status.VERSION_CONTROL to "Version Control"
-    I18nKeys.Status.NO_FILE_OPENED to "No file opened"
-    I18nKeys.Status.LINE_COLUMN to "Line %d, Column %d"
+    put(I18nKeys.Status.READY, "Ready")
+    put(I18nKeys.Status.CANCEL, "Cancel")
+    put(I18nKeys.Status.GOTO_LINE_COLUMN, "Go to Line/Column")
+    put(I18nKeys.Status.ERROR, "Error")
+    put(I18nKeys.Status.WARNING, "Warning")
+    put(I18nKeys.Status.SUCCESS, "Success")
+    put(I18nKeys.Status.VERSION_CONTROL, "Version Control")
+    put(I18nKeys.Status.NO_FILE_OPENED, "No file opened")
+    put(I18nKeys.Status.LINE_COLUMN, "Line %d, Column %d")
 
-    I18nKeys.FindReplace.SEARCH to "Search"
-    I18nKeys.FindReplace.REPLACE to "Replace"
-    I18nKeys.FindReplace.EXPAND_REPLACE to "Expand Replace"
-    I18nKeys.FindReplace.COLLAPSE_REPLACE to "Collapse Replace"
-    I18nKeys.FindReplace.MATCH_CASE to "Match Case"
-    I18nKeys.FindReplace.WHOLE_WORD to "Whole Word"
-    I18nKeys.FindReplace.REGEX to "Regex"
-    I18nKeys.FindReplace.REPLACE_ONE to "Replace"
-    I18nKeys.FindReplace.REPLACE_ALL to "Replace All"
-    I18nKeys.FindReplace.REPLACE_ONE_TOOLTIP to "Replace current match"
-    I18nKeys.FindReplace.REPLACE_ALL_TOOLTIP to "Replace all matches"
-    I18nKeys.FindReplace.FIND_PREV to "Previous (Shift+Enter)"
-    I18nKeys.FindReplace.FIND_NEXT to "Next (Enter)"
-    I18nKeys.FindReplace.CLOSE to "Close"
-    I18nKeys.FindReplace.NO_RESULTS to "0 results"
-    I18nKeys.FindReplace.RESULTS to "%d/%d"
-    I18nKeys.FindReplace.INVALID_REGEX to "Invalid regex"
-    I18nKeys.FindReplace.SEARCH_FAILED to "Search failed"
-    I18nKeys.FindReplace.REPLACE_FAILED to "Replace failed"
+    put(I18nKeys.FindReplace.SEARCH, "Search")
+    put(I18nKeys.FindReplace.REPLACE, "Replace")
+    put(I18nKeys.FindReplace.EXPAND_REPLACE, "Expand Replace")
+    put(I18nKeys.FindReplace.COLLAPSE_REPLACE, "Collapse Replace")
+    put(I18nKeys.FindReplace.MATCH_CASE, "Match Case")
+    put(I18nKeys.FindReplace.WHOLE_WORD, "Whole Word")
+    put(I18nKeys.FindReplace.REGEX, "Regex")
+    put(I18nKeys.FindReplace.REPLACE_ONE, "Replace")
+    put(I18nKeys.FindReplace.REPLACE_ALL, "Replace All")
+    put(I18nKeys.FindReplace.REPLACE_ONE_TOOLTIP, "Replace current match")
+    put(I18nKeys.FindReplace.REPLACE_ALL_TOOLTIP, "Replace all matches")
+    put(I18nKeys.FindReplace.FIND_PREV, "Previous (Shift+Enter)")
+    put(I18nKeys.FindReplace.FIND_NEXT, "Next (Enter)")
+    put(I18nKeys.FindReplace.CLOSE, "Close")
+    put(I18nKeys.FindReplace.NO_RESULTS, "0 results")
+    put(I18nKeys.FindReplace.RESULTS, "%d/%d")
+    put(I18nKeys.FindReplace.INVALID_REGEX, "Invalid regex")
+    put(I18nKeys.FindReplace.SEARCH_FAILED, "Search failed")
+    put(I18nKeys.FindReplace.REPLACE_FAILED, "Replace failed")
 
-    I18nKeys.Dialog.SELECT_FOLDER to "Select Folder"
-    I18nKeys.Dialog.TIP to "Tip"
-    I18nKeys.Dialog.ABOUT_TITLE to "About EditorX"
-    I18nKeys.Dialog.ABOUT_MESSAGE to """EditorX v1.0
+    put(I18nKeys.Dialog.SELECT_FOLDER, "Select Folder")
+    put(I18nKeys.Dialog.TIP, "Tip")
+    put(I18nKeys.Dialog.ABOUT_TITLE, "About EditorX")
+    put(I18nKeys.Dialog.ABOUT_MESSAGE, """EditorX v1.0
 
 A tool for editing APK files
 
@@ -126,141 +126,141 @@ Features:
 • Multi-tab interface
 • File browsing and management
 
-Developed by: XiaMao Tools"""
-    I18nKeys.Dialog.HELP_NOT_IMPLEMENTED to "Help documentation not implemented"
-    I18nKeys.Dialog.NO_RECENT_FILES to "(None)"
-    I18nKeys.Dialog.FILE_NOT_EXISTS to "File does not exist"
-    I18nKeys.Dialog.NOT_FOUND to "Not found"
-    I18nKeys.Dialog.ERROR to "Error"
-    I18nKeys.Dialog.INFO to "Info"
-    I18nKeys.Dialog.SELECT_ENTRY_FIRST to "Select an entry first."
-    I18nKeys.Dialog.DIRECTORY_NOT_FOUND to "Directory not found: %s"
-    I18nKeys.Dialog.CLEAR_CACHE to "Clear Cache"
-    I18nKeys.Dialog.CLEARED to "Cleared"
-    I18nKeys.Dialog.CLEAR_FAILED to "Failed to clear, files may be in use."
-    I18nKeys.Dialog.UNABLE_TO_OPEN to "Unable to open: %s"
+Developed by: XiaMao Tools""")
+    put(I18nKeys.Dialog.HELP_NOT_IMPLEMENTED, "Help documentation not implemented")
+    put(I18nKeys.Dialog.NO_RECENT_FILES, "(None)")
+    put(I18nKeys.Dialog.FILE_NOT_EXISTS, "File does not exist")
+    put(I18nKeys.Dialog.NOT_FOUND, "Not found")
+    put(I18nKeys.Dialog.ERROR, "Error")
+    put(I18nKeys.Dialog.INFO, "Info")
+    put(I18nKeys.Dialog.SELECT_ENTRY_FIRST, "Select an entry first.")
+    put(I18nKeys.Dialog.DIRECTORY_NOT_FOUND, "Directory not found: %s")
+    put(I18nKeys.Dialog.CLEAR_CACHE, "Clear Cache")
+    put(I18nKeys.Dialog.CLEARED, "Cleared")
+    put(I18nKeys.Dialog.CLEAR_FAILED, "Failed to clear, files may be in use.")
+    put(I18nKeys.Dialog.UNABLE_TO_OPEN, "Unable to open: %s")
 
-    I18nKeys.Explorer.TITLE to "Explorer"
-    I18nKeys.Explorer.NEW_FILE to "New File"
-    I18nKeys.Explorer.NEW_FOLDER to "New Folder"
-    I18nKeys.Explorer.DELETE to "Delete"
-    I18nKeys.Explorer.REFRESH to "Refresh"
-    I18nKeys.Explorer.REVEAL_IN_SYSTEM to "Reveal in System"
+    put(I18nKeys.Explorer.TITLE, "Explorer")
+    put(I18nKeys.Explorer.NEW_FILE, "New File")
+    put(I18nKeys.Explorer.NEW_FOLDER, "New Folder")
+    put(I18nKeys.Explorer.DELETE, "Delete")
+    put(I18nKeys.Explorer.REFRESH, "Refresh")
+    put(I18nKeys.Explorer.REVEAL_IN_SYSTEM, "Reveal in System")
 
-    I18nKeys.Editor.CLOSE to "Close"
-    I18nKeys.Editor.CLOSE_OTHERS to "Close Others"
-    I18nKeys.Editor.CLOSE_ALL to "Close All"
-    I18nKeys.Editor.CLOSE_LEFT to "Close Left"
-    I18nKeys.Editor.CLOSE_RIGHT to "Close Right"
-    I18nKeys.Editor.CLOSE_UNMODIFIED to "Close Unmodified"
-    I18nKeys.Editor.FORMAT_FILE to "Format File"
-    I18nKeys.Editor.CANNOT_READ_FILE to "Cannot read file: %s"
-    I18nKeys.Editor.TOTAL_FILES to "Total %d files/directories"
-    I18nKeys.Editor.CANNOT_READ_ARCHIVE to "Cannot read archive"
+    put(I18nKeys.Editor.CLOSE, "Close")
+    put(I18nKeys.Editor.CLOSE_OTHERS, "Close Others")
+    put(I18nKeys.Editor.CLOSE_ALL, "Close All")
+    put(I18nKeys.Editor.CLOSE_LEFT, "Close Left")
+    put(I18nKeys.Editor.CLOSE_RIGHT, "Close Right")
+    put(I18nKeys.Editor.CLOSE_UNMODIFIED, "Close Unmodified")
+    put(I18nKeys.Editor.FORMAT_FILE, "Format File")
+    put(I18nKeys.Editor.CANNOT_READ_FILE, "Cannot read file: %s")
+    put(I18nKeys.Editor.TOTAL_FILES, "Total %d files/directories")
+    put(I18nKeys.Editor.CANNOT_READ_ARCHIVE, "Cannot read archive")
 
-    I18nKeys.Toolbar.GOTO_MANIFEST to "Go to AndroidManifest.xml"
-    I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY to "Go to MainActivity"
-    I18nKeys.Toolbar.GOTO_APPLICATION to "Go to Application"
-    I18nKeys.Toolbar.BUILD to "Build"
-    I18nKeys.Toolbar.TOGGLE_SIDEBAR to "Toggle Sidebar"
-    I18nKeys.Toolbar.GLOBAL_SEARCH to "Global Search"
-    I18nKeys.Toolbar.SETTINGS to "Settings"
-    I18nKeys.Toolbar.DOUBLE_SHIFT to "Double Shift"
+    put(I18nKeys.Toolbar.GOTO_MANIFEST, "Go to AndroidManifest.xml")
+    put(I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY, "Go to MainActivity")
+    put(I18nKeys.Toolbar.GOTO_APPLICATION, "Go to Application")
+    put(I18nKeys.Toolbar.BUILD, "Build")
+    put(I18nKeys.Toolbar.TOGGLE_SIDEBAR, "Toggle Sidebar")
+    put(I18nKeys.Toolbar.GLOBAL_SEARCH, "Global Search")
+    put(I18nKeys.Toolbar.SETTINGS, "Settings")
+    put(I18nKeys.Toolbar.DOUBLE_SHIFT, "Double Shift")
 
-    I18nKeys.Search.SEARCH to "Search"
-    I18nKeys.Search.STOP to "Stop"
-    I18nKeys.Search.SEARCH_LABEL to "Search:"
-    I18nKeys.Search.PLEASE_ENTER_SEARCH to "Please enter search content"
-    I18nKeys.Search.PLEASE_OPEN_FOLDER to "Please open a folder (workspace) first before global search"
-    I18nKeys.Search.SCANNED_FILES to "Scanned %d files, found %d results"
+    put(I18nKeys.Search.SEARCH, "Search")
+    put(I18nKeys.Search.STOP, "Stop")
+    put(I18nKeys.Search.SEARCH_LABEL, "Search:")
+    put(I18nKeys.Search.PLEASE_ENTER_SEARCH, "Please enter search content")
+    put(I18nKeys.Search.PLEASE_OPEN_FOLDER, "Please open a folder (workspace) first before global search")
+    put(I18nKeys.Search.SCANNED_FILES, "Scanned %d files, found %d results")
 
-    I18nKeys.Welcome.RECENT_PROJECTS to "Recent projects"
-    I18nKeys.Welcome.VIEW_ALL to "View all (%d)"
-    I18nKeys.Welcome.NO_RECENT_PROJECTS to "No recent projects"
-    I18nKeys.Welcome.NEW_FILE to "New File"
-    I18nKeys.Welcome.OPEN_FILE to "Open File"
-    I18nKeys.Welcome.OPEN_PROJECT to "Open Project"
+    put(I18nKeys.Welcome.RECENT_PROJECTS, "Recent projects")
+    put(I18nKeys.Welcome.VIEW_ALL, "View all")
+    put(I18nKeys.Welcome.NO_RECENT_PROJECTS, "No recent projects")
+    put(I18nKeys.Welcome.NEW_FILE, "New File")
+    put(I18nKeys.Welcome.OPEN_FILE, "Open File")
+    put(I18nKeys.Welcome.OPEN_PROJECT, "Open Project")
 
-    I18nKeys.Navigation.NO_FILE_OPENED to "No file opened"
-    I18nKeys.Navigation.COPY_PATH to "Copy Path"
-    I18nKeys.Navigation.SELECT_IN_SIDEBAR to "Select in Sidebar"
-    I18nKeys.Navigation.REVEAL_IN_EXPLORER to "Reveal in Explorer"
+    put(I18nKeys.Navigation.NO_FILE_OPENED, "No file opened")
+    put(I18nKeys.Navigation.COPY_PATH, "Copy Path")
+    put(I18nKeys.Navigation.SELECT_IN_SIDEBAR, "Select in Sidebar")
+    put(I18nKeys.Navigation.REVEAL_IN_EXPLORER, "Reveal in Explorer")
 
-    I18nKeys.Plugins.NO_PLUGIN_SELECTED to "No plugin selected"
-    I18nKeys.Plugins.ID to "ID"
-    I18nKeys.Plugins.VERSION to "Version"
-    I18nKeys.Plugins.ORIGIN to "Origin"
-    I18nKeys.Plugins.STATE to "State"
-    I18nKeys.Plugins.PATH to "Path"
-    I18nKeys.Plugins.PLUGINS_COUNT to "%d plugins"
-    I18nKeys.Plugins.SCAN_COMPLETED to "Scan completed"
-    I18nKeys.Plugins.ENABLED to "Enabled: %s"
-    I18nKeys.Plugins.DISABLED to "Disabled: %s"
-    I18nKeys.Plugins.REMOVED to "Removed: %s"
-    I18nKeys.Plugins.BUNDLED to "Bundled"
-    I18nKeys.Plugins.BUILTIN_CANNOT_UNINSTALL to "Built-in plugins cannot be uninstalled.\nPlugin: %s (%s)"
-    I18nKeys.Plugins.CONFIRM_UNINSTALL to "Remove plugin %s (%s)?\nIf it is a JAR plugin, also remove the file from plugins/ directory."
-    I18nKeys.Plugins.UNINSTALL_FAILED to "Failed to uninstall plugin: %s (%s)"
-    I18nKeys.Plugins.NO_PLUGIN_ENTRY to "Copied to plugins/, but no new plugin entry detected (check META-INF/services)."
-    I18nKeys.Plugins.INSTALLED_AND_STARTED to "Installed and started: %s"
+    put(I18nKeys.Plugins.NO_PLUGIN_SELECTED, "No plugin selected")
+    put(I18nKeys.Plugins.ID, "ID")
+    put(I18nKeys.Plugins.VERSION, "Version")
+    put(I18nKeys.Plugins.ORIGIN, "Origin")
+    put(I18nKeys.Plugins.STATE, "State")
+    put(I18nKeys.Plugins.PATH, "Path")
+    put(I18nKeys.Plugins.PLUGINS_COUNT, "%d plugins")
+    put(I18nKeys.Plugins.SCAN_COMPLETED, "Scan completed")
+    put(I18nKeys.Plugins.ENABLED, "Enabled: %s")
+    put(I18nKeys.Plugins.DISABLED, "Disabled: %s")
+    put(I18nKeys.Plugins.REMOVED, "Removed: %s")
+    put(I18nKeys.Plugins.BUNDLED, "Bundled")
+    put(I18nKeys.Plugins.BUILTIN_CANNOT_UNINSTALL, "Built-in plugins cannot be uninstalled.\nPlugin: %s (%s)")
+    put(I18nKeys.Plugins.CONFIRM_UNINSTALL, "Remove plugin %s (%s)?\nIf it is a JAR plugin, also remove the file from plugins/ directory.")
+    put(I18nKeys.Plugins.UNINSTALL_FAILED, "Failed to uninstall plugin: %s (%s)")
+    put(I18nKeys.Plugins.NO_PLUGIN_ENTRY, "Copied to plugins/, but no new plugin entry detected (check META-INF/services).")
+    put(I18nKeys.Plugins.INSTALLED_AND_STARTED, "Installed and started: %s")
 
-    I18nKeys.Keymap.ACTION to "Action"
-    I18nKeys.Keymap.SHORTCUT to "Shortcut"
-    I18nKeys.Keymap.DESCRIPTION to "Description"
+    put(I18nKeys.Keymap.ACTION, "Action")
+    put(I18nKeys.Keymap.SHORTCUT, "Shortcut")
+    put(I18nKeys.Keymap.DESCRIPTION, "Description")
 
-    I18nKeys.ToolbarMessage.COMPILING to "Compiling, please wait…"
-    I18nKeys.ToolbarMessage.COMPILING_TITLE to "Compiling"
-    I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED to "Workspace not opened"
-    I18nKeys.ToolbarMessage.NOT_APKTOOL_DIR to "Current workspace is not an apktool decompiled directory (missing apktool.yml)"
-    I18nKeys.ToolbarMessage.CANNOT_COMPILE to "Cannot compile"
-    I18nKeys.ToolbarMessage.COMPILING_APK to "Compiling APK..."
-    I18nKeys.ToolbarMessage.SIGNING_APK to "Signing APK..."
-    I18nKeys.ToolbarMessage.COMPILE_AND_SIGN_SUCCESS to "APK compiled and signed: %s"
-    I18nKeys.ToolbarMessage.APK_GENERATED to "APK generated and signed with debug certificate:\n%s"
-    I18nKeys.ToolbarMessage.COMPILE_COMPLETE to "Compile Complete"
-    I18nKeys.ToolbarMessage.SIGN_FAILED to "Sign failed: %s"
-    I18nKeys.ToolbarMessage.SIGN_FAILED_DETAIL to "APK compiled successfully, but signing failed:\n%s"
-    I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND to "apktool not found"
-    I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND_DETAIL to "apktool not found. Executable should be placed in toolchain/apktool or tools/apktool, or added to PATH"
-    I18nKeys.ToolbarMessage.COMPILE_CANCELLED to "APK compilation cancelled"
-    I18nKeys.ToolbarMessage.COMPILE_FAILED to "APK compilation failed (exit=%d)"
-    I18nKeys.ToolbarMessage.COMPILE_FAILED_DETAIL to "apktool compilation failed (exit=%d)\n%s"
-    I18nKeys.ToolbarMessage.COMPILE_EXCEPTION to "Exception during compilation: %s"
-    I18nKeys.ToolbarMessage.KEYSTORE_NOT_FOUND to "Cannot find or create ~/.android/debug.keystore"
-    I18nKeys.ToolbarMessage.APKSIGNER_NOT_FOUND to "apksigner not found. Please set ANDROID_HOME/ANDROID_SDK_ROOT or add apksigner to PATH"
-    I18nKeys.ToolbarMessage.SIGN_EXCEPTION to "Unknown error during signing"
-    I18nKeys.ToolbarMessage.MANIFEST_NOT_FOUND to "AndroidManifest.xml not found\nPath: %s"
-    I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND to "AndroidManifest.xml not found, cannot locate MainActivity"
-    I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND_DETAIL to "MainActivity not found in AndroidManifest.xml (no Activity with MAIN action found)"
-    I18nKeys.ToolbarMessage.MAINACTIVITY_SMALI_NOT_FOUND to "MainActivity smali file not found\nClass: %s\nExpected path: %s"
-    I18nKeys.ToolbarMessage.PARSE_MANIFEST_FAILED to "Failed to parse AndroidManifest.xml: %s"
-    I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND to "AndroidManifest.xml not found, cannot locate Application"
-    I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND_DETAIL to "Custom Application class not found in AndroidManifest.xml (using default Application)"
-    I18nKeys.ToolbarMessage.APPLICATION_SMALI_NOT_FOUND to "Application smali file not found\nClass: %s\nExpected path: %s"
+    put(I18nKeys.ToolbarMessage.COMPILING, "Compiling, please wait…")
+    put(I18nKeys.ToolbarMessage.COMPILING_TITLE, "Compiling")
+    put(I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED, "Workspace not opened")
+    put(I18nKeys.ToolbarMessage.NOT_APKTOOL_DIR, "Current workspace is not an apktool decompiled directory (missing apktool.yml)")
+    put(I18nKeys.ToolbarMessage.CANNOT_COMPILE, "Cannot compile")
+    put(I18nKeys.ToolbarMessage.COMPILING_APK, "Compiling APK...")
+    put(I18nKeys.ToolbarMessage.SIGNING_APK, "Signing APK...")
+    put(I18nKeys.ToolbarMessage.COMPILE_AND_SIGN_SUCCESS, "APK compiled and signed: %s")
+    put(I18nKeys.ToolbarMessage.APK_GENERATED, "APK generated and signed with debug certificate:\n%s")
+    put(I18nKeys.ToolbarMessage.COMPILE_COMPLETE, "Compile Complete")
+    put(I18nKeys.ToolbarMessage.SIGN_FAILED, "Sign failed: %s")
+    put(I18nKeys.ToolbarMessage.SIGN_FAILED_DETAIL, "APK compiled successfully, but signing failed:\n%s")
+    put(I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND, "apktool not found")
+    put(I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND_DETAIL, "apktool not found. Executable should be placed in toolchain/apktool or tools/apktool, or added to PATH")
+    put(I18nKeys.ToolbarMessage.COMPILE_CANCELLED, "APK compilation cancelled")
+    put(I18nKeys.ToolbarMessage.COMPILE_FAILED, "APK compilation failed (exit=%d)")
+    put(I18nKeys.ToolbarMessage.COMPILE_FAILED_DETAIL, "apktool compilation failed (exit=%d)\n%s")
+    put(I18nKeys.ToolbarMessage.COMPILE_EXCEPTION, "Exception during compilation: %s")
+    put(I18nKeys.ToolbarMessage.KEYSTORE_NOT_FOUND, "Cannot find or create ~/.android/debug.keystore")
+    put(I18nKeys.ToolbarMessage.APKSIGNER_NOT_FOUND, "apksigner not found. Please set ANDROID_HOME/ANDROID_SDK_ROOT or add apksigner to PATH")
+    put(I18nKeys.ToolbarMessage.SIGN_EXCEPTION, "Unknown error during signing")
+    put(I18nKeys.ToolbarMessage.MANIFEST_NOT_FOUND, "AndroidManifest.xml not found\nPath: %s")
+    put(I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND, "AndroidManifest.xml not found, cannot locate MainActivity")
+    put(I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND_DETAIL, "MainActivity not found in AndroidManifest.xml (no Activity with MAIN action found)")
+    put(I18nKeys.ToolbarMessage.MAINACTIVITY_SMALI_NOT_FOUND, "MainActivity smali file not found\nClass: %s\nExpected path: %s")
+    put(I18nKeys.ToolbarMessage.PARSE_MANIFEST_FAILED, "Failed to parse AndroidManifest.xml: %s")
+    put(I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND, "AndroidManifest.xml not found, cannot locate Application")
+    put(I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND_DETAIL, "Custom Application class not found in AndroidManifest.xml (using default Application)")
+    put(I18nKeys.ToolbarMessage.APPLICATION_SMALI_NOT_FOUND, "Application smali file not found\nClass: %s\nExpected path: %s")
 
-    I18nKeys.Cache.CACHE_CONTENT to "Cache"
-    I18nKeys.Cache.LOGS to "Logs"
-    I18nKeys.Cache.CACHE_DESC to "Workspace and plugin caches"
-    I18nKeys.Cache.LOGS_DESC to "Runtime logs for troubleshooting"
-    I18nKeys.Cache.CONFIRM_CLEAR to "Clear %s?\n%s"
-    I18nKeys.Cache.CANNOT_DELETE to "Cannot delete: %s"
+    put(I18nKeys.Cache.CACHE_CONTENT, "Cache")
+    put(I18nKeys.Cache.LOGS, "Logs")
+    put(I18nKeys.Cache.CACHE_DESC, "Workspace and plugin caches")
+    put(I18nKeys.Cache.LOGS_DESC, "Runtime logs for troubleshooting")
+    put(I18nKeys.Cache.CONFIRM_CLEAR, "Clear %s?\n%s")
+    put(I18nKeys.Cache.CANNOT_DELETE, "Cannot delete: %s")
 
-    I18nKeys.Dialog.SELECT_PLUGIN_JAR to "Select Plugin JAR"
-    I18nKeys.Dialog.SELECT_FILE to "Select File"
-    I18nKeys.Dialog.PATH_NOT_EXISTS to "Path does not exist: %s"
-    I18nKeys.Dialog.UNABLE_TO_OPEN_SYSTEM to "Unable to open in system: %s"
-    I18nKeys.Dialog.COPY_PATH_FAILED to "Copy path failed: %s"
-    I18nKeys.Dialog.PATH_COPIED to "Path copied: %s"
-    I18nKeys.Dialog.PLUGIN_SYSTEM_NOT_INIT to "Plugin system not initialized"
-    I18nKeys.Dialog.SELECT_JAR_FILE to "Please select a .jar file"
-    I18nKeys.Dialog.CONFIRM_OVERWRITE to "Plugin directory already contains file: %s\nOverwrite?"
-    I18nKeys.Dialog.CANNOT_UNINSTALL to "Cannot Uninstall"
-    I18nKeys.Dialog.CONFIRM_REMOVAL to "Confirm Removal"
-    I18nKeys.Dialog.UNINSTALL_FAILED to "Failed to uninstall plugin: %s (%s)"
-    I18nKeys.Dialog.COPY_FAILED to "Copy failed: %s"
-    I18nKeys.Dialog.DELETE_RECENT_PROJECT to "Delete Recent Project"
-    I18nKeys.Dialog.OPEN_APK_FILE to "Open APK File"
-    I18nKeys.Dialog.DETECTED_APK to "APK file detected. Convert to project (decompile)?"
+    put(I18nKeys.Dialog.SELECT_PLUGIN_JAR, "Select Plugin JAR")
+    put(I18nKeys.Dialog.SELECT_FILE, "Select File")
+    put(I18nKeys.Dialog.PATH_NOT_EXISTS, "Path does not exist: %s")
+    put(I18nKeys.Dialog.UNABLE_TO_OPEN_SYSTEM, "Unable to open in system: %s")
+    put(I18nKeys.Dialog.COPY_PATH_FAILED, "Copy path failed: %s")
+    put(I18nKeys.Dialog.PATH_COPIED, "Path copied: %s")
+    put(I18nKeys.Dialog.PLUGIN_SYSTEM_NOT_INIT, "Plugin system not initialized")
+    put(I18nKeys.Dialog.SELECT_JAR_FILE, "Please select a .jar file")
+    put(I18nKeys.Dialog.CONFIRM_OVERWRITE, "Plugin directory already contains file: %s\nOverwrite?")
+    put(I18nKeys.Dialog.CANNOT_UNINSTALL, "Cannot Uninstall")
+    put(I18nKeys.Dialog.CONFIRM_REMOVAL, "Confirm Removal")
+    put(I18nKeys.Dialog.UNINSTALL_FAILED, "Failed to uninstall plugin: %s (%s)")
+    put(I18nKeys.Dialog.COPY_FAILED, "Copy failed: %s")
+    put(I18nKeys.Dialog.DELETE_RECENT_PROJECT, "Delete Recent Project")
+    put(I18nKeys.Dialog.OPEN_APK_FILE, "Open APK File")
+    put(I18nKeys.Dialog.DETECTED_APK, "APK file detected. Convert to project (decompile)?")
     
     // 语言名称使用动态生成的 key
     put(I18nKeys.Lang.forLocale(Locale.forLanguageTag("zh")), "Chinese")
