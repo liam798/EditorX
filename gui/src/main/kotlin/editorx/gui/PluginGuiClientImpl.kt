@@ -1,19 +1,10 @@
-package editorx.gui.plugin
+package editorx.gui
 
-import editorx.core.filetype.FileType
-import editorx.core.filetype.FileTypeRegistry
-import editorx.core.filetype.Formatter
-import editorx.core.filetype.FormatterRegistry
-import editorx.core.filetype.SyntaxHighlighter
-import editorx.core.filetype.SyntaxHighlighterRegistry
-import editorx.core.filetype.Language
+import editorx.core.filetype.*
 import editorx.core.gui.GuiContext
 import editorx.core.plugin.gui.PluginGuiClient
 
-class PluginGuiContextImpl(
-    private val pluginId: String,
-    private val guiContext: GuiContext
-) : PluginGuiClient {
+class PluginGuiClientImpl(private val pluginId: String, private val guiContext: GuiContext) : PluginGuiClient {
 
     override fun getWorkspaceRoot(): java.io.File? {
         return guiContext.workspace.getWorkspaceRoot()

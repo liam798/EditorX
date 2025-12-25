@@ -9,7 +9,7 @@ import editorx.gui.main.statusbar.StatusBar
 import editorx.gui.main.toolbar.ToolBar
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginState
-import editorx.gui.util.NoLineSplitPaneUI
+import editorx.gui.core.ui.NoLineSplitPaneUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.event.KeyEvent

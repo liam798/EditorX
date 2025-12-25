@@ -1,4 +1,4 @@
-package editorx.gui.core.ui
+package editorx.gui.core
 
 import java.awt.Color
 import javax.swing.BorderFactory

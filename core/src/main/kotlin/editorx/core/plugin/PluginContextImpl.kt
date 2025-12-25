@@ -35,7 +35,7 @@ class PluginContextImpl(
         ownedServices.remove(serviceClass)
     }
 
-    fun setGuiContext(guiClient: PluginGuiClient) {
+    fun setGuiClient(guiClient: PluginGuiClient) {
         this.guiClient = guiClient
     }
 

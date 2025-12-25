@@ -2,7 +2,7 @@ package editorx.gui.main.editor
 
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
-import editorx.gui.core.ui.ThemeManager
+import editorx.gui.core.ThemeManager
 import org.fife.ui.rtextarea.SearchContext
 import org.fife.ui.rtextarea.SearchEngine
 import org.fife.ui.rtextarea.SearchResult
