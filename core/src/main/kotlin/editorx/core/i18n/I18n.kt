@@ -37,17 +37,6 @@ object I18n {
     }
 
     /**
-     * 注销指定语言的翻译提供器。
-     *
-     * @param locale 要注销的语言
-     */
-    fun unregister(locale: Locale) {
-        val changed = providers.remove(locale) != null
-        if (!changed) return
-        fireLanguageChanged()
-    }
-
-    /**
      * 注销指定的翻译提供器。
      *
      * @param provider 要注销的提供器实例
