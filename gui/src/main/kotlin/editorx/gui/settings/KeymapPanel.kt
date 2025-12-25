@@ -1,6 +1,7 @@
 package editorx.gui.settings
 
 import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.Font
@@ -28,14 +29,18 @@ class KeymapPanel : JPanel(BorderLayout()) {
         val descriptionEn: String,
     )
 
-    private val shortcuts = listOf(
-        ShortcutItem("全局搜索", "Global Search", if (isEnglish()) "Double Shift" else "双击Shift", "打开全局搜索对话框", "Open global search dialog"),
-        ShortcutItem("查找", "Find", keyStroke(KeyEvent.VK_F), "聚焦顶部搜索栏", "Focus search bar"),
-        ShortcutItem("替换", "Replace", keyStroke(KeyEvent.VK_R), "展开替换行", "Expand replace row"),
-        ShortcutItem("保存文件", "Save File", keyStroke(KeyEvent.VK_S), "保存当前编辑内容", "Save current content"),
-        ShortcutItem("关闭标签页", "Close Tab", keyStroke(KeyEvent.VK_W), "关闭当前标签页", "Close active tab"),
-        ShortcutItem("格式化文件", "Format File", formatKeyStroke(), "格式化当前文件", "Format current file"),
-    )
+    private fun isEnglish(): Boolean = I18n.locale().language == java.util.Locale.ENGLISH.language
+
+    private val shortcuts by lazy {
+        listOf(
+            ShortcutItem("全局搜索", "Global Search", if (isEnglish()) "Double Shift" else "双击Shift", "打开全局搜索对话框", "Open global search dialog"),
+            ShortcutItem("查找", "Find", keyStroke(KeyEvent.VK_F), "聚焦顶部搜索栏", "Focus search bar"),
+            ShortcutItem("替换", "Replace", keyStroke(KeyEvent.VK_R), "展开替换行", "Expand replace row"),
+            ShortcutItem("保存文件", "Save File", keyStroke(KeyEvent.VK_S), "保存当前编辑内容", "Save current content"),
+            ShortcutItem("关闭标签页", "Close Tab", keyStroke(KeyEvent.VK_W), "关闭当前标签页", "Close active tab"),
+            ShortcutItem("格式化文件", "Format File", formatKeyStroke(), "格式化当前文件", "Format current file"),
+        )
+    }
 
     private val tableModel = object : AbstractTableModel() {
         override fun getRowCount(): Int = shortcuts.size
@@ -104,24 +109,13 @@ class KeymapPanel : JPanel(BorderLayout()) {
         applyTexts()
     }
 
-    private fun isEnglish(): Boolean = I18n.locale().language == java.util.Locale.ENGLISH.language
-
     private fun applyTexts() {
-        if (isEnglish()) {
-            headerLabel.text = "Keymap (Planned)"
-            hintLabel.text = "<html>Current list shows default shortcuts. Customization/export is under planning.</html>"
-            noteButton.text = "Add Note…"
-            noteButton.toolTipText = "Shortcut customization is under development"
-            exportButton.text = "Export…"
-            exportButton.toolTipText = "Feature under development"
-        } else {
-            headerLabel.text = "快捷键"
-            hintLabel.text = "<html>当前列表展示默认快捷键，自定义与导出功能规划中。</html>"
-            noteButton.text = "添加备注…"
-            noteButton.toolTipText = "快捷键自定义功能开发中"
-            exportButton.text = "导出配置…"
-            exportButton.toolTipText = "功能开发中"
-        }
+        headerLabel.text = I18n.translate(I18nKeys.Settings.KEYMAP_TITLE)
+        hintLabel.text = I18n.translate(I18nKeys.Settings.KEYMAP_HINT)
+        noteButton.text = I18n.translate(I18nKeys.Settings.ADD_NOTE)
+        noteButton.toolTipText = I18n.translate(I18nKeys.Settings.ADD_NOTE_TOOLTIP)
+        exportButton.text = I18n.translate(I18nKeys.Settings.EXPORT)
+        exportButton.toolTipText = I18n.translate(I18nKeys.Settings.EXPORT_TOOLTIP)
     }
 
     companion object {

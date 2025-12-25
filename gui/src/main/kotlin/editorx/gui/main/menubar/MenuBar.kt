@@ -79,12 +79,12 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
             val shortcut = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
             mnemonic = KeyEvent.VK_E
 
-            add(JMenuItem("撤销").apply {
+            add(JMenuItem(I18n.translate(I18nKeys.Action.UNDO)).apply {
                 mnemonic = KeyEvent.VK_Z
                 accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Z, shortcut)
                 isEnabled = false
             })
-            add(JMenuItem("重做").apply {
+            add(JMenuItem(I18n.translate(I18nKeys.Action.REDO)).apply {
                 mnemonic = KeyEvent.VK_Y
                 accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Y, shortcut)
                 isEnabled = false
@@ -125,7 +125,7 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
         val fileChooser =
             JFileChooser().apply {
                 fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                dialogTitle = "选择文件夹"
+                dialogTitle = I18n.translate(I18nKeys.Dialog.SELECT_FOLDER)
             }
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selectedFolder = fileChooser.selectedFile
@@ -161,30 +161,21 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
     // }
 
     private fun showAbout() {
-        val aboutMessage =
-            """
-            EditorX v1.0
-
-            一个用于编辑APK文件的工具
-
-            功能特性：
-            • 语法高亮编辑
-            • 插件系统支持
-            • 多标签页界面
-            • 文件浏览和管理
-
-            开发：XiaMao Tools
-        """.trimIndent()
         JOptionPane.showMessageDialog(
             this,
-            aboutMessage,
-            "关于 EditorX",
+            I18n.translate(I18nKeys.Dialog.ABOUT_MESSAGE),
+            I18n.translate(I18nKeys.Dialog.ABOUT_TITLE),
             JOptionPane.INFORMATION_MESSAGE
         )
     }
 
     private fun showHelp() {
-        JOptionPane.showMessageDialog(this, "帮助文档待实现", "提示", JOptionPane.INFORMATION_MESSAGE)
+        JOptionPane.showMessageDialog(
+            this,
+            I18n.translate(I18nKeys.Dialog.HELP_NOT_IMPLEMENTED),
+            I18n.translate(I18nKeys.Dialog.TIP),
+            JOptionPane.INFORMATION_MESSAGE
+        )
     }
 }
 
@@ -196,7 +187,7 @@ private class RecentFilesMenuListener(
         menu.removeAll()
         val recents = mainWindow.guiContext.workspace.recentFiles()
         if (recents.isEmpty()) {
-            menu.add(JMenuItem("(无)"))
+            menu.add(JMenuItem(I18n.translate(I18nKeys.Dialog.NO_RECENT_FILES)))
         } else {
             recents.forEach { file ->
                 val item = JMenuItem(file.name)

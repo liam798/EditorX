@@ -1,5 +1,7 @@
 package editorx.gui.main.statusbar
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.gui.core.ThemeManager
 import editorx.gui.main.MainWindow
 import java.awt.Color
@@ -10,8 +12,9 @@ import java.awt.event.MouseEvent
 import javax.swing.*
 
 class StatusBar(private val mainWindow: MainWindow) : JPanel() {
-    private val statusLabel = JLabel("就绪").apply {
+    private val statusLabel = JLabel().apply {
         font = font.deriveFont(Font.PLAIN, 12f)
+        text = I18n.translate(I18nKeys.Status.READY)
     }
 
     private val fileInfoLabel = JLabel("").apply {
@@ -45,7 +48,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         preferredSize = Dimension(16, 16)
         isBorderPainted = false
         isContentAreaFilled = false
-        toolTipText = "取消"
+        toolTipText = I18n.translate(I18nKeys.Status.CANCEL)
         // 使用系统默认的关闭图标
         icon = UIManager.getIcon("InternalFrame.closeIcon") ?: createCloseIcon()
 
@@ -57,7 +60,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     // 行号和列号
     private val lineColumnLabel = JLabel("").apply {
-        toolTipText = "转到行/列"
+        toolTipText = I18n.translate(I18nKeys.Status.GOTO_LINE_COLUMN)
         font = font.deriveFont(Font.PLAIN, 12f)
         isVisible = false  // 初始状态隐藏
         verticalAlignment = SwingConstants.CENTER
@@ -135,7 +138,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
             currentMessageTimer?.stop()
             currentMessageTimer =
                 Timer(3000) {
-                    statusLabel.text = "就绪"
+                    statusLabel.text = I18n.translate(I18nKeys.Status.READY)
                     statusLabel.foreground = ThemeManager.currentTheme.statusBarForeground
                 }.apply {
                     isRepeats = false
@@ -155,7 +158,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     fun setLineColumn(line: Int, column: Int) {
-        lineColumnLabel.text = "行 $line, 列 $column"
+        lineColumnLabel.text = I18n.translate(I18nKeys.Status.LINE_COLUMN).format(line, column)
         lineColumnLabel.isVisible = true
     }
 
@@ -232,7 +235,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         progressCancelButton.isVisible = false
         progressLabel.isVisible = false
         onProgressCancel = null
-        statusLabel.text = "就绪" // 恢复默认状态
+        statusLabel.text = I18n.translate(I18nKeys.Status.READY) // 恢复默认状态
         // 只在隐藏进度时才重新布局
         revalidate()
         // 只重绘相关组件
@@ -243,7 +246,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
     }
 
     fun clear() {
-        statusLabel.text = "就绪"
+        statusLabel.text = I18n.translate(I18nKeys.Status.READY)
         fileInfoLabel.text = ""
         lineColumnLabel.text = ""
         hideLineColumn()
@@ -252,7 +255,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     fun showError(message: String) {
         statusLabel.apply {
-            text = "错误: $message"
+            text = "${I18n.translate(I18nKeys.Status.ERROR)}: $message"
             foreground = Color.RED
         }
         Timer(5000) {
@@ -265,7 +268,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     fun showWarning(message: String) {
         statusLabel.apply {
-            text = "警告: $message"
+            text = "${I18n.translate(I18nKeys.Status.WARNING)}: $message"
             foreground = Color.ORANGE
         }
         Timer(3000) {
@@ -278,7 +281,7 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
 
     fun showSuccess(message: String) {
         statusLabel.apply {
-            text = "成功: $message"
+            text = "${I18n.translate(I18nKeys.Status.SUCCESS)}: $message"
             foreground = Color.GREEN
         }
         Timer(2000) {

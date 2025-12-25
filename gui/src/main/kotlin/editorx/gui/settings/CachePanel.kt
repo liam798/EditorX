@@ -1,5 +1,7 @@
 package editorx.gui.settings
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.gui.GuiContext
 import java.awt.BorderLayout
 import java.awt.FlowLayout
@@ -42,15 +44,15 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         override fun getRowCount(): Int = entries.size
         override fun getColumnCount(): Int = 4
         override fun getColumnName(column: Int): String = when (column) {
-            0 -> if (isEnglish()) "Name" else "名称"
-            1 -> if (isEnglish()) "Path" else "路径"
-            2 -> if (isEnglish()) "Size" else "大小"
-            else -> if (isEnglish()) "Description" else "说明"
+            0 -> I18n.translate(I18nKeys.CacheTable.NAME)
+            1 -> I18n.translate(I18nKeys.CacheTable.PATH)
+            2 -> I18n.translate(I18nKeys.CacheTable.SIZE)
+            else -> I18n.translate(I18nKeys.CacheTable.DESCRIPTION)
         }
 
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val entry = entries[rowIndex]
-            val english = isEnglish()
+            val english = I18n.locale().language == java.util.Locale.ENGLISH.language
             return when (columnIndex) {
                 0 -> if (english) entry.nameEn else entry.name
                 1 -> entry.dir.absolutePath
@@ -107,8 +109,8 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         val idx = table.selectedRow.takeIf { it >= 0 } ?: run {
             JOptionPane.showMessageDialog(
                 this,
-                if (isEnglish()) "Select an entry first." else "请选择要清理的缓存条目",
-                infoTitle(),
+                I18n.translate(I18nKeys.Dialog.SELECT_ENTRY_FIRST),
+                I18n.translate(I18nKeys.Dialog.INFO),
                 JOptionPane.INFORMATION_MESSAGE
             )
             return
@@ -117,8 +119,8 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         if (!entry.dir.exists()) {
                 JOptionPane.showMessageDialog(
                     this,
-                    if (isEnglish()) "Directory not found: ${entry.dir.absolutePath}" else "目录不存在：${entry.dir.absolutePath}",
-                    infoTitle(),
+                    I18n.translate(I18nKeys.Dialog.DIRECTORY_NOT_FOUND).format(entry.dir.absolutePath),
+                    I18n.translate(I18nKeys.Dialog.INFO),
                     JOptionPane.INFORMATION_MESSAGE
                 )
             tableModel.refreshSizes()
@@ -126,21 +128,30 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         }
         val confirm = JOptionPane.showConfirmDialog(
             this,
-            if (isEnglish()) "Clear ${entry.nameEn}?\n${entry.dir.absolutePath}" else "确认清理 ${entry.name}？\n${entry.dir.absolutePath}",
-            if (isEnglish()) "Clear Cache" else "清理缓存",
+            if (I18n.locale().language == java.util.Locale.ENGLISH.language) {
+                "Clear ${entry.nameEn}?\n${entry.dir.absolutePath}"
+            } else {
+                "确认清理 ${entry.name}？\n${entry.dir.absolutePath}"
+            },
+            I18n.translate(I18nKeys.Dialog.CLEAR_CACHE),
             JOptionPane.YES_NO_OPTION
         )
         if (confirm != JOptionPane.YES_OPTION) return
 
         val success = deleteRecursively(entry.dir)
+        val message = if (success) {
+            if (I18n.locale().language == java.util.Locale.ENGLISH.language) {
+                "${I18n.translate(I18nKeys.Dialog.CLEARED)} ${entry.nameEn}"
+            } else {
+                "${I18n.translate(I18nKeys.Dialog.CLEARED)} ${entry.name}"
+            }
+        } else {
+            I18n.translate(I18nKeys.Dialog.CLEAR_FAILED)
+        }
         JOptionPane.showMessageDialog(
             this,
-            if (success) {
-                if (isEnglish()) "Cleared ${entry.nameEn}" else "已清理 ${entry.name}"
-            } else {
-                if (isEnglish()) "Failed to clear, files may be in use." else "清理失败，请检查文件是否被占用"
-            },
-            infoTitle(),
+            message,
+            I18n.translate(I18nKeys.Dialog.INFO),
             if (success) JOptionPane.INFORMATION_MESSAGE else JOptionPane.WARNING_MESSAGE
         )
         tableModel.refreshSizes()
@@ -150,8 +161,8 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         val idx = table.selectedRow.takeIf { it >= 0 } ?: run {
             JOptionPane.showMessageDialog(
                 this,
-                if (isEnglish()) "Select an entry first." else "请选择要打开的条目",
-                infoTitle(),
+                I18n.translate(I18nKeys.Dialog.SELECT_ENTRY_FIRST),
+                I18n.translate(I18nKeys.Dialog.INFO),
                 JOptionPane.INFORMATION_MESSAGE
             )
             return
@@ -165,8 +176,8 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         }.onFailure {
             JOptionPane.showMessageDialog(
                 this,
-                if (isEnglish()) "Unable to open: ${entry.dir.absolutePath}" else "无法打开目录：${entry.dir.absolutePath}",
-                infoTitle(),
+                I18n.translate(I18nKeys.Dialog.UNABLE_TO_OPEN).format(entry.dir.absolutePath),
+                I18n.translate(I18nKeys.Dialog.INFO),
                 JOptionPane.INFORMATION_MESSAGE
             )
         }
@@ -197,25 +208,14 @@ class CachePanel(private val guiEnv: GuiContext) : JPanel(BorderLayout()) {
         }.getOrElse { false }
     }
 
-    private fun infoTitle(): String = if (isEnglish()) "Info" else "提示"
-    private fun isEnglish(): Boolean = editorx.core.i18n.I18n.locale().language == java.util.Locale.ENGLISH.language
-
     private fun applyTexts() {
-        if (isEnglish()) {
-            headerLabel.text = "Cache"
-            hintLabel.text = "Clear cache only when no background decompile tasks are running."
-            refreshButton.text = "Refresh"
-            refreshButton.toolTipText = null
-            clearButton.text = "Clear Selected"
-            clearButton.toolTipText = null
-            openButton.text = "Open Folder"
-            openButton.toolTipText = null
-        } else {
-            headerLabel.text = "缓存"
-            hintLabel.text = "清理缓存前请确认不存在正在运行的反编译或插件任务。"
-            refreshButton.text = "刷新"
-            clearButton.text = "清理所选"
-            openButton.text = "打开所在目录"
-        }
+        headerLabel.text = I18n.translate(I18nKeys.Settings.CACHE_TITLE)
+        hintLabel.text = I18n.translate(I18nKeys.Settings.CACHE_HINT)
+        refreshButton.text = I18n.translate(I18nKeys.Settings.REFRESH_CACHE)
+        refreshButton.toolTipText = null
+        clearButton.text = I18n.translate(I18nKeys.Settings.CLEAR_SELECTED)
+        clearButton.toolTipText = null
+        openButton.text = I18n.translate(I18nKeys.Settings.OPEN_FOLDER)
+        openButton.toolTipText = null
     }
 }

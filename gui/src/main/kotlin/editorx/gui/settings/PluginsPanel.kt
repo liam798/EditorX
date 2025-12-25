@@ -1,6 +1,7 @@
 package editorx.gui.settings
 
 import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginOrigin
 import editorx.core.plugin.PluginRecord
@@ -427,9 +428,9 @@ class PluginsPanel(
 
     private fun displayState(record: PluginRecord): String {
         return when {
-            record.disabled -> if (isEnglish()) "Disabled" else "已禁用"
-            record.state == PluginState.STARTED -> if (isEnglish()) "Enabled" else "已启用"
-            record.state == PluginState.FAILED -> if (isEnglish()) "Failed" else "失败"
+            record.disabled -> I18n.translate(I18nKeys.Settings.PLUGIN_STATE_DISABLED)
+            record.state == PluginState.STARTED -> I18n.translate(I18nKeys.Settings.PLUGIN_STATE_ENABLED)
+            record.state == PluginState.FAILED -> I18n.translate(I18nKeys.Settings.PLUGIN_STATE_FAILED)
             else -> record.state.name
         }
     }
@@ -446,12 +447,12 @@ class PluginsPanel(
     private fun isEnglish(): Boolean = I18n.locale().language == Locale.ENGLISH.language
 
     private fun applyTexts() {
-        installBtn.text = if (isEnglish()) "Install Plugin" else "安装插件"
-        openDirBtn.text = if (isEnglish()) "Open Plugins Folder" else "打开插件目录"
+        installBtn.text = I18n.translate(I18nKeys.Action.INSTALL_PLUGIN)
+        openDirBtn.text = I18n.translate(I18nKeys.Action.OPEN_PLUGINS_FOLDER)
 
-        enableBtn.text = if (isEnglish()) "Enable" else "启用"
-        disableBtn.text = if (isEnglish()) "Disable" else "禁用"
-        uninstallBtn.text = if (isEnglish()) "Uninstall" else "卸载"
+        enableBtn.text = I18n.translate(I18nKeys.Action.ENABLE)
+        disableBtn.text = I18n.translate(I18nKeys.Action.DISABLE)
+        uninstallBtn.text = I18n.translate(I18nKeys.Action.UNINSTALL)
     }
 
     companion object {

@@ -1,6 +1,7 @@
 package editorx.gui.settings
 
 import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.gui.GuiContext
 import editorx.gui.main.MainWindow
@@ -31,16 +32,15 @@ class SettingsDialog(
     private val environment: GuiContext,
     private val pluginManager: PluginManager,
     private val defaultSection: Section = Section.APPEARANCE,
-) : JDialog(owner, if (isEnglish()) "Preferences" else "设置", true) {
+) : JDialog(owner, I18n.translate(I18nKeys.Settings.TITLE), true) {
 
     enum class Section { APPEARANCE, KEYMAP, PLUGINS, CACHE }
 
     private data class SectionItem(
         val section: Section,
-        val zh: String,
-        val en: String,
+        val key: String,
     ) {
-        fun label(): String = if (isEnglish()) en else zh
+        fun label(): String = I18n.translate(key)
     }
 
     private val cardLayout = CardLayout()
@@ -52,10 +52,10 @@ class SettingsDialog(
     private val cachePanel = CachePanel(environment)
 
     private val listModel = DefaultListModel<SectionItem>().apply {
-        addElement(SectionItem(Section.APPEARANCE, "外观", "Appearance"))
-        addElement(SectionItem(Section.KEYMAP, "快捷键", "Keymap"))
-        addElement(SectionItem(Section.PLUGINS, "插件", "Plugins"))
-        addElement(SectionItem(Section.CACHE, "缓存", "Cache"))
+        addElement(SectionItem(Section.APPEARANCE, I18nKeys.Settings.APPEARANCE))
+        addElement(SectionItem(Section.KEYMAP, I18nKeys.Settings.KEYMAP))
+        addElement(SectionItem(Section.PLUGINS, I18nKeys.Settings.PLUGINS))
+        addElement(SectionItem(Section.CACHE, I18nKeys.Settings.CACHE))
     }
 
     private val navigation = JList(listModel).apply {
@@ -85,7 +85,7 @@ class SettingsDialog(
 
     private val i18nListener = {
         SwingUtilities.invokeLater {
-            title = if (isEnglish()) "Preferences" else "设置"
+            title = I18n.translate(I18nKeys.Settings.TITLE)
             navigation.repaint()
             appearancePanel.refresh()
             keymapPanel.refresh()
@@ -126,7 +126,7 @@ class SettingsDialog(
                 BorderFactory.createMatteBorder(0, 0, 0, 1, Color(0xD0, 0xD0, 0xD0)),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)
             )
-            val title = JLabel(if (isEnglish()) "Preferences" else "设置项").apply {
+            val title = JLabel(I18n.translate(I18nKeys.Settings.PREFERENCES)).apply {
                 font = font.deriveFont(Font.BOLD, 13f)
                 border = BorderFactory.createEmptyBorder(0, 0, 6, 0)
             }
@@ -166,17 +166,17 @@ class SettingsDialog(
     private fun buildFooter(): JComponent {
         val resetPanel = JPanel(FlowLayout(FlowLayout.LEFT, 12, 6)).apply {
             isOpaque = false
-            add(JButton(if (isEnglish()) "Reset" else "重置").apply {
+            add(JButton(I18n.translate(I18nKeys.Action.RESET)).apply {
                 isFocusable = false
                 addActionListener { onResetPressed() }
             })
         }
         val actionPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 12, 6)).apply {
             isOpaque = false
-            add(JButton(if (isEnglish()) "Cancel" else "取消").apply {
+            add(JButton(I18n.translate(I18nKeys.Action.CANCEL)).apply {
                 addActionListener { dispose() }
             })
-            add(JButton(if (isEnglish()) "Confirm" else "确定").apply {
+            add(JButton(I18n.translate(I18nKeys.Action.CONFIRM)).apply {
                 addActionListener {
                     environment.settings.sync()
                     dispose()
@@ -212,7 +212,4 @@ class SettingsDialog(
         contentPanel.repaint()
     }
 
-    companion object {
-        private fun isEnglish(): Boolean = I18n.locale().language == Locale.ENGLISH.language
-    }
 }

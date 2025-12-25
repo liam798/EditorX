@@ -42,16 +42,70 @@ object I18nKeys {
         const val PLUGIN_MANAGER = "action.pluginManager"
         const val ABOUT = "action.about"
         const val HELP = "action.help"
+        const val UNDO = "action.undo"
+        const val REDO = "action.redo"
+        const val NEW_FILE = "action.newFile"
+        const val NEW_FOLDER = "action.newFolder"
+        const val DELETE = "action.delete"
+        const val REFRESH = "action.refresh"
+        const val REVEAL_IN_SYSTEM = "action.revealInSystem"
+        const val COPY_PATH = "action.copyPath"
+        const val SELECT_IN_SIDEBAR = "action.selectInSidebar"
+        const val REVEAL_IN_EXPLORER = "action.revealInExplorer"
+        const val CLOSE = "action.close"
+        const val CLOSE_OTHERS = "action.closeOthers"
+        const val CLOSE_ALL = "action.closeAll"
+        const val CLOSE_LEFT = "action.closeLeft"
+        const val CLOSE_RIGHT = "action.closeRight"
+        const val CLOSE_UNMODIFIED = "action.closeUnmodified"
+        const val FORMAT_FILE = "action.formatFile"
+        const val RESET = "action.reset"
+        const val CANCEL = "action.cancel"
+        const val CONFIRM = "action.confirm"
+        const val INSTALL_PLUGIN = "action.installPlugin"
+        const val OPEN_PLUGINS_FOLDER = "action.openPluginsFolder"
+        const val ENABLE = "action.enable"
+        const val DISABLE = "action.disable"
+        const val UNINSTALL = "action.uninstall"
     }
 
     /**
      * 设置相关的翻译 key
      */
     object Settings {
+        const val TITLE = "settings.title"
+        const val PREFERENCES = "settings.preferences"
         const val APPEARANCE = "settings.appearance"
         const val LANGUAGE = "settings.language"
         const val THEME = "settings.theme"
         const val APPEARANCE_TIP = "settings.appearance.tip"
+        const val KEYMAP = "settings.keymap"
+        const val PLUGINS = "settings.plugins"
+        const val CACHE = "settings.cache"
+        const val KEYMAP_TITLE = "settings.keymap.title"
+        const val KEYMAP_HINT = "settings.keymap.hint"
+        const val ADD_NOTE = "settings.keymap.addNote"
+        const val ADD_NOTE_TOOLTIP = "settings.keymap.addNoteTooltip"
+        const val EXPORT = "settings.keymap.export"
+        const val EXPORT_TOOLTIP = "settings.keymap.exportTooltip"
+        const val CACHE_TITLE = "settings.cache.title"
+        const val CACHE_HINT = "settings.cache.hint"
+        const val REFRESH_CACHE = "settings.cache.refresh"
+        const val CLEAR_SELECTED = "settings.cache.clearSelected"
+        const val OPEN_FOLDER = "settings.cache.openFolder"
+        const val PLUGIN_STATE_DISABLED = "settings.plugins.state.disabled"
+        const val PLUGIN_STATE_ENABLED = "settings.plugins.state.enabled"
+        const val PLUGIN_STATE_FAILED = "settings.plugins.state.failed"
+    }
+
+    /**
+     * 缓存表格相关的翻译 key
+     */
+    object CacheTable {
+        const val NAME = "cache.table.name"
+        const val PATH = "cache.table.path"
+        const val SIZE = "cache.table.size"
+        const val DESCRIPTION = "cache.table.description"
     }
 
     /**
@@ -76,6 +130,131 @@ object I18nKeys {
         fun forLocale(locale: java.util.Locale): String {
             return "${PREFIX}.${locale.toLanguageTag()}"
         }
+    }
+
+    /**
+     * 状态和消息相关的翻译 key
+     */
+    object Status {
+        const val READY = "status.ready"
+        const val CANCEL = "status.cancel"
+        const val GOTO_LINE_COLUMN = "status.gotoLineColumn"
+        const val ERROR = "status.error"
+        const val WARNING = "status.warning"
+        const val SUCCESS = "status.success"
+        const val VERSION_CONTROL = "status.versionControl"
+        const val NO_FILE_OPENED = "status.noFileOpened"
+        const val LINE_COLUMN = "status.lineColumn"
+    }
+
+    /**
+     * 查找替换相关的翻译 key
+     */
+    object FindReplace {
+        const val SEARCH = "findReplace.search"
+        const val REPLACE = "findReplace.replace"
+        const val EXPAND_REPLACE = "findReplace.expandReplace"
+        const val COLLAPSE_REPLACE = "findReplace.collapseReplace"
+        const val MATCH_CASE = "findReplace.matchCase"
+        const val WHOLE_WORD = "findReplace.wholeWord"
+        const val REGEX = "findReplace.regex"
+        const val REPLACE_ONE = "findReplace.replaceOne"
+        const val REPLACE_ALL = "findReplace.replaceAll"
+        const val REPLACE_ONE_TOOLTIP = "findReplace.replaceOneTooltip"
+        const val REPLACE_ALL_TOOLTIP = "findReplace.replaceAllTooltip"
+        const val FIND_PREV = "findReplace.findPrev"
+        const val FIND_NEXT = "findReplace.findNext"
+        const val CLOSE = "findReplace.close"
+        const val NO_RESULTS = "findReplace.noResults"
+        const val RESULTS = "findReplace.results"
+        const val INVALID_REGEX = "findReplace.invalidRegex"
+        const val SEARCH_FAILED = "findReplace.searchFailed"
+        const val REPLACE_FAILED = "findReplace.replaceFailed"
+    }
+
+    /**
+     * 对话框和提示相关的翻译 key
+     */
+    object Dialog {
+        const val SELECT_FOLDER = "dialog.selectFolder"
+        const val TIP = "dialog.tip"
+        const val INFO = "dialog.info"
+        const val ABOUT_TITLE = "dialog.about.title"
+        const val ABOUT_MESSAGE = "dialog.about.message"
+        const val HELP_NOT_IMPLEMENTED = "dialog.help.notImplemented"
+        const val NO_RECENT_FILES = "dialog.noRecentFiles"
+        const val FILE_NOT_EXISTS = "dialog.fileNotExists"
+        const val NOT_FOUND = "dialog.notFound"
+        const val ERROR = "dialog.error"
+        const val SELECT_ENTRY_FIRST = "dialog.selectEntryFirst"
+        const val DIRECTORY_NOT_FOUND = "dialog.directoryNotFound"
+        const val CLEAR_CACHE = "dialog.clearCache"
+        const val CLEARED = "dialog.cleared"
+        const val CLEAR_FAILED = "dialog.clearFailed"
+        const val UNABLE_TO_OPEN = "dialog.unableToOpen"
+    }
+
+    /**
+     * 资源管理器相关的翻译 key
+     */
+    object Explorer {
+        const val TITLE = "explorer.title"
+        const val NEW_FILE = "explorer.newFile"
+        const val NEW_FOLDER = "explorer.newFolder"
+        const val DELETE = "explorer.delete"
+        const val REFRESH = "explorer.refresh"
+        const val REVEAL_IN_SYSTEM = "explorer.revealInSystem"
+    }
+
+    /**
+     * 编辑器相关的翻译 key
+     */
+    object Editor {
+        const val CLOSE = "editor.close"
+        const val CLOSE_OTHERS = "editor.closeOthers"
+        const val CLOSE_ALL = "editor.closeAll"
+        const val CLOSE_LEFT = "editor.closeLeft"
+        const val CLOSE_RIGHT = "editor.closeRight"
+        const val CLOSE_UNMODIFIED = "editor.closeUnmodified"
+        const val FORMAT_FILE = "editor.formatFile"
+        const val CANNOT_READ_FILE = "editor.cannotReadFile"
+        const val TOTAL_FILES = "editor.totalFiles"
+        const val CANNOT_READ_ARCHIVE = "editor.cannotReadArchive"
+    }
+
+    /**
+     * 工具栏相关的翻译 key
+     */
+    object Toolbar {
+        const val GOTO_MANIFEST = "toolbar.gotoManifest"
+        const val GOTO_MAIN_ACTIVITY = "toolbar.gotoMainActivity"
+        const val GOTO_APPLICATION = "toolbar.gotoApplication"
+        const val BUILD = "toolbar.build"
+        const val TOGGLE_SIDEBAR = "toolbar.toggleSidebar"
+        const val GLOBAL_SEARCH = "toolbar.globalSearch"
+        const val SETTINGS = "toolbar.settings"
+        const val DOUBLE_SHIFT = "toolbar.doubleShift"
+    }
+
+    /**
+     * 搜索相关的翻译 key
+     */
+    object Search {
+        const val SEARCH = "search.search"
+        const val STOP = "search.stop"
+        const val SEARCH_LABEL = "search.searchLabel"
+        const val PLEASE_ENTER_SEARCH = "search.pleaseEnterSearch"
+        const val PLEASE_OPEN_FOLDER = "search.pleaseOpenFolder"
+        const val SCANNED_FILES = "search.scannedFiles"
+    }
+
+    /**
+     * 欢迎页面相关的翻译 key
+     */
+    object Welcome {
+        const val RECENT_PROJECTS = "welcome.recentProjects"
+        const val VIEW_ALL = "welcome.viewAll"
+        const val NO_RECENT_PROJECTS = "welcome.noRecentProjects"
     }
 }
 

@@ -1,5 +1,7 @@
 package editorx.gui.main.editor
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import editorx.gui.core.ThemeManager
@@ -59,9 +61,10 @@ class FindReplaceBar(
 
     private val findField = JTextField()
     private val replaceField = JTextField()
-    private val statusLabel = JLabel("0 个结果").apply {
+    private val statusLabel = JLabel().apply {
         foreground = Color(0x66, 0x66, 0x66)
         font = font.deriveFont(Font.PLAIN, 12f)
+        text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
     }
 
     private val expandIconCollapsed = IconLoader.getIcon(IconRef("icons/common/chevron-right.svg"), 16)
@@ -69,19 +72,19 @@ class FindReplaceBar(
     private val prevIcon = IconLoader.getIcon(IconRef("icons/common/arrow-up.svg"), 16)
     private val nextIcon = IconLoader.getIcon(IconRef("icons/common/arrow-down.svg"), 16)
     private val closeIcon = IconLoader.getIcon(IconRef("icons/common/close.svg"), 24)
-    private val expandButton = createIconButton(expandIconCollapsed, "展开替换", fallbackText = "▸") {
+    private val expandButton = createIconButton(expandIconCollapsed, I18n.translate(I18nKeys.FindReplace.EXPAND_REPLACE), fallbackText = "▸") {
         toggleReplaceRow()
     }
-    private val matchCase = createToggleButton("Cc", "区分大小写")
-    private val wholeWord = createToggleButton("W", "全词匹配")
-    private val regex = createToggleButton(".*", "正则表达式")
+    private val matchCase = createToggleButton("Cc", I18n.translate(I18nKeys.FindReplace.MATCH_CASE))
+    private val wholeWord = createToggleButton("W", I18n.translate(I18nKeys.FindReplace.WHOLE_WORD))
+    private val regex = createToggleButton(".*", I18n.translate(I18nKeys.FindReplace.REGEX))
 
-    private val replaceButton = createGhostButton("替换", "替换当前匹配") { replaceOne() }
-    private val replaceAllButton = createGhostButton("全部替换", "替换所有匹配") { replaceAll() }
+    private val replaceButton = createGhostButton(I18n.translate(I18nKeys.FindReplace.REPLACE_ONE), I18n.translate(I18nKeys.FindReplace.REPLACE_ONE_TOOLTIP)) { replaceOne() }
+    private val replaceAllButton = createGhostButton(I18n.translate(I18nKeys.FindReplace.REPLACE_ALL), I18n.translate(I18nKeys.FindReplace.REPLACE_ALL_TOOLTIP)) { replaceAll() }
 
-    private val findPrevButton = createIconButton(prevIcon, "上一个（Shift+Enter）", fallbackText = "↑") { findNext(forward = false) }
-    private val findNextButton = createIconButton(nextIcon, "下一个（Enter）", fallbackText = "↓") { findNext(forward = true) }
-    private val closeButton = createIconButton(closeIcon, "关闭", fallbackText = "×") { close() }
+    private val findPrevButton = createIconButton(prevIcon, I18n.translate(I18nKeys.FindReplace.FIND_PREV), fallbackText = "↑") { findNext(forward = false) }
+    private val findNextButton = createIconButton(nextIcon, I18n.translate(I18nKeys.FindReplace.FIND_NEXT), fallbackText = "↓") { findNext(forward = true) }
+    private val closeButton = createIconButton(closeIcon, I18n.translate(I18nKeys.FindReplace.CLOSE), fallbackText = "×") { close() }
 
     private val replaceIndent = JPanel().apply {
         isOpaque = false
@@ -108,8 +111,8 @@ class FindReplaceBar(
         )
 
         // FlatLaf：占位提示
-        findField.putClientProperty("JTextField.placeholderText", "搜索")
-        replaceField.putClientProperty("JTextField.placeholderText", "替换")
+        findField.putClientProperty("JTextField.placeholderText", I18n.translate(I18nKeys.FindReplace.SEARCH))
+        replaceField.putClientProperty("JTextField.placeholderText", I18n.translate(I18nKeys.FindReplace.REPLACE))
 
         // 基础输入尺寸（更贴近 IDEA 的紧凑感）
         val fieldHeight = 28
@@ -248,7 +251,7 @@ class FindReplaceBar(
         lastCriteriaKey = ""
         totalMatches = 0
         currentMatchIndex = 0
-        statusLabel.text = "0 个结果"
+        statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
         clearHighlights()
         currentTextAreaProvider()?.requestFocusInWindow()
     }
@@ -303,7 +306,7 @@ class FindReplaceBar(
         } else {
             expandButton.text = null
         }
-        expandButton.toolTipText = if (replaceVisible) "收起替换" else "展开替换"
+        expandButton.toolTipText = if (replaceVisible) I18n.translate(I18nKeys.FindReplace.COLLAPSE_REPLACE) else I18n.translate(I18nKeys.FindReplace.EXPAND_REPLACE)
         revalidate()
         repaint()
     }
@@ -334,7 +337,14 @@ class FindReplaceBar(
 
     private fun updateStatusLabel() {
         statusLabel.text =
-            if (totalMatches <= 0) "0 个结果" else "${currentMatchIndex.coerceIn(1, totalMatches)}/${totalMatches}"
+            if (totalMatches <= 0) {
+                I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
+            } else {
+                I18n.translate(I18nKeys.FindReplace.RESULTS).format(
+                    currentMatchIndex.coerceIn(1, totalMatches),
+                    totalMatches
+                )
+            }
     }
 
     private fun isRegexValidOrShowError(): Boolean {
@@ -350,7 +360,7 @@ class FindReplaceBar(
         } catch (_: PatternSyntaxException) {
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "正则表达式不合法"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.INVALID_REGEX)
             clearHighlights()
             false
         }
@@ -425,7 +435,7 @@ class FindReplaceBar(
             lastCriteriaKey = ""
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "0 个结果"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
             return
         }
 
@@ -439,12 +449,12 @@ class FindReplaceBar(
             SearchEngine.markAll(textArea, context)
         }.onFailure {
             // 兜底：理论上正则错误已提前处理，这里仅保证 UI 不崩溃
-            statusLabel.text = "搜索失败"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.SEARCH_FAILED)
             return
         }
 
         val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
-            statusLabel.text = "正则表达式不合法"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.INVALID_REGEX)
             clearHighlights()
             totalMatches = 0
             currentMatchIndex = 0
@@ -466,7 +476,7 @@ class FindReplaceBar(
             }
             SearchEngine.find(textArea, ctx)
         }.getOrElse {
-            statusLabel.text = "搜索失败"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.SEARCH_FAILED)
             return
         }
 
@@ -482,7 +492,7 @@ class FindReplaceBar(
         if (textArea == null) {
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "0 个结果"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
             return
         }
         if (query.isBlank()) {
@@ -501,7 +511,7 @@ class FindReplaceBar(
             lastCriteriaKey = criteriaKey()
 
             val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
-                statusLabel.text = "正则表达式不合法"
+                statusLabel.text = I18n.translate(I18nKeys.FindReplace.INVALID_REGEX)
                 clearHighlights()
                 totalMatches = 0
                 currentMatchIndex = 0
@@ -511,7 +521,7 @@ class FindReplaceBar(
             currentMatchIndex = if (result.wasFound()) indexFromRange(matches, result.matchRange) else 0
             updateStatusLabel()
         }.onFailure {
-            statusLabel.text = "搜索失败"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.SEARCH_FAILED)
         }
     }
 
@@ -521,7 +531,7 @@ class FindReplaceBar(
         if (textArea == null) {
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "0 个结果"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
             return
         }
         if (query.isBlank()) {
@@ -541,7 +551,7 @@ class FindReplaceBar(
             lastCriteriaKey = criteriaKey()
 
             val matches = runCatching { collectMatches(textArea.text) }.getOrElse {
-                statusLabel.text = "正则表达式不合法"
+                statusLabel.text = I18n.translate(I18nKeys.FindReplace.INVALID_REGEX)
                 clearHighlights()
                 totalMatches = 0
                 currentMatchIndex = 0
@@ -551,7 +561,7 @@ class FindReplaceBar(
             currentMatchIndex = if (result.wasFound()) indexFromRange(matches, result.matchRange) else 0
             updateStatusLabel()
         }.onFailure {
-            statusLabel.text = "替换失败"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.REPLACE_FAILED)
         }
     }
 
@@ -561,7 +571,7 @@ class FindReplaceBar(
         if (textArea == null) {
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "0 个结果"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
             return
         }
         if (query.isBlank()) {
@@ -580,9 +590,9 @@ class FindReplaceBar(
             // replaceAll 后以 refreshMarkAll() 的结果为准，这里先重置
             totalMatches = 0
             currentMatchIndex = 0
-            statusLabel.text = "0 个结果"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.NO_RESULTS)
         }.onFailure {
-            statusLabel.text = "替换失败"
+            statusLabel.text = I18n.translate(I18nKeys.FindReplace.REPLACE_FAILED)
             return
         }
         // 替换后刷新高亮（如果查找条仍在）

@@ -1,5 +1,7 @@
 package editorx.gui.main.statusbar
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import editorx.core.workspace.Workspace
@@ -96,7 +98,7 @@ class VcsWidget(private val workspace: Workspace) : JPanel() {
     fun updateDisplay() {
         val workspaceRoot = workspace.getWorkspaceRoot()
 
-        textLabel.text = "版本控制"
+        textLabel.text = I18n.translate(I18nKeys.Status.VERSION_CONTROL)
         iconLabel.icon = null
 
         if (workspaceRoot == null || !workspaceRoot.exists()) {
