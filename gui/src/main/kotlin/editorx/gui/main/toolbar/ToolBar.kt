@@ -502,7 +502,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
 
         val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(this, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -745,7 +745,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToAndroidManifest() {
         val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(this, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -769,7 +769,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToMainActivity() {
         val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(this, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -826,7 +826,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToApplication() {
         val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(this, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
