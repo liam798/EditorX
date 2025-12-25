@@ -1,5 +1,7 @@
 package editorx.gui.main.welcome
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import editorx.gui.core.ThemeManager
@@ -133,7 +135,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         // 新建文件 按钮
         val newFileBtn = createActionButton(
             icon = IconLoader.getIcon(IconRef("icons/common/addFile.svg"), 24),
-            text = "新建文件",
+            text = I18n.translate(I18nKeys.Welcome.NEW_FILE),
             onClick = { newFile() }
         )
         panel.add(newFileBtn)
@@ -143,7 +145,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         // 打开文件 按钮
         val openFileBtn = createActionButton(
             icon = IconLoader.getIcon(IconRef("icons/common/anyType.svg"), 24),
-            text = "打开文件",
+            text = I18n.translate(I18nKeys.Welcome.OPEN_FILE),
             onClick = { openFile() }
         )
         panel.add(openFileBtn)
@@ -153,7 +155,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         // 打开项目 按钮
         val openProjectBtn = createActionButton(
             icon = IconLoader.getIcon(IconRef("icons/common/folder.svg"), 24),
-            text = "打开项目",
+            text = I18n.translate(I18nKeys.Welcome.OPEN_PROJECT),
             onClick = { openProject() }
         )
         panel.add(openProjectBtn)
@@ -239,7 +241,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
             border = EmptyBorder(0, 0, 20, 0)
         }
 
-        val titleLabel = JLabel("Recent projects").apply {
+        val titleLabel = JLabel(I18n.translate(I18nKeys.Welcome.RECENT_PROJECTS)).apply {
             font = font.deriveFont(Font.BOLD, 16f)
             foreground = ThemeManager.currentTheme.onSurface
         }
@@ -253,7 +255,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         } else {
             println("WelcomeView: No recent workspaces found")
         }
-        val viewAllLabel = JLabel("View all (${recentWorkspaces.size})").apply {
+        val viewAllLabel = JLabel("${I18n.translate(I18nKeys.Welcome.VIEW_ALL)} (${recentWorkspaces.size})").apply {
             font = font.deriveFont(Font.PLAIN, 12f)
             foreground = Color(0x6C707E)
             cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
@@ -281,7 +283,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         }
 
         if (projects.isEmpty()) {
-            val emptyLabel = JLabel("No recent projects").apply {
+            val emptyLabel = JLabel(I18n.translate(I18nKeys.Welcome.NO_RECENT_PROJECTS)).apply {
                 font = font.deriveFont(Font.PLAIN, 12f)
                 foreground = Color(0x6C707E)
                 alignmentX = CENTER_ALIGNMENT

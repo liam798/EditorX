@@ -4,117 +4,118 @@ import editorx.core.i18n.I18nKeys
 import editorx.core.i18n.I18nPlugin
 import editorx.core.plugin.PluginInfo
 import java.util.Locale
+import kotlin.collections.buildMap
 
-private val dictionary = mapOf(
-    I18nKeys.Menu.FILE to "File",
-    I18nKeys.Menu.EDIT to "Edit",
-    I18nKeys.Menu.PLUGINS to "Plugins",
-    I18nKeys.Menu.HELP to "Help",
-    I18nKeys.Menu.LANGUAGE to "Language",
+private val dictionary = buildMap<String, String> {
+    I18nKeys.Menu.FILE to "File"
+    I18nKeys.Menu.EDIT to "Edit"
+    I18nKeys.Menu.PLUGINS to "Plugins"
+    I18nKeys.Menu.HELP to "Help"
+    I18nKeys.Menu.LANGUAGE to "Language"
 
-    I18nKeys.Action.OPEN_FILE to "Open File…",
-    I18nKeys.Action.OPEN_FOLDER to "Open Folder…",
-    I18nKeys.Action.RECENT to "Recent Files",
-    I18nKeys.Action.SAVE to "Save",
-    I18nKeys.Action.SAVE_AS to "Save As…",
-    I18nKeys.Action.EXIT to "Quit",
-    I18nKeys.Action.UNDO to "Undo",
-    I18nKeys.Action.REDO to "Redo",
-    I18nKeys.Action.FIND to "Find…",
-    I18nKeys.Action.REPLACE to "Replace…",
-    I18nKeys.Action.GLOBAL_SEARCH to "Search in Files…",
-    I18nKeys.Action.PLUGIN_MANAGER to "Plugin Manager",
-    I18nKeys.Action.ABOUT to "About",
-    I18nKeys.Action.HELP to "Help",
-    I18nKeys.Action.NEW_FILE to "New File",
-    I18nKeys.Action.NEW_FOLDER to "New Folder",
-    I18nKeys.Action.DELETE to "Delete",
-    I18nKeys.Action.REFRESH to "Refresh",
-    I18nKeys.Action.REVEAL_IN_SYSTEM to "Reveal in System",
-    I18nKeys.Action.COPY_PATH to "Copy Path",
-    I18nKeys.Action.SELECT_IN_SIDEBAR to "Select in Sidebar",
-    I18nKeys.Action.REVEAL_IN_EXPLORER to "Reveal in Explorer",
-    I18nKeys.Action.CLOSE to "Close",
-    I18nKeys.Action.CLOSE_OTHERS to "Close Others",
-    I18nKeys.Action.CLOSE_ALL to "Close All",
-    I18nKeys.Action.CLOSE_LEFT to "Close Left",
-    I18nKeys.Action.CLOSE_RIGHT to "Close Right",
-    I18nKeys.Action.CLOSE_UNMODIFIED to "Close Unmodified",
-    I18nKeys.Action.FORMAT_FILE to "Format File",
-    I18nKeys.Action.RESET to "Reset",
-    I18nKeys.Action.CANCEL to "Cancel",
-    I18nKeys.Action.CONFIRM to "Confirm",
-    I18nKeys.Action.INSTALL_PLUGIN to "Install Plugin",
-    I18nKeys.Action.OPEN_PLUGINS_FOLDER to "Open Plugins Folder",
-    I18nKeys.Action.ENABLE to "Enable",
-    I18nKeys.Action.DISABLE to "Disable",
-    I18nKeys.Action.UNINSTALL to "Uninstall",
+    I18nKeys.Action.OPEN_FILE to "Open File…"
+    I18nKeys.Action.OPEN_FOLDER to "Open Folder…"
+    I18nKeys.Action.RECENT to "Recent Files"
+    I18nKeys.Action.SAVE to "Save"
+    I18nKeys.Action.SAVE_AS to "Save As…"
+    I18nKeys.Action.EXIT to "Quit"
+    I18nKeys.Action.UNDO to "Undo"
+    I18nKeys.Action.REDO to "Redo"
+    I18nKeys.Action.FIND to "Find…"
+    I18nKeys.Action.REPLACE to "Replace…"
+    I18nKeys.Action.GLOBAL_SEARCH to "Search in Files…"
+    I18nKeys.Action.PLUGIN_MANAGER to "Plugin Manager"
+    I18nKeys.Action.ABOUT to "About"
+    I18nKeys.Action.HELP to "Help"
+    I18nKeys.Action.NEW_FILE to "New File"
+    I18nKeys.Action.NEW_FOLDER to "New Folder"
+    I18nKeys.Action.DELETE to "Delete"
+    I18nKeys.Action.REFRESH to "Refresh"
+    I18nKeys.Action.REVEAL_IN_SYSTEM to "Reveal in System"
+    I18nKeys.Action.COPY_PATH to "Copy Path"
+    I18nKeys.Action.SELECT_IN_SIDEBAR to "Select in Sidebar"
+    I18nKeys.Action.REVEAL_IN_EXPLORER to "Reveal in Explorer"
+    I18nKeys.Action.CLOSE to "Close"
+    I18nKeys.Action.CLOSE_OTHERS to "Close Others"
+    I18nKeys.Action.CLOSE_ALL to "Close All"
+    I18nKeys.Action.CLOSE_LEFT to "Close Left"
+    I18nKeys.Action.CLOSE_RIGHT to "Close Right"
+    I18nKeys.Action.CLOSE_UNMODIFIED to "Close Unmodified"
+    I18nKeys.Action.FORMAT_FILE to "Format File"
+    I18nKeys.Action.RESET to "Reset"
+    I18nKeys.Action.CANCEL to "Cancel"
+    I18nKeys.Action.CONFIRM to "Confirm"
+    I18nKeys.Action.INSTALL_PLUGIN to "Install Plugin"
+    I18nKeys.Action.OPEN_PLUGINS_FOLDER to "Open Plugins Folder"
+    I18nKeys.Action.ENABLE to "Enable"
+    I18nKeys.Action.DISABLE to "Disable"
+    I18nKeys.Action.UNINSTALL to "Uninstall"
 
-    I18nKeys.Settings.TITLE to "Preferences",
-    I18nKeys.Settings.PREFERENCES to "Preferences",
-    I18nKeys.Settings.APPEARANCE to "Appearance",
-    I18nKeys.Settings.LANGUAGE to "Language",
-    I18nKeys.Settings.THEME to "Theme",
-    I18nKeys.Settings.APPEARANCE_TIP to "Tip: language and theme changes apply immediately.",
-    I18nKeys.Settings.KEYMAP to "Keymap",
-    I18nKeys.Settings.PLUGINS to "Plugins",
-    I18nKeys.Settings.CACHE to "Cache",
-    I18nKeys.Settings.KEYMAP_TITLE to "Keymap (Planned)",
-    I18nKeys.Settings.KEYMAP_HINT to "<html>Current list shows default shortcuts. Customization/export is under planning.</html>",
-    I18nKeys.Settings.ADD_NOTE to "Add Note…",
-    I18nKeys.Settings.ADD_NOTE_TOOLTIP to "Shortcut customization is under development",
-    I18nKeys.Settings.EXPORT to "Export…",
-    I18nKeys.Settings.EXPORT_TOOLTIP to "Feature under development",
-    I18nKeys.Settings.CACHE_TITLE to "Cache",
-    I18nKeys.Settings.CACHE_HINT to "Clear cache only when no background decompile tasks are running.",
-    I18nKeys.Settings.REFRESH_CACHE to "Refresh",
-    I18nKeys.Settings.CLEAR_SELECTED to "Clear Selected",
-    I18nKeys.Settings.OPEN_FOLDER to "Open Folder",
-    I18nKeys.Settings.PLUGIN_STATE_DISABLED to "Disabled",
-    I18nKeys.Settings.PLUGIN_STATE_ENABLED to "Enabled",
-    I18nKeys.Settings.PLUGIN_STATE_FAILED to "Failed",
+    I18nKeys.Settings.TITLE to "Preferences"
+    I18nKeys.Settings.PREFERENCES to "Preferences"
+    I18nKeys.Settings.APPEARANCE to "Appearance"
+    I18nKeys.Settings.LANGUAGE to "Language"
+    I18nKeys.Settings.THEME to "Theme"
+    I18nKeys.Settings.APPEARANCE_TIP to "Tip: language and theme changes apply immediately."
+    I18nKeys.Settings.KEYMAP to "Keymap"
+    I18nKeys.Settings.PLUGINS to "Plugins"
+    I18nKeys.Settings.CACHE to "Cache"
+    I18nKeys.Settings.KEYMAP_TITLE to "Keymap (Planned)"
+    I18nKeys.Settings.KEYMAP_HINT to "<html>Current list shows default shortcuts. Customization/export is under planning.</html>"
+    I18nKeys.Settings.ADD_NOTE to "Add Note…"
+    I18nKeys.Settings.ADD_NOTE_TOOLTIP to "Shortcut customization is under development"
+    I18nKeys.Settings.EXPORT to "Export…"
+    I18nKeys.Settings.EXPORT_TOOLTIP to "Feature under development"
+    I18nKeys.Settings.CACHE_TITLE to "Cache"
+    I18nKeys.Settings.CACHE_HINT to "Clear cache only when no background decompile tasks are running."
+    I18nKeys.Settings.REFRESH_CACHE to "Refresh"
+    I18nKeys.Settings.CLEAR_SELECTED to "Clear Selected"
+    I18nKeys.Settings.OPEN_FOLDER to "Open Folder"
+    I18nKeys.Settings.PLUGIN_STATE_DISABLED to "Disabled"
+    I18nKeys.Settings.PLUGIN_STATE_ENABLED to "Enabled"
+    I18nKeys.Settings.PLUGIN_STATE_FAILED to "Failed"
 
-    I18nKeys.CacheTable.NAME to "Name",
-    I18nKeys.CacheTable.PATH to "Path",
-    I18nKeys.CacheTable.SIZE to "Size",
-    I18nKeys.CacheTable.DESCRIPTION to "Description",
+    I18nKeys.CacheTable.NAME to "Name"
+    I18nKeys.CacheTable.PATH to "Path"
+    I18nKeys.CacheTable.SIZE to "Size"
+    I18nKeys.CacheTable.DESCRIPTION to "Description"
 
-    I18nKeys.Theme.LIGHT to "Light",
-    I18nKeys.Theme.DARK to "Dark",
+    I18nKeys.Theme.LIGHT to "Light"
+    I18nKeys.Theme.DARK to "Dark"
 
-    I18nKeys.Status.READY to "Ready",
-    I18nKeys.Status.CANCEL to "Cancel",
-    I18nKeys.Status.GOTO_LINE_COLUMN to "Go to Line/Column",
-    I18nKeys.Status.ERROR to "Error",
-    I18nKeys.Status.WARNING to "Warning",
-    I18nKeys.Status.SUCCESS to "Success",
-    I18nKeys.Status.VERSION_CONTROL to "Version Control",
-    I18nKeys.Status.NO_FILE_OPENED to "No file opened",
-    I18nKeys.Status.LINE_COLUMN to "Line %d, Column %d",
+    I18nKeys.Status.READY to "Ready"
+    I18nKeys.Status.CANCEL to "Cancel"
+    I18nKeys.Status.GOTO_LINE_COLUMN to "Go to Line/Column"
+    I18nKeys.Status.ERROR to "Error"
+    I18nKeys.Status.WARNING to "Warning"
+    I18nKeys.Status.SUCCESS to "Success"
+    I18nKeys.Status.VERSION_CONTROL to "Version Control"
+    I18nKeys.Status.NO_FILE_OPENED to "No file opened"
+    I18nKeys.Status.LINE_COLUMN to "Line %d, Column %d"
 
-    I18nKeys.FindReplace.SEARCH to "Search",
-    I18nKeys.FindReplace.REPLACE to "Replace",
-    I18nKeys.FindReplace.EXPAND_REPLACE to "Expand Replace",
-    I18nKeys.FindReplace.COLLAPSE_REPLACE to "Collapse Replace",
-    I18nKeys.FindReplace.MATCH_CASE to "Match Case",
-    I18nKeys.FindReplace.WHOLE_WORD to "Whole Word",
-    I18nKeys.FindReplace.REGEX to "Regex",
-    I18nKeys.FindReplace.REPLACE_ONE to "Replace",
-    I18nKeys.FindReplace.REPLACE_ALL to "Replace All",
-    I18nKeys.FindReplace.REPLACE_ONE_TOOLTIP to "Replace current match",
-    I18nKeys.FindReplace.REPLACE_ALL_TOOLTIP to "Replace all matches",
-    I18nKeys.FindReplace.FIND_PREV to "Previous (Shift+Enter)",
-    I18nKeys.FindReplace.FIND_NEXT to "Next (Enter)",
-    I18nKeys.FindReplace.CLOSE to "Close",
-    I18nKeys.FindReplace.NO_RESULTS to "0 results",
-    I18nKeys.FindReplace.RESULTS to "%d/%d",
-    I18nKeys.FindReplace.INVALID_REGEX to "Invalid regex",
-    I18nKeys.FindReplace.SEARCH_FAILED to "Search failed",
-    I18nKeys.FindReplace.REPLACE_FAILED to "Replace failed",
+    I18nKeys.FindReplace.SEARCH to "Search"
+    I18nKeys.FindReplace.REPLACE to "Replace"
+    I18nKeys.FindReplace.EXPAND_REPLACE to "Expand Replace"
+    I18nKeys.FindReplace.COLLAPSE_REPLACE to "Collapse Replace"
+    I18nKeys.FindReplace.MATCH_CASE to "Match Case"
+    I18nKeys.FindReplace.WHOLE_WORD to "Whole Word"
+    I18nKeys.FindReplace.REGEX to "Regex"
+    I18nKeys.FindReplace.REPLACE_ONE to "Replace"
+    I18nKeys.FindReplace.REPLACE_ALL to "Replace All"
+    I18nKeys.FindReplace.REPLACE_ONE_TOOLTIP to "Replace current match"
+    I18nKeys.FindReplace.REPLACE_ALL_TOOLTIP to "Replace all matches"
+    I18nKeys.FindReplace.FIND_PREV to "Previous (Shift+Enter)"
+    I18nKeys.FindReplace.FIND_NEXT to "Next (Enter)"
+    I18nKeys.FindReplace.CLOSE to "Close"
+    I18nKeys.FindReplace.NO_RESULTS to "0 results"
+    I18nKeys.FindReplace.RESULTS to "%d/%d"
+    I18nKeys.FindReplace.INVALID_REGEX to "Invalid regex"
+    I18nKeys.FindReplace.SEARCH_FAILED to "Search failed"
+    I18nKeys.FindReplace.REPLACE_FAILED to "Replace failed"
 
-    I18nKeys.Dialog.SELECT_FOLDER to "Select Folder",
-    I18nKeys.Dialog.TIP to "Tip",
-    I18nKeys.Dialog.ABOUT_TITLE to "About EditorX",
+    I18nKeys.Dialog.SELECT_FOLDER to "Select Folder"
+    I18nKeys.Dialog.TIP to "Tip"
+    I18nKeys.Dialog.ABOUT_TITLE to "About EditorX"
     I18nKeys.Dialog.ABOUT_MESSAGE to """EditorX v1.0
 
 A tool for editing APK files
@@ -125,71 +126,155 @@ Features:
 • Multi-tab interface
 • File browsing and management
 
-Developed by: XiaMao Tools""",
-    I18nKeys.Dialog.HELP_NOT_IMPLEMENTED to "Help documentation not implemented",
-    I18nKeys.Dialog.NO_RECENT_FILES to "(None)",
-    I18nKeys.Dialog.FILE_NOT_EXISTS to "File does not exist",
-    I18nKeys.Dialog.NOT_FOUND to "Not found",
-    I18nKeys.Dialog.ERROR to "Error",
-    I18nKeys.Dialog.INFO to "Info",
-    I18nKeys.Dialog.SELECT_ENTRY_FIRST to "Select an entry first.",
-    I18nKeys.Dialog.DIRECTORY_NOT_FOUND to "Directory not found: %s",
-    I18nKeys.Dialog.CLEAR_CACHE to "Clear Cache",
-    I18nKeys.Dialog.CLEARED to "Cleared",
-    I18nKeys.Dialog.CLEAR_FAILED to "Failed to clear, files may be in use.",
-    I18nKeys.Dialog.UNABLE_TO_OPEN to "Unable to open: %s",
+Developed by: XiaMao Tools"""
+    I18nKeys.Dialog.HELP_NOT_IMPLEMENTED to "Help documentation not implemented"
+    I18nKeys.Dialog.NO_RECENT_FILES to "(None)"
+    I18nKeys.Dialog.FILE_NOT_EXISTS to "File does not exist"
+    I18nKeys.Dialog.NOT_FOUND to "Not found"
+    I18nKeys.Dialog.ERROR to "Error"
+    I18nKeys.Dialog.INFO to "Info"
+    I18nKeys.Dialog.SELECT_ENTRY_FIRST to "Select an entry first."
+    I18nKeys.Dialog.DIRECTORY_NOT_FOUND to "Directory not found: %s"
+    I18nKeys.Dialog.CLEAR_CACHE to "Clear Cache"
+    I18nKeys.Dialog.CLEARED to "Cleared"
+    I18nKeys.Dialog.CLEAR_FAILED to "Failed to clear, files may be in use."
+    I18nKeys.Dialog.UNABLE_TO_OPEN to "Unable to open: %s"
 
-    I18nKeys.Explorer.TITLE to "Explorer",
-    I18nKeys.Explorer.NEW_FILE to "New File",
-    I18nKeys.Explorer.NEW_FOLDER to "New Folder",
-    I18nKeys.Explorer.DELETE to "Delete",
-    I18nKeys.Explorer.REFRESH to "Refresh",
-    I18nKeys.Explorer.REVEAL_IN_SYSTEM to "Reveal in System",
+    I18nKeys.Explorer.TITLE to "Explorer"
+    I18nKeys.Explorer.NEW_FILE to "New File"
+    I18nKeys.Explorer.NEW_FOLDER to "New Folder"
+    I18nKeys.Explorer.DELETE to "Delete"
+    I18nKeys.Explorer.REFRESH to "Refresh"
+    I18nKeys.Explorer.REVEAL_IN_SYSTEM to "Reveal in System"
 
-    I18nKeys.Editor.CLOSE to "Close",
-    I18nKeys.Editor.CLOSE_OTHERS to "Close Others",
-    I18nKeys.Editor.CLOSE_ALL to "Close All",
-    I18nKeys.Editor.CLOSE_LEFT to "Close Left",
-    I18nKeys.Editor.CLOSE_RIGHT to "Close Right",
-    I18nKeys.Editor.CLOSE_UNMODIFIED to "Close Unmodified",
-    I18nKeys.Editor.FORMAT_FILE to "Format File",
-    I18nKeys.Editor.CANNOT_READ_FILE to "Cannot read file: %s",
-    I18nKeys.Editor.TOTAL_FILES to "Total %d files/directories",
-    I18nKeys.Editor.CANNOT_READ_ARCHIVE to "Cannot read archive",
+    I18nKeys.Editor.CLOSE to "Close"
+    I18nKeys.Editor.CLOSE_OTHERS to "Close Others"
+    I18nKeys.Editor.CLOSE_ALL to "Close All"
+    I18nKeys.Editor.CLOSE_LEFT to "Close Left"
+    I18nKeys.Editor.CLOSE_RIGHT to "Close Right"
+    I18nKeys.Editor.CLOSE_UNMODIFIED to "Close Unmodified"
+    I18nKeys.Editor.FORMAT_FILE to "Format File"
+    I18nKeys.Editor.CANNOT_READ_FILE to "Cannot read file: %s"
+    I18nKeys.Editor.TOTAL_FILES to "Total %d files/directories"
+    I18nKeys.Editor.CANNOT_READ_ARCHIVE to "Cannot read archive"
 
-    I18nKeys.Toolbar.GOTO_MANIFEST to "Go to AndroidManifest.xml",
-    I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY to "Go to MainActivity",
-    I18nKeys.Toolbar.GOTO_APPLICATION to "Go to Application",
-    I18nKeys.Toolbar.BUILD to "Build",
-    I18nKeys.Toolbar.TOGGLE_SIDEBAR to "Toggle Sidebar",
-    I18nKeys.Toolbar.GLOBAL_SEARCH to "Global Search",
-    I18nKeys.Toolbar.SETTINGS to "Settings",
-    I18nKeys.Toolbar.DOUBLE_SHIFT to "Double Shift",
+    I18nKeys.Toolbar.GOTO_MANIFEST to "Go to AndroidManifest.xml"
+    I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY to "Go to MainActivity"
+    I18nKeys.Toolbar.GOTO_APPLICATION to "Go to Application"
+    I18nKeys.Toolbar.BUILD to "Build"
+    I18nKeys.Toolbar.TOGGLE_SIDEBAR to "Toggle Sidebar"
+    I18nKeys.Toolbar.GLOBAL_SEARCH to "Global Search"
+    I18nKeys.Toolbar.SETTINGS to "Settings"
+    I18nKeys.Toolbar.DOUBLE_SHIFT to "Double Shift"
 
-    I18nKeys.Search.SEARCH to "Search",
-    I18nKeys.Search.STOP to "Stop",
-    I18nKeys.Search.SEARCH_LABEL to "Search:",
-    I18nKeys.Search.PLEASE_ENTER_SEARCH to "Please enter search content",
-    I18nKeys.Search.PLEASE_OPEN_FOLDER to "Please open a folder (workspace) first before global search",
-    I18nKeys.Search.SCANNED_FILES to "Scanned %d files, found %d results",
+    I18nKeys.Search.SEARCH to "Search"
+    I18nKeys.Search.STOP to "Stop"
+    I18nKeys.Search.SEARCH_LABEL to "Search:"
+    I18nKeys.Search.PLEASE_ENTER_SEARCH to "Please enter search content"
+    I18nKeys.Search.PLEASE_OPEN_FOLDER to "Please open a folder (workspace) first before global search"
+    I18nKeys.Search.SCANNED_FILES to "Scanned %d files, found %d results"
 
-    I18nKeys.Welcome.RECENT_PROJECTS to "Recent projects",
-    I18nKeys.Welcome.VIEW_ALL to "View all (%d)",
-    I18nKeys.Welcome.NO_RECENT_PROJECTS to "No recent projects",
+    I18nKeys.Welcome.RECENT_PROJECTS to "Recent projects"
+    I18nKeys.Welcome.VIEW_ALL to "View all (%d)"
+    I18nKeys.Welcome.NO_RECENT_PROJECTS to "No recent projects"
+    I18nKeys.Welcome.NEW_FILE to "New File"
+    I18nKeys.Welcome.OPEN_FILE to "Open File"
+    I18nKeys.Welcome.OPEN_PROJECT to "Open Project"
 
+    I18nKeys.Navigation.NO_FILE_OPENED to "No file opened"
+    I18nKeys.Navigation.COPY_PATH to "Copy Path"
+    I18nKeys.Navigation.SELECT_IN_SIDEBAR to "Select in Sidebar"
+    I18nKeys.Navigation.REVEAL_IN_EXPLORER to "Reveal in Explorer"
+
+    I18nKeys.Plugins.NO_PLUGIN_SELECTED to "No plugin selected"
+    I18nKeys.Plugins.ID to "ID"
+    I18nKeys.Plugins.VERSION to "Version"
+    I18nKeys.Plugins.ORIGIN to "Origin"
+    I18nKeys.Plugins.STATE to "State"
+    I18nKeys.Plugins.PATH to "Path"
+    I18nKeys.Plugins.PLUGINS_COUNT to "%d plugins"
+    I18nKeys.Plugins.SCAN_COMPLETED to "Scan completed"
+    I18nKeys.Plugins.ENABLED to "Enabled: %s"
+    I18nKeys.Plugins.DISABLED to "Disabled: %s"
+    I18nKeys.Plugins.REMOVED to "Removed: %s"
+    I18nKeys.Plugins.BUNDLED to "Bundled"
+    I18nKeys.Plugins.BUILTIN_CANNOT_UNINSTALL to "Built-in plugins cannot be uninstalled.\nPlugin: %s (%s)"
+    I18nKeys.Plugins.CONFIRM_UNINSTALL to "Remove plugin %s (%s)?\nIf it is a JAR plugin, also remove the file from plugins/ directory."
+    I18nKeys.Plugins.UNINSTALL_FAILED to "Failed to uninstall plugin: %s (%s)"
+    I18nKeys.Plugins.NO_PLUGIN_ENTRY to "Copied to plugins/, but no new plugin entry detected (check META-INF/services)."
+    I18nKeys.Plugins.INSTALLED_AND_STARTED to "Installed and started: %s"
+
+    I18nKeys.Keymap.ACTION to "Action"
+    I18nKeys.Keymap.SHORTCUT to "Shortcut"
+    I18nKeys.Keymap.DESCRIPTION to "Description"
+
+    I18nKeys.ToolbarMessage.COMPILING to "Compiling, please wait…"
+    I18nKeys.ToolbarMessage.COMPILING_TITLE to "Compiling"
+    I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED to "Workspace not opened"
+    I18nKeys.ToolbarMessage.NOT_APKTOOL_DIR to "Current workspace is not an apktool decompiled directory (missing apktool.yml)"
+    I18nKeys.ToolbarMessage.CANNOT_COMPILE to "Cannot compile"
+    I18nKeys.ToolbarMessage.COMPILING_APK to "Compiling APK..."
+    I18nKeys.ToolbarMessage.SIGNING_APK to "Signing APK..."
+    I18nKeys.ToolbarMessage.COMPILE_AND_SIGN_SUCCESS to "APK compiled and signed: %s"
+    I18nKeys.ToolbarMessage.APK_GENERATED to "APK generated and signed with debug certificate:\n%s"
+    I18nKeys.ToolbarMessage.COMPILE_COMPLETE to "Compile Complete"
+    I18nKeys.ToolbarMessage.SIGN_FAILED to "Sign failed: %s"
+    I18nKeys.ToolbarMessage.SIGN_FAILED_DETAIL to "APK compiled successfully, but signing failed:\n%s"
+    I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND to "apktool not found"
+    I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND_DETAIL to "apktool not found. Executable should be placed in toolchain/apktool or tools/apktool, or added to PATH"
+    I18nKeys.ToolbarMessage.COMPILE_CANCELLED to "APK compilation cancelled"
+    I18nKeys.ToolbarMessage.COMPILE_FAILED to "APK compilation failed (exit=%d)"
+    I18nKeys.ToolbarMessage.COMPILE_FAILED_DETAIL to "apktool compilation failed (exit=%d)\n%s"
+    I18nKeys.ToolbarMessage.COMPILE_EXCEPTION to "Exception during compilation: %s"
+    I18nKeys.ToolbarMessage.KEYSTORE_NOT_FOUND to "Cannot find or create ~/.android/debug.keystore"
+    I18nKeys.ToolbarMessage.APKSIGNER_NOT_FOUND to "apksigner not found. Please set ANDROID_HOME/ANDROID_SDK_ROOT or add apksigner to PATH"
+    I18nKeys.ToolbarMessage.SIGN_EXCEPTION to "Unknown error during signing"
+    I18nKeys.ToolbarMessage.MANIFEST_NOT_FOUND to "AndroidManifest.xml not found\nPath: %s"
+    I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND to "AndroidManifest.xml not found, cannot locate MainActivity"
+    I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND_DETAIL to "MainActivity not found in AndroidManifest.xml (no Activity with MAIN action found)"
+    I18nKeys.ToolbarMessage.MAINACTIVITY_SMALI_NOT_FOUND to "MainActivity smali file not found\nClass: %s\nExpected path: %s"
+    I18nKeys.ToolbarMessage.PARSE_MANIFEST_FAILED to "Failed to parse AndroidManifest.xml: %s"
+    I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND to "AndroidManifest.xml not found, cannot locate Application"
+    I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND_DETAIL to "Custom Application class not found in AndroidManifest.xml (using default Application)"
+    I18nKeys.ToolbarMessage.APPLICATION_SMALI_NOT_FOUND to "Application smali file not found\nClass: %s\nExpected path: %s"
+
+    I18nKeys.Cache.CACHE_CONTENT to "Cache"
+    I18nKeys.Cache.LOGS to "Logs"
+    I18nKeys.Cache.CACHE_DESC to "Workspace and plugin caches"
+    I18nKeys.Cache.LOGS_DESC to "Runtime logs for troubleshooting"
+    I18nKeys.Cache.CONFIRM_CLEAR to "Clear %s?\n%s"
+    I18nKeys.Cache.CANNOT_DELETE to "Cannot delete: %s"
+
+    I18nKeys.Dialog.SELECT_PLUGIN_JAR to "Select Plugin JAR"
+    I18nKeys.Dialog.SELECT_FILE to "Select File"
+    I18nKeys.Dialog.PATH_NOT_EXISTS to "Path does not exist: %s"
+    I18nKeys.Dialog.UNABLE_TO_OPEN_SYSTEM to "Unable to open in system: %s"
+    I18nKeys.Dialog.COPY_PATH_FAILED to "Copy path failed: %s"
+    I18nKeys.Dialog.PATH_COPIED to "Path copied: %s"
+    I18nKeys.Dialog.PLUGIN_SYSTEM_NOT_INIT to "Plugin system not initialized"
+    I18nKeys.Dialog.SELECT_JAR_FILE to "Please select a .jar file"
+    I18nKeys.Dialog.CONFIRM_OVERWRITE to "Plugin directory already contains file: %s\nOverwrite?"
+    I18nKeys.Dialog.CANNOT_UNINSTALL to "Cannot Uninstall"
+    I18nKeys.Dialog.CONFIRM_REMOVAL to "Confirm Removal"
+    I18nKeys.Dialog.UNINSTALL_FAILED to "Failed to uninstall plugin: %s (%s)"
+    I18nKeys.Dialog.COPY_FAILED to "Copy failed: %s"
+    I18nKeys.Dialog.DELETE_RECENT_PROJECT to "Delete Recent Project"
+    I18nKeys.Dialog.OPEN_APK_FILE to "Open APK File"
+    I18nKeys.Dialog.DETECTED_APK to "APK file detected. Convert to project (decompile)?"
+    
     // 语言名称使用动态生成的 key
-    I18nKeys.Lang.forLocale(Locale.forLanguageTag("zh")) to "Chinese",
-    I18nKeys.Lang.forLocale(Locale.SIMPLIFIED_CHINESE) to "Chinese (Simplified)",
-    I18nKeys.Lang.forLocale(Locale.TRADITIONAL_CHINESE) to "Chinese (Traditional)",
-    I18nKeys.Lang.forLocale(Locale.ENGLISH) to "English",
-)
+    put(I18nKeys.Lang.forLocale(Locale.forLanguageTag("zh")), "Chinese")
+    put(I18nKeys.Lang.forLocale(Locale.SIMPLIFIED_CHINESE), "Chinese (Simplified)")
+    put(I18nKeys.Lang.forLocale(Locale.TRADITIONAL_CHINESE), "Chinese (Traditional)")
+    put(I18nKeys.Lang.forLocale(Locale.ENGLISH), "English")
+}
 
 class EnglishI18nPlugin : I18nPlugin(Locale.ENGLISH) {
 
     override fun getInfo() = PluginInfo(
         id = "i18n-en",
         name = "English (i18n)",
-        version = "0.0.1",
+        version = "0.0.1"
     )
 
     override fun translate(key: String): String? = dictionary[key]

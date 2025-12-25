@@ -1,6 +1,7 @@
 package editorx.gui.main.toolbar
 
 import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.core.external.ApkTool
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
@@ -128,19 +129,19 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                     IconRef("icons/gui/android-manifest.svg"),
                     ICON_SIZE
                 )
-            ).compact("跳转到 AndroidManifest.xml") {
+            ).compact(I18n.translate(I18nKeys.Toolbar.GOTO_MANIFEST)) {
                 navigateToAndroidManifest()
             })
 
         add(Box.createHorizontalStrut(6))
 
-        add(JButton(IconLoader.getIcon(IconRef("icons/gui/main-activity.svg"), ICON_SIZE)).compact("跳转到 MainActivity") {
+        add(JButton(IconLoader.getIcon(IconRef("icons/gui/main-activity.svg"), ICON_SIZE)).compact(I18n.translate(I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY)) {
             navigateToMainActivity()
         })
 
         add(Box.createHorizontalStrut(6))
 
-        add(JButton(IconLoader.getIcon(IconRef("icons/gui/application.svg"), ICON_SIZE)).compact("跳转到 Application") {
+        add(JButton(IconLoader.getIcon(IconRef("icons/gui/application.svg"), ICON_SIZE)).compact(I18n.translate(I18nKeys.Toolbar.GOTO_APPLICATION)) {
             navigateToApplication()
         })
 
@@ -148,7 +149,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
     private fun setupRightActions() {
-        add(JButton(IconLoader.getIcon(IconRef("icons/common/build.svg"), ICON_SIZE)).compact("构建") {
+        add(JButton(IconLoader.getIcon(IconRef("icons/common/build.svg"), ICON_SIZE)).compact(I18n.translate(I18nKeys.Toolbar.BUILD)) {
             compileWorkspaceApk()
         })
 
@@ -156,7 +157,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         addSeparator()
         add(Box.createHorizontalStrut(12))
 
-        toggleSideBarButton = JButton(getSideBarIcon()).compact("切换侧边栏") {
+        toggleSideBarButton = JButton(getSideBarIcon()).compact(I18n.translate(I18nKeys.Toolbar.TOGGLE_SIDEBAR)) {
             toggleSideBar()
         }
         add(toggleSideBarButton)
@@ -164,14 +165,14 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         add(Box.createHorizontalStrut(6))
 
         // 全局搜索按钮（双击 Shift）
-        val doubleShiftText = if (I18n.locale().language == Locale.ENGLISH.language) "Double Shift" else "双击Shift"
-        add(JButton(IconLoader.getIcon(IconRef("icons/common/search.svg"), ICON_SIZE)).compactWithShortcut("全局搜索", doubleShiftText) {
+        val doubleShiftText = I18n.translate(I18nKeys.Toolbar.DOUBLE_SHIFT)
+        add(JButton(IconLoader.getIcon(IconRef("icons/common/search.svg"), ICON_SIZE)).compactWithShortcut(I18n.translate(I18nKeys.Toolbar.GLOBAL_SEARCH), doubleShiftText) {
             showGlobalSearch()
         })
 
         add(Box.createHorizontalStrut(6))
 
-        add(JButton(IconLoader.getIcon(IconRef("icons/common/settings.svg"), ICON_SIZE)).compact("设置") {
+        add(JButton(IconLoader.getIcon(IconRef("icons/common/settings.svg"), ICON_SIZE)).compact(I18n.translate(I18nKeys.Toolbar.SETTINGS)) {
             showSettings()
         })
 
@@ -181,7 +182,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun openFolder() {
         val chooser = JFileChooser().apply {
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            dialogTitle = "选择文件夹"
+            dialogTitle = I18n.translate(I18nKeys.Dialog.SELECT_FOLDER)
         }
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selected = chooser.selectedFile
@@ -221,7 +222,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
 
     private fun showSettings() {
         val pm = mainWindow.pluginManager ?: run {
-            JOptionPane.showMessageDialog(this, "插件系统尚未初始化", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(this, I18n.translate(I18nKeys.Dialog.PLUGIN_SYSTEM_NOT_INIT), I18n.translate(I18nKeys.Dialog.TIP), JOptionPane.INFORMATION_MESSAGE)
             return
         }
         SettingsDialog(mainWindow, mainWindow.guiContext, pm, SettingsDialog.Section.APPEARANCE).isVisible = true
@@ -248,8 +249,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (compileTask?.isAlive == true) {
             JOptionPane.showMessageDialog(
                 this,
-                "正在编译，请稍候…",
-                "编译进行中",
+                I18n.translate(I18nKeys.ToolbarMessage.COMPILING),
+                I18n.translate(I18nKeys.ToolbarMessage.COMPILING_TITLE),
                 JOptionPane.INFORMATION_MESSAGE
             )
             return
@@ -257,7 +258,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
 
         val workspaceRoot = mainWindow.guiContext.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, I18n.translate(I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED), I18n.translate(I18nKeys.Dialog.TIP), JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -265,8 +266,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (!apktoolConfig.exists()) {
             JOptionPane.showMessageDialog(
                 this,
-                "当前工作区不是 apktool 反编译目录（缺少 apktool.yml）",
-                "无法编译",
+                I18n.translate(I18nKeys.ToolbarMessage.NOT_APKTOOL_DIR),
+                I18n.translate(I18nKeys.ToolbarMessage.CANNOT_COMPILE),
                 JOptionPane.WARNING_MESSAGE
             )
             return
@@ -281,7 +282,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             index++
         }
 
-        mainWindow.statusBar.showProgress("正在编译APK...", indeterminate = true)
+        mainWindow.statusBar.showProgress(I18n.translate(I18nKeys.ToolbarMessage.COMPILING_APK), indeterminate = true)
         compileTask = Thread {
             try {
                 val buildResult = ApkTool.build(workspaceRoot, outputApk)
@@ -289,7 +290,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                 var signResult: SignResult? = null
                 if (buildResult.status == ApkTool.Status.SUCCESS) {
                     SwingUtilities.invokeLater {
-                        mainWindow.statusBar.showProgress("正在签名APK...", indeterminate = true)
+                        mainWindow.statusBar.showProgress(I18n.translate(I18nKeys.ToolbarMessage.SIGNING_APK), indeterminate = true)
                     }
                     signResult = signWithDebugKeystore(outputApk)
                 }
@@ -300,45 +301,45 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                     when (buildResult.status) {
                         ApkTool.Status.SUCCESS -> {
                             if (finalSignResult?.success == true) {
-                                mainWindow.statusBar.showSuccess("APK 编译并签名完成: ${outputApk.name}")
+                                mainWindow.statusBar.showSuccess(I18n.translate(I18nKeys.ToolbarMessage.COMPILE_AND_SIGN_SUCCESS).format(outputApk.name))
                                 JOptionPane.showMessageDialog(
                                     this@ToolBar,
-                                    "已生成并使用调试证书签名的 APK:\n${outputApk.absolutePath}",
-                                    "编译完成",
+                                    I18n.translate(I18nKeys.ToolbarMessage.APK_GENERATED).format(outputApk.absolutePath),
+                                    I18n.translate(I18nKeys.ToolbarMessage.COMPILE_COMPLETE),
                                     JOptionPane.INFORMATION_MESSAGE
                                 )
                             } else {
-                                val msg = finalSignResult?.message ?: "未知原因"
-                                mainWindow.statusBar.showError("签名失败: $msg")
+                                val msg = finalSignResult?.message ?: I18n.translate(I18nKeys.ToolbarMessage.SIGN_EXCEPTION)
+                                mainWindow.statusBar.showError(I18n.translate(I18nKeys.ToolbarMessage.SIGN_FAILED).format(msg))
                                 JOptionPane.showMessageDialog(
                                     this@ToolBar,
-                                    "APK 编译成功，但签名失败:\n$msg",
-                                    "签名失败",
+                                    I18n.translate(I18nKeys.ToolbarMessage.SIGN_FAILED_DETAIL).format(msg),
+                                    I18n.translate(I18nKeys.ToolbarMessage.SIGN_FAILED).split(":")[0],
                                     JOptionPane.ERROR_MESSAGE
                                 )
                             }
                         }
 
                         ApkTool.Status.NOT_FOUND -> {
-                            mainWindow.statusBar.showError("未找到 apktool")
+                            mainWindow.statusBar.showError(I18n.translate(I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND))
                             JOptionPane.showMessageDialog(
                                 this@ToolBar,
-                                "未找到 apktool，可执行文件需放在 toolchain/apktool 或 tools/apktool，或加入 PATH",
-                                "无法编译",
+                                I18n.translate(I18nKeys.ToolbarMessage.APKTOOL_NOT_FOUND_DETAIL),
+                                I18n.translate(I18nKeys.ToolbarMessage.CANNOT_COMPILE),
                                 JOptionPane.ERROR_MESSAGE
                             )
                         }
 
                         ApkTool.Status.CANCELLED -> {
-                            mainWindow.statusBar.setMessage("APK 编译被取消", persistent = true)
+                            mainWindow.statusBar.setMessage(I18n.translate(I18nKeys.ToolbarMessage.COMPILE_CANCELLED), persistent = true)
                         }
 
                         ApkTool.Status.FAILED -> {
-                            mainWindow.statusBar.showError("APK 编译失败 (exit=${buildResult.exitCode})")
+                            mainWindow.statusBar.showError(I18n.translate(I18nKeys.ToolbarMessage.COMPILE_FAILED).format(buildResult.exitCode))
                             JOptionPane.showMessageDialog(
                                 this@ToolBar,
-                                "apktool 编译失败 (exit=${buildResult.exitCode})\n${buildResult.output}",
-                                "编译失败",
+                                I18n.translate(I18nKeys.ToolbarMessage.COMPILE_FAILED_DETAIL).format(buildResult.exitCode, buildResult.output),
+                                I18n.translate(I18nKeys.ToolbarMessage.COMPILE_FAILED).split("(")[0].trim(),
                                 JOptionPane.ERROR_MESSAGE
                             )
                         }
@@ -347,11 +348,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             } catch (e: Exception) {
                 SwingUtilities.invokeLater {
                     mainWindow.statusBar.hideProgress()
-                    mainWindow.statusBar.showError("APK 编译失败: ${e.message}")
+                    mainWindow.statusBar.showError("${I18n.translate(I18nKeys.ToolbarMessage.COMPILE_FAILED).split("(")[0].trim()}: ${e.message}")
                     JOptionPane.showMessageDialog(
                         this@ToolBar,
-                        "编译过程中出现异常: ${e.message}",
-                        "编译失败",
+                        I18n.translate(I18nKeys.ToolbarMessage.COMPILE_EXCEPTION).format(e.message ?: ""),
+                        I18n.translate(I18nKeys.ToolbarMessage.COMPILE_FAILED).split("(")[0].trim(),
                         JOptionPane.ERROR_MESSAGE
                     )
                 }
@@ -366,11 +367,11 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
 
     private fun signWithDebugKeystore(apkFile: File): SignResult {
         val keystore = ensureDebugKeystore()
-            ?: return SignResult(false, "未找到或无法创建 ~/.android/debug.keystore")
+            ?: return SignResult(false, I18n.translate(I18nKeys.ToolbarMessage.KEYSTORE_NOT_FOUND))
         val apksigner = locateApkSigner()
             ?: return SignResult(
                 false,
-                "未找到 apksigner，请设置 ANDROID_HOME/ANDROID_SDK_ROOT 或将 apksigner 加入 PATH"
+                I18n.translate(I18nKeys.ToolbarMessage.APKSIGNER_NOT_FOUND)
             )
 
         val processBuilder =
@@ -393,9 +394,9 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             val output = process.inputStream.bufferedReader().use { it.readText() }
             val exitCode = process.waitFor()
             if (exitCode == 0) SignResult(true, null)
-            else SignResult(false, "apksigner 退出码 $exitCode\n$output")
+            else SignResult(false, "apksigner exit code $exitCode\n$output")
         } catch (e: Exception) {
-            SignResult(false, e.message ?: "签名时发生未知错误")
+            SignResult(false, e.message ?: I18n.translate(I18nKeys.ToolbarMessage.SIGN_EXCEPTION))
         }
     }
 
@@ -500,7 +501,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToAndroidManifest() {
         val workspaceRoot = mainWindow.guiContext.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, I18n.translate(I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED), I18n.translate(I18nKeys.Dialog.TIP), JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -508,8 +509,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (!manifestFile.exists()) {
             JOptionPane.showMessageDialog(
                 this,
-                "未找到 AndroidManifest.xml 文件\n路径: ${manifestFile.absolutePath}",
-                "文件不存在",
+                I18n.translate(I18nKeys.ToolbarMessage.MANIFEST_NOT_FOUND).format(manifestFile.absolutePath),
+                I18n.translate(I18nKeys.Dialog.FILE_NOT_EXISTS),
                 JOptionPane.WARNING_MESSAGE
             )
             return
@@ -524,7 +525,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToMainActivity() {
         val workspaceRoot = mainWindow.guiContext.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, I18n.translate(I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED), I18n.translate(I18nKeys.Dialog.TIP), JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -532,8 +533,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (!manifestFile.exists()) {
             JOptionPane.showMessageDialog(
                 this,
-                "未找到 AndroidManifest.xml 文件，无法定位 MainActivity",
-                "文件不存在",
+                I18n.translate(I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND),
+                I18n.translate(I18nKeys.Dialog.FILE_NOT_EXISTS),
                 JOptionPane.WARNING_MESSAGE
             )
             return
@@ -546,8 +547,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             if (mainActivityClass == null) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "在 AndroidManifest.xml 中未找到 MainActivity（未找到包含 MAIN action 的 Activity）",
-                    "未找到",
+                    I18n.translate(I18nKeys.ToolbarMessage.MAINACTIVITY_NOT_FOUND_DETAIL),
+                    I18n.translate(I18nKeys.Dialog.NOT_FOUND),
                     JOptionPane.INFORMATION_MESSAGE
                 )
                 return
@@ -559,8 +560,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             } else {
                 JOptionPane.showMessageDialog(
                     this,
-                    "未找到 MainActivity 对应的 smali 文件\n类名: $mainActivityClass\n预期路径: ${smaliFile?.absolutePath ?: "未知"}",
-                    "文件不存在",
+                    I18n.translate(I18nKeys.ToolbarMessage.MAINACTIVITY_SMALI_NOT_FOUND).format(mainActivityClass, smaliFile?.absolutePath ?: I18n.translate(I18nKeys.Dialog.NOT_FOUND)),
+                    I18n.translate(I18nKeys.Dialog.FILE_NOT_EXISTS),
                     JOptionPane.WARNING_MESSAGE
                 )
             }
@@ -568,8 +569,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             logger.error("跳转到 MainActivity 失败", e)
             JOptionPane.showMessageDialog(
                 this,
-                "解析 AndroidManifest.xml 失败: ${e.message}",
-                "错误",
+                I18n.translate(I18nKeys.ToolbarMessage.PARSE_MANIFEST_FAILED).format(e.message ?: ""),
+                I18n.translate(I18nKeys.Dialog.ERROR),
                 JOptionPane.ERROR_MESSAGE
             )
         }
@@ -581,7 +582,7 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun navigateToApplication() {
         val workspaceRoot = mainWindow.guiContext.workspace.getWorkspaceRoot()
         if (workspaceRoot == null) {
-            JOptionPane.showMessageDialog(mainWindow, "尚未打开工作区", "提示", JOptionPane.INFORMATION_MESSAGE)
+            JOptionPane.showMessageDialog(mainWindow, I18n.translate(I18nKeys.ToolbarMessage.WORKSPACE_NOT_OPENED), I18n.translate(I18nKeys.Dialog.TIP), JOptionPane.INFORMATION_MESSAGE)
             return
         }
 
@@ -589,8 +590,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (!manifestFile.exists()) {
             JOptionPane.showMessageDialog(
                 this,
-                "未找到 AndroidManifest.xml 文件，无法定位 Application",
-                "文件不存在",
+                I18n.translate(I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND),
+                I18n.translate(I18nKeys.Dialog.FILE_NOT_EXISTS),
                 JOptionPane.WARNING_MESSAGE
             )
             return
@@ -603,8 +604,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             if (applicationClass == null) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "在 AndroidManifest.xml 中未找到自定义 Application 类（使用默认 Application）",
-                    "未找到",
+                    I18n.translate(I18nKeys.ToolbarMessage.APPLICATION_NOT_FOUND_DETAIL),
+                    I18n.translate(I18nKeys.Dialog.NOT_FOUND),
                     JOptionPane.INFORMATION_MESSAGE
                 )
                 return
@@ -616,8 +617,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             } else {
                 JOptionPane.showMessageDialog(
                     this,
-                    "未找到 Application 对应的 smali 文件\n类名: $applicationClass\n预期路径: ${smaliFile?.absolutePath ?: "未知"}",
-                    "文件不存在",
+                    I18n.translate(I18nKeys.ToolbarMessage.APPLICATION_SMALI_NOT_FOUND).format(applicationClass, smaliFile?.absolutePath ?: I18n.translate(I18nKeys.Dialog.NOT_FOUND)),
+                    I18n.translate(I18nKeys.Dialog.FILE_NOT_EXISTS),
                     JOptionPane.WARNING_MESSAGE
                 )
             }
@@ -625,8 +626,8 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
             logger.error("跳转到 Application 失败", e)
             JOptionPane.showMessageDialog(
                 this,
-                "解析 AndroidManifest.xml 失败: ${e.message}",
-                "错误",
+                I18n.translate(I18nKeys.ToolbarMessage.PARSE_MANIFEST_FAILED).format(e.message ?: ""),
+                I18n.translate(I18nKeys.Dialog.ERROR),
                 JOptionPane.ERROR_MESSAGE
             )
         }

@@ -177,6 +177,8 @@ object I18nKeys {
      */
     object Dialog {
         const val SELECT_FOLDER = "dialog.selectFolder"
+        const val SELECT_PLUGIN_JAR = "dialog.selectPluginJar"
+        const val SELECT_FILE = "dialog.selectFile"
         const val TIP = "dialog.tip"
         const val INFO = "dialog.info"
         const val ABOUT_TITLE = "dialog.about.title"
@@ -192,6 +194,23 @@ object I18nKeys {
         const val CLEARED = "dialog.cleared"
         const val CLEAR_FAILED = "dialog.clearFailed"
         const val UNABLE_TO_OPEN = "dialog.unableToOpen"
+        const val PATH_NOT_EXISTS = "dialog.pathNotExists"
+        const val UNABLE_TO_OPEN_SYSTEM = "dialog.unableToOpenSystem"
+        const val COPY_PATH_FAILED = "dialog.copyPathFailed"
+        const val PATH_COPIED = "dialog.pathCopied"
+        const val PLUGIN_SYSTEM_NOT_INIT = "dialog.pluginSystemNotInit"
+        const val WORKSPACE_NOT_OPENED = "dialog.workspaceNotOpened"
+        const val SELECT_JAR_FILE = "dialog.selectJarFile"
+        const val CONFIRM_OVERWRITE = "dialog.confirmOverwrite"
+        const val CANNOT_UNINSTALL = "dialog.cannotUninstall"
+        const val CONFIRM_REMOVAL = "dialog.confirmRemoval"
+        const val UNINSTALL_FAILED = "dialog.uninstallFailed"
+        const val COPY_FAILED = "dialog.copyFailed"
+        const val NO_PLUGIN_ENTRY = "dialog.noPluginEntry"
+        const val INSTALLED_AND_STARTED = "dialog.installedAndStarted"
+        const val DELETE_RECENT_PROJECT = "dialog.deleteRecentProject"
+        const val OPEN_APK_FILE = "dialog.openApkFile"
+        const val DETECTED_APK = "dialog.detectedApk"
     }
 
     /**
@@ -255,6 +274,98 @@ object I18nKeys {
         const val RECENT_PROJECTS = "welcome.recentProjects"
         const val VIEW_ALL = "welcome.viewAll"
         const val NO_RECENT_PROJECTS = "welcome.noRecentProjects"
+        const val NEW_FILE = "welcome.newFile"
+        const val OPEN_FILE = "welcome.openFile"
+        const val OPEN_PROJECT = "welcome.openProject"
+    }
+
+    /**
+     * 导航栏相关的翻译 key
+     */
+    object Navigation {
+        const val NO_FILE_OPENED = "navigation.noFileOpened"
+        const val COPY_PATH = "navigation.copyPath"
+        const val SELECT_IN_SIDEBAR = "navigation.selectInSidebar"
+        const val REVEAL_IN_EXPLORER = "navigation.revealInExplorer"
+    }
+
+    /**
+     * 插件面板相关的翻译 key
+     */
+    object Plugins {
+        const val NO_PLUGIN_SELECTED = "plugins.noPluginSelected"
+        const val ID = "plugins.id"
+        const val VERSION = "plugins.version"
+        const val ORIGIN = "plugins.origin"
+        const val STATE = "plugins.state"
+        const val PATH = "plugins.path"
+        const val PLUGINS_COUNT = "plugins.pluginsCount"
+        const val SCAN_COMPLETED = "plugins.scanCompleted"
+        const val ENABLED = "plugins.enabled"
+        const val DISABLED = "plugins.disabled"
+        const val REMOVED = "plugins.removed"
+        const val BUNDLED = "plugins.bundled"
+        const val BUILTIN_CANNOT_UNINSTALL = "plugins.builtinCannotUninstall"
+        const val CONFIRM_UNINSTALL = "plugins.confirmUninstall"
+        const val UNINSTALL_FAILED = "plugins.uninstallFailed"
+        const val NO_PLUGIN_ENTRY = "plugins.noPluginEntry"
+        const val INSTALLED_AND_STARTED = "plugins.installedAndStarted"
+    }
+
+    /**
+     * 快捷键面板相关的翻译 key
+     */
+    object Keymap {
+        const val ACTION = "keymap.action"
+        const val SHORTCUT = "keymap.shortcut"
+        const val DESCRIPTION = "keymap.description"
+    }
+
+    /**
+     * 工具栏相关的消息翻译 key
+     */
+    object ToolbarMessage {
+        const val COMPILING = "toolbarMessage.compiling"
+        const val COMPILING_TITLE = "toolbarMessage.compilingTitle"
+        const val WORKSPACE_NOT_OPENED = "toolbarMessage.workspaceNotOpened"
+        const val NOT_APKTOOL_DIR = "toolbarMessage.notApktoolDir"
+        const val CANNOT_COMPILE = "toolbarMessage.cannotCompile"
+        const val COMPILING_APK = "toolbarMessage.compilingApk"
+        const val SIGNING_APK = "toolbarMessage.signingApk"
+        const val COMPILE_AND_SIGN_SUCCESS = "toolbarMessage.compileAndSignSuccess"
+        const val APK_GENERATED = "toolbarMessage.apkGenerated"
+        const val COMPILE_COMPLETE = "toolbarMessage.compileComplete"
+        const val SIGN_FAILED = "toolbarMessage.signFailed"
+        const val SIGN_FAILED_DETAIL = "toolbarMessage.signFailedDetail"
+        const val APKTOOL_NOT_FOUND = "toolbarMessage.apktoolNotFound"
+        const val APKTOOL_NOT_FOUND_DETAIL = "toolbarMessage.apktoolNotFoundDetail"
+        const val COMPILE_CANCELLED = "toolbarMessage.compileCancelled"
+        const val COMPILE_FAILED = "toolbarMessage.compileFailed"
+        const val COMPILE_FAILED_DETAIL = "toolbarMessage.compileFailedDetail"
+        const val COMPILE_EXCEPTION = "toolbarMessage.compileException"
+        const val KEYSTORE_NOT_FOUND = "toolbarMessage.keystoreNotFound"
+        const val APKSIGNER_NOT_FOUND = "toolbarMessage.apksignerNotFound"
+        const val SIGN_EXCEPTION = "toolbarMessage.signException"
+        const val MANIFEST_NOT_FOUND = "toolbarMessage.manifestNotFound"
+        const val MAINACTIVITY_NOT_FOUND = "toolbarMessage.mainActivityNotFound"
+        const val MAINACTIVITY_NOT_FOUND_DETAIL = "toolbarMessage.mainActivityNotFoundDetail"
+        const val MAINACTIVITY_SMALI_NOT_FOUND = "toolbarMessage.mainActivitySmaliNotFound"
+        const val PARSE_MANIFEST_FAILED = "toolbarMessage.parseManifestFailed"
+        const val APPLICATION_NOT_FOUND = "toolbarMessage.applicationNotFound"
+        const val APPLICATION_NOT_FOUND_DETAIL = "toolbarMessage.applicationNotFoundDetail"
+        const val APPLICATION_SMALI_NOT_FOUND = "toolbarMessage.applicationSmaliNotFound"
+    }
+
+    /**
+     * 缓存相关的翻译 key
+     */
+    object Cache {
+        const val CACHE_CONTENT = "cache.cacheContent"
+        const val LOGS = "cache.logs"
+        const val CACHE_DESC = "cache.cacheDesc"
+        const val LOGS_DESC = "cache.logsDesc"
+        const val CONFIRM_CLEAR = "cache.confirmClear"
+        const val CANNOT_DELETE = "cache.cannotDelete"
     }
 }
 
