@@ -6,7 +6,7 @@ import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.filetype.Language
 import java.io.File
 
-interface PluginGuiClient {
+interface PluginGuiContext {
 
     /**
      * 获取工作区根目录

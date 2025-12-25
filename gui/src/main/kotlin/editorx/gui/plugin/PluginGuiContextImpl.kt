@@ -7,28 +7,32 @@ import editorx.core.filetype.FormatterRegistry
 import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.filetype.SyntaxHighlighterRegistry
 import editorx.core.filetype.Language
+import editorx.core.gui.GuiContext
 import editorx.core.plugin.PluginContext
-import editorx.core.plugin.gui.PluginGuiClient
-import editorx.gui.main.MainWindow
+import editorx.core.plugin.gui.PluginGuiContext
 
-class PluginGuiClientImpl(
-    private val mainWindow: MainWindow,
-    private val pluginContext: PluginContext
-) : PluginGuiClient {
+class PluginGuiContextImpl(
+    private val pluginId: String,
+    private val guiContext: GuiContext
+) : PluginGuiContext {
 
     override fun getWorkspaceRoot(): java.io.File? {
-        return mainWindow.guiContext.workspace.getWorkspaceRoot()
+        return guiContext.workspace.getWorkspaceRoot()
     }
 
     override fun registerFileType(fileType: FileType) {
-        FileTypeRegistry.registerFileType(fileType, ownerId = pluginContext.pluginId())
+        FileTypeRegistry.registerFileType(fileType, ownerId = pluginId)
     }
 
     override fun registerSyntaxHighlighter(language: Language, syntaxHighlighter: SyntaxHighlighter) {
-        SyntaxHighlighterRegistry.registerSyntaxHighlighter(language, syntaxHighlighter, ownerId = pluginContext.pluginId())
+        SyntaxHighlighterRegistry.registerSyntaxHighlighter(
+            language,
+            syntaxHighlighter,
+            ownerId = pluginId
+        )
     }
 
     override fun registerFormatter(language: Language, formatter: Formatter) {
-        FormatterRegistry.registerFormatter(language, formatter, ownerId = pluginContext.pluginId())
+        FormatterRegistry.registerFormatter(language, formatter, ownerId = pluginId)
     }
 }

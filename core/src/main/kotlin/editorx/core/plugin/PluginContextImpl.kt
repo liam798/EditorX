@@ -1,13 +1,13 @@
 package editorx.core.plugin
 
-import editorx.core.plugin.gui.PluginGuiClient
+import editorx.core.plugin.gui.PluginGuiContext
 import editorx.core.service.MutableServiceRegistry
 
 class PluginContextImpl(
     private val plugin: Plugin,
     private val serviceRegistry: MutableServiceRegistry,
 ) : PluginContext, Comparable<PluginContextImpl> {
-    private var guiClient: PluginGuiClient? = null
+    private var guiContext: PluginGuiContext? = null
     private var hasActive = false
     private val ownedServices: MutableSet<Class<*>> = linkedSetOf()
 
@@ -19,8 +19,8 @@ class PluginContextImpl(
         return plugin.getInfo()
     }
 
-    override fun guiClient(): PluginGuiClient? {
-        return guiClient
+    override fun gui(): PluginGuiContext? {
+        return guiContext
     }
 
     override fun services(): MutableServiceRegistry = serviceRegistry
@@ -35,8 +35,8 @@ class PluginContextImpl(
         ownedServices.remove(serviceClass)
     }
 
-    fun setGuiClient(guiClient: PluginGuiClient) {
-        this.guiClient = guiClient
+    fun setGuiContext(guiContext: PluginGuiContext) {
+        this.guiContext = guiContext
     }
 
     fun active() {

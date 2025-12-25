@@ -8,7 +8,7 @@ import editorx.core.settings.SettingsStore
 import editorx.core.util.StartupTimer
 import editorx.gui.core.ui.ThemeManager
 import editorx.gui.main.MainWindow
-import editorx.gui.plugin.PluginGuiClientImpl
+import editorx.gui.plugin.PluginGuiContextImpl
 import java.io.File
 import java.util.Locale
 import javax.swing.SwingUtilities
@@ -62,7 +62,7 @@ private fun initializeApplication(timer: StartupTimer) {
         System.setProperty("apple.laf.useScreenMenuBar", "true")
         System.setProperty("com.apple.mrj.application.apple.menu.about.name", "EditorX")
     }
-    
+
     // 设置应用图标（使用 Taskbar API，支持 Java 9+）
     runCatching {
         val classLoader = Thread.currentThread().contextClassLoader ?: ClassLoader.getSystemClassLoader()
@@ -105,11 +105,11 @@ private fun initializeApplication(timer: StartupTimer) {
 
 private fun initializeMainWindow(startupTimer: StartupTimer) {
     val appDir = File(System.getProperty("user.home"), ".editorx")
-    val environment = GuiContext(appDir)
-    val disabled = loadDisabledSet(environment.settings)
+    val guiContext = GuiContext(appDir)
+    val disabled = loadDisabledSet(guiContext.settings)
     startupTimer.mark("environment.ready")
 
-    environment.settings.get("ui.locale", null)?.let { tag ->
+    guiContext.settings.get("ui.locale", null)?.let { tag ->
         runCatching { Locale.forLanguageTag(tag) }
             .getOrNull()
             ?.takeIf { it.language.isNotBlank() }
@@ -121,12 +121,12 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
     }
 
     // 加载保存的主题
-    environment.settings.get("ui.theme", null)?.let { themeName ->
+    guiContext.settings.get("ui.theme", null)?.let { themeName ->
         val theme = ThemeManager.loadTheme(themeName)
         ThemeManager.currentTheme = theme
     }
 
-    val mv = MainWindow(environment)
+    val mv = MainWindow(guiContext)
 
     // 显示主窗口
     mv.isVisible = true
@@ -136,8 +136,8 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
     val pluginManager = PluginManager()
     pluginManager.setInitialDisabled(disabled)
     pluginManager.registerContextInitializer { pluginContext ->
-        val guiEnvironment = PluginGuiClientImpl(mv, pluginContext)
-        pluginContext.setGuiClient(guiEnvironment)
+        val pluginGuiContext = PluginGuiContextImpl(pluginContext.pluginId(), guiContext)
+        pluginContext.setGuiContext(pluginGuiContext)
     }
     mv.pluginManager = pluginManager
     val loadLogger = LoggerFactory.getLogger("StartupTimer")

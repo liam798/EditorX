@@ -13,9 +13,9 @@ class SmaliPlugin : Plugin {
 
     override fun activate(pluginContext: PluginContext) {
         // 注册文件类型
-        pluginContext.guiClient()?.registerFileType(SmaliFileType)
+        pluginContext.gui()?.registerFileType(SmaliFileType)
 
         // 注册 Smali 语法高亮
-        pluginContext.guiClient()?.registerSyntaxHighlighter(SmaliLanguage, SmaliHighlighter)
+        pluginContext.gui()?.registerSyntaxHighlighter(SmaliLanguage, SmaliHighlighter)
     }
 }

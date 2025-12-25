@@ -1,6 +1,6 @@
 package editorx.core.plugin
 
-import editorx.core.plugin.gui.PluginGuiClient
+import editorx.core.plugin.gui.PluginGuiContext
 import editorx.core.service.ServiceRegistry
 
 interface PluginContext {
@@ -9,7 +9,7 @@ interface PluginContext {
 
     fun pluginInfo(): PluginInfo
 
-    fun guiClient(): PluginGuiClient?
+    fun gui(): PluginGuiContext?
 
     fun services(): ServiceRegistry
 
