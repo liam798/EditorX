@@ -469,13 +469,10 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
                         // 其他情况（关闭对话框）：什么都不做
                     }
                 } else {
-                    // 其他支持的文件类型（aar、aab、xapk）暂时显示提示
-                    JOptionPane.showMessageDialog(
-                        mainWindow,
-                        "当前版本仅支持 APK 文件。\n\n${ext.uppercase()} 文件支持正在开发中。",
-                        "提示",
-                        JOptionPane.INFORMATION_MESSAGE
-                    )
+                    // 直接打开文件
+                    mainWindow.editor.openFile(selectedFile)
+                    mainWindow.guiContext.workspace.addRecentFile(selectedFile)
+                    mainWindow.editor.showEditorContent()
                 }
             }
         }
