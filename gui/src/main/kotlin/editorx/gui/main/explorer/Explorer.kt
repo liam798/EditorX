@@ -1,13 +1,12 @@
 package editorx.gui.main.explorer
 
-import editorx.core.filetype.FileTypeRegistry
-import editorx.core.util.IconRef
-import editorx.gui.main.MainWindow
-import editorx.core.service.DecompilerService
 import editorx.core.external.ApkTool
-import editorx.core.external.Jadx
+import editorx.core.filetype.FileTypeRegistry
+import editorx.core.service.DecompilerService
 import editorx.core.util.IconLoader
+import editorx.core.util.IconRef
 import editorx.core.util.IconUtils
+import editorx.gui.main.MainWindow
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
@@ -32,8 +31,6 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     companion object {
         private const val TOP_BAR_ICON_SIZE = 16
     }
-
-    private enum class ApkDecompileMode { APKTOOL, JADX, BOTH }
 
     private val searchField = JTextField()
     private val refreshBtn = JButton("刷新")
@@ -733,7 +730,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         val f = node.file
         val confirm =
             JOptionPane.showConfirmDialog(
-                this,
+                mainWindow,
                 if (f.isDirectory) "确定要删除该文件夹及其内容吗？\n${f.absolutePath}"
                 else "确定要删除该文件吗？\n${f.absolutePath}",
                 "确认删除",
@@ -818,8 +815,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
      */
     private fun promptCreateGitRepository(outputDir: File) {
         val response = JOptionPane.showConfirmDialog(
-            this,
-            "APK 反编译完成！\n\n是否要为反编译的项目创建 Git 仓库？\n这将帮助您跟踪代码修改历史。",
+            mainWindow,
+            "是否要为当前项目创建 Git 仓库？\n这将帮助您跟踪代码修改历史。",
             "创建 Git 仓库",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE
@@ -1093,58 +1090,20 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         }
     }
 
-    private fun handleApkFile(apkFile: File) {
-
+    /**
+     * 处理 APK 文件转换为项目
+     * 这是一个公共方法，可以从其他组件（如 WelcomeView）调用
+     */
+    fun handleApkFileConversion(apkFile: File) {
         // 重置取消状态
         isTaskCancelled = false
-
-        val option =
-            JOptionPane.showOptionDialog(
-                this,
-                "请选择反编译方式：\n\n- ApkTool：资源 + Smali（适合编辑/回编译）\n- JADX：Java 源码（适合阅读/搜索）\n- 两者：在 ApkTool 输出目录中额外生成 java_src/ 目录",
-                "反编译 APK",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                arrayOf("ApkTool", "JADX", "两者"),
-                "ApkTool",
-            )
-        if (option < 0) return
-        val mode =
-            when (option) {
-                1 -> ApkDecompileMode.JADX
-                2 -> ApkDecompileMode.BOTH
-                else -> ApkDecompileMode.APKTOOL
-            }
 
         // 在后台线程中处理APK反编译
         currentTask = Thread {
             try {
                 if (!Thread.currentThread().isInterrupted) {
                     setWait(true)
-                    when (mode) {
-                        ApkDecompileMode.APKTOOL -> decompileApk(apkFile)
-                        ApkDecompileMode.JADX -> {
-                            val out = File(apkFile.parentFile, apkFile.nameWithoutExtension + "_jadx")
-                            decompileJavaWithJadx(apkFile, out, openWorkspace = true)
-                        }
-                        ApkDecompileMode.BOTH -> {
-                            decompileApk(apkFile)
-                            val apktoolOut = File(apkFile.parentFile, apkFile.nameWithoutExtension + "_decompiled")
-                            val javaOut = File(apktoolOut, "java_src")
-                            runCatching { decompileJavaWithJadx(apkFile, javaOut, openWorkspace = false) }
-                                .onFailure { e ->
-                                    SwingUtilities.invokeLater {
-                                        JOptionPane.showMessageDialog(
-                                            this,
-                                            "JADX 生成 Java 源码失败: ${e.message}",
-                                            "提示",
-                                            JOptionPane.INFORMATION_MESSAGE
-                                        )
-                                    }
-                                }
-                        }
-                    }
+                    decompileApk(apkFile)
                     setWait(false)
                     SwingUtilities.invokeLater {
                         hideProgress()
@@ -1166,81 +1125,44 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         currentTask?.start()
     }
 
-    private fun decompileJavaWithJadx(apkFile: File, outputDir: File, openWorkspace: Boolean) {
-        try {
-            if (isTaskCancelled || Thread.currentThread().isInterrupted) return
-
-            val decompiler = ensureDecompilerService()
-
-            if (outputDir.exists()) {
-                val overwrite =
-                    JOptionPane.showConfirmDialog(
-                        this,
-                        "目录 ${outputDir.name} 已存在，是否覆盖？",
-                        "确认覆盖",
-                        JOptionPane.YES_NO_OPTION
-                    ) == JOptionPane.YES_OPTION
-                if (!overwrite) return
-            }
-
-            showProgress(message = "正在使用 JADX 生成 Java 源码…", indeterminate = true, cancellable = true)
-            if (outputDir.exists()) deleteRecursively(outputDir)
-
-            val result = if (decompiler != null) {
-                decompiler.decompile(
-                    apkFile,
-                    outputDir,
-                    mapOf("cancelSignal" to { isTaskCancelled || Thread.currentThread().isInterrupted })
-                )
-            } else {
-                val fallback = Jadx.decompile(apkFile, outputDir) {
-                    isTaskCancelled || Thread.currentThread().isInterrupted
-                }
-                when (fallback.status) {
-                    Jadx.Status.SUCCESS -> DecompilerService.DecompileResult(true, outputDir = outputDir)
-                    Jadx.Status.CANCELLED -> DecompilerService.DecompileResult(false, "cancelled")
-                    Jadx.Status.NOT_FOUND -> DecompilerService.DecompileResult(false, "jadx not found")
-                    Jadx.Status.FAILED -> DecompilerService.DecompileResult(false, fallback.output)
-                }
-            }
-
-            when {
-                result.success ->
-                    if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
-                        SwingUtilities.invokeLater {
-                            if (openWorkspace) {
-                                mainWindow.guiContext.workspace.openWorkspace(outputDir)
-                                mainWindow.statusBar.updateNavigation(null)
-                                refreshRoot()
-                                mainWindow.toolBar.updateProjectDisplay()
-                            }
-                            mainWindow.statusBar.setMessage("JADX 反编译完成: ${outputDir.name}")
-                        }
-                    }
-
-                result.message == "cancelled" -> return
-                result.message == "jadx not found" -> throw Exception("未找到 JADX（jadx）")
-                else -> throw Exception(result.message ?: "jadx 执行失败")
-            }
-        } catch (e: Exception) {
-            if (!isTaskCancelled) throw Exception("JADX 反编译失败: ${e.message}")
-        }
-    }
-
     private fun decompileApk(apkFile: File) {
         try {
             if (isTaskCancelled || Thread.currentThread().isInterrupted) return
 
             val outputDir = File(apkFile.parentFile, apkFile.nameWithoutExtension + "_decompiled")
             if (outputDir.exists()) {
-                val overwrite =
-                    JOptionPane.showConfirmDialog(
-                        this,
-                        "目录 ${outputDir.name} 已存在，是否覆盖？",
-                        "确认覆盖",
-                        JOptionPane.YES_NO_OPTION
-                    ) == JOptionPane.YES_OPTION
-                if (!overwrite) return
+                val options = arrayOf("打开已存在的项目", "重新反编译")
+                val choice = JOptionPane.showOptionDialog(
+                    mainWindow,
+                    "此Apk对应的反编译目录 \"${outputDir.name}\" 已存在。\n\n请选择操作：",
+                    "目录已存在",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0] // 默认选择"打开已存在的项目"
+                )
+                
+                when (choice) {
+                    JOptionPane.YES_OPTION -> {
+                        // 直接打开已存在的项目
+                        SwingUtilities.invokeLater {
+                            mainWindow.guiContext.workspace.openWorkspace(outputDir)
+                            mainWindow.statusBar.updateNavigation(null)
+                            refreshRoot()
+                            mainWindow.toolBar.updateProjectDisplay()
+                            mainWindow.statusBar.setMessage("已打开项目: ${outputDir.name}")
+                        }
+                        return
+                    }
+                    JOptionPane.NO_OPTION -> {
+                        // 重新反编译，继续执行后续逻辑
+                    }
+                    else -> {
+                        // 用户取消或关闭对话框
+                        return
+                    }
+                }
             }
 
             if (isTaskCancelled || Thread.currentThread().isInterrupted) return
@@ -1258,7 +1180,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     // 从 APK 中提取 DEX 文件到输出目录
                     val originalDir = File(outputDir, "original")
                     extractDexFilesFromApk(apkFile, originalDir)
-                    
+
                     if (!isTaskCancelled && !Thread.currentThread().isInterrupted) {
                         SwingUtilities.invokeLater {
                             mainWindow.guiContext.workspace.openWorkspace(outputDir)
@@ -1289,12 +1211,12 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         try {
             val logger = org.slf4j.LoggerFactory.getLogger(Explorer::class.java)
             logger.debug("开始从 APK 提取 DEX 文件: ${apkFile.absolutePath} -> ${outputDir.absolutePath}")
-            
+
             val zipFile = ZipFile(apkFile)
             val dexPattern = """^classes\d*\.dex$""".toRegex()
             var extractedCount = 0
             val extractedFiles = mutableListOf<String>()
-            
+
             zipFile.entries().asSequence().forEach { entry ->
                 if (dexPattern.matches(entry.name)) {
                     val outputDexFile = File(outputDir, entry.name)
@@ -1312,9 +1234,9 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                     }
                 }
             }
-            
+
             zipFile.close()
-            
+
             if (extractedCount > 0) {
                 logger.info("从 APK 成功提取了 $extractedCount 个 DEX 文件到: ${outputDir.absolutePath}")
                 logger.debug("提取的文件: ${extractedFiles.joinToString(", ")}")
@@ -1327,7 +1249,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
             // 不抛出异常，因为反编译本身已经成功
         }
     }
-    
+
     private fun ensureDecompilerService(): DecompilerService? {
         val manager = mainWindow.pluginManager ?: return null
         manager.triggerCommand("decompiler")
@@ -1416,7 +1338,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
     /** 自定义渲染：为目录和常见后缀的文件展示系统图标（带缓存）。 */
-    private class FileTreeCellRenderer(private val mainWindow: MainWindow) : javax.swing.tree.DefaultTreeCellRenderer() {
+    private class FileTreeCellRenderer(private val mainWindow: MainWindow) :
+        javax.swing.tree.DefaultTreeCellRenderer() {
         private val fileIconCache = mutableMapOf<String, Icon>()
 
         override fun getTreeCellRendererComponent(
@@ -1461,10 +1384,12 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                         dirName == "assets" || dirName == "res" -> {
                             // 使用 resourcesRoot 图标
                             return fileIconCache.getOrPut("resourcesRoot") {
-                                val base: Icon = ExplorerIcons.ResourcesRoot ?: ExplorerIcons.Folder ?: createDefaultIcon()
+                                val base: Icon =
+                                    ExplorerIcons.ResourcesRoot ?: ExplorerIcons.Folder ?: createDefaultIcon()
                                 IconUtils.resizeIcon(base, 16, 16)
                             }
                         }
+
                         dirName == "smali" || dirName.startsWith("smali_") -> {
                             // 使用 sourceRoot 图标（包括 smali、smali_classes2 等）
                             return fileIconCache.getOrPut("sourceRoot") {
@@ -1556,7 +1481,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             if (files.size == 1) {
                                 val file = files[0]
                                 if (file.isFile && file.extension.lowercase() == "apk") {
-                                    handleApkFile(file)
+                                    handleApkFileConversion(file)
                                     dtde.dropComplete(true)
                                     return
                                 }
