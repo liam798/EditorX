@@ -132,7 +132,9 @@ class PluginManager {
     }
 
     fun unloadAll() {
-        pluginsById.keys.toList().forEach { unloadPlugin(it) }
+        pluginsById.values.filter { it.origin == PluginOrigin.JAR }
+            .map { it.info.id }
+            .forEach { unloadPlugin(it) }
     }
 
     fun listPlugins(): List<PluginRecord> {
@@ -189,14 +191,26 @@ class PluginManager {
         logger.info("Plugin stopped: {}", pluginId)
     }
 
-    fun unloadPlugin(pluginId: String) {
-        val runtime = pluginsById[pluginId] ?: return
+    /**
+     * 卸载插件。
+     * @return 是否成功卸载。内置插件（CLASSPATH）不可卸载，将返回 false。
+     */
+    fun unloadPlugin(pluginId: String): Boolean {
+        val runtime = pluginsById[pluginId] ?: return false
+        
+        // 内置插件（随源码一起打包的）不可卸载
+        if (runtime.origin == PluginOrigin.CLASSPATH) {
+            logger.warn("内置插件不可卸载: {}", pluginId)
+            return false
+        }
+        
         stopPlugin(pluginId)
         pluginsById.remove(pluginId)
         activationRoutes.values.forEach { it.remove(pluginId) }
         releaseClassLoader(runtime)
         listeners.forEach { it.onPluginUnloaded(pluginId) }
         logger.info("Plugin unloaded: {}", pluginId)
+        return true
     }
 
     fun triggerStartup() {

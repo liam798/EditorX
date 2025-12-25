@@ -132,9 +132,11 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
             val selectedFolder = fileChooser.selectedFile
             // 更新工作区并刷新 Explorer
             mainWindow.guiControl.workspace.openWorkspace(selectedFolder)
+            mainWindow.guiControl.workspace.addRecentWorkspace(selectedFolder)
 //            mainWindow.statusBar.setMessage("已打开文件夹: ${selectedFolder.name}")
             (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
-            mainWindow.toolBar.updateProjectDisplay()
+            mainWindow.toolBar.updateVcsDisplay()
+            mainWindow.editor.showEditorContent()
         }
     }
 

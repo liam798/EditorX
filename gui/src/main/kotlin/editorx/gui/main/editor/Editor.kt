@@ -79,6 +79,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     }
     private val findReplaceBars = mutableMapOf<File, FindReplaceBar>()
     private val smaliLoadingPanels = mutableMapOf<File, JPanel>()
+    private val welcomeView = editorx.gui.main.welcome.WelcomeView(mainWindow)
+    private val editorContentPanel = JPanel(BorderLayout()).apply {
+        add(tabbedPane, BorderLayout.CENTER)
+        add(bottomContainer, BorderLayout.SOUTH)
+    }
 
     private class TabContent(val scrollPane: RTextScrollPane) : JPanel(BorderLayout()) {
         val topSlot: JPanel = JPanel(BorderLayout()).apply {
@@ -133,10 +138,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             })
         }
 
-        // 将JTabbedPane添加到JPanel中
-        add(tabbedPane, java.awt.BorderLayout.CENTER)
-        // 统一承载底部组件（查找条、AndroidManifest 视图等），避免多个 SOUTH 冲突
-        add(bottomContainer, java.awt.BorderLayout.SOUTH)
+        // 根据工作区状态显示欢迎界面或编辑器内容
+        updateEditorContent()
 
         // 切换标签时更新状态栏与事件
         tabbedPane.addChangeListener {
@@ -229,6 +232,23 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         background = ThemeManager.currentTheme.editorBackground
         revalidate()
         repaint()
+    }
+    
+    private fun updateEditorContent() {
+        removeAll()
+        val workspaceRoot = mainWindow.guiControl.workspace.getWorkspaceRoot()
+        if (workspaceRoot == null) {
+            welcomeView.refreshContent()
+            add(welcomeView, BorderLayout.CENTER)
+        } else {
+            add(editorContentPanel, BorderLayout.CENTER)
+        }
+        revalidate()
+        repaint()
+    }
+    
+    fun showEditorContent() {
+        updateEditorContent()
     }
 
     // VSCode 风格的 Tab 头：固定槽位 + hover/选中显示 close 按钮

@@ -64,14 +64,14 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun setupVcsWidget() {
         // 创建一个面板，包含图标、文字标签和下拉箭头
         val widgetPanel = JPanel(BorderLayout()).apply {
-            // 设置边框和样式，使其看起来像一个下拉框
+            // 设置边框和样式，使其看起来像一个下拉框（幽灵按钮样式：透明背景，只有边框）
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color(0xCC, 0xCC, 0xCC), 1),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)
             )
             maximumSize = Dimension(300, 28)
             minimumSize = Dimension(100, 28)
-            background = Color.WHITE
+            isOpaque = false  // 透明背景（幽灵按钮样式）
 
             // 创建鼠标监听器（用于显示弹出菜单和悬停效果）
             val panel = this
@@ -83,12 +83,14 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
                 }
 
                 override fun mouseEntered(e: java.awt.event.MouseEvent) {
-                    panel.background = Color(0xF5, 0xF5, 0xF5)
+                    // 悬停时保持透明，或使用半透明效果
+                    panel.isOpaque = false
                     panel.repaint()
                 }
 
                 override fun mouseExited(e: java.awt.event.MouseEvent) {
-                    panel.background = Color.WHITE
+                    // 保持透明背景
+                    panel.isOpaque = false
                     panel.repaint()
                 }
             }
@@ -438,8 +440,10 @@ class ToolBar(private val mainWindow: MainWindow) : JToolBar() {
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             val selected = chooser.selectedFile
             mainWindow.guiControl.workspace.openWorkspace(selected)
+            mainWindow.guiControl.workspace.addRecentWorkspace(selected)
             (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRoot()
             updateProjectDisplay()
+            mainWindow.editor.showEditorContent()
         }
     }
 

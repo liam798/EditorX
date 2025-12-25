@@ -11,6 +11,8 @@ interface WorkspaceManager {
     fun openWorkspace(root: File)
     fun recentFiles(): List<File>
     fun addRecentFile(file: File)
+    fun recentWorkspaces(): List<File>
+    fun addRecentWorkspace(workspace: File)
 }
 
 class DefaultWorkspaceManager(private val settings: SettingsStore) : editorx.core.workspace.WorkspaceManager {
@@ -35,6 +37,36 @@ class DefaultWorkspaceManager(private val settings: SettingsStore) : editorx.cor
         // Clear old keys
         settings.keys("files.recent.").forEach { settings.remove(it) }
         top.forEachIndexed { idx, f -> settings.put("files.recent.$idx", f.absolutePath) }
+        settings.sync()
+    }
+
+    override fun recentWorkspaces(): List<File> {
+        val keys = settings.keys("workspaces.recent.").sorted()
+        val workspaces = keys.mapNotNull { key ->
+            settings.get(key, null)?.let { path ->
+                try {
+                    File(path)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        }.filter { it.exists() && it.isDirectory }
+        return workspaces
+    }
+
+    override fun addRecentWorkspace(workspace: File) {
+        if (!workspace.exists() || !workspace.isDirectory) {
+            return // 只保存存在的目录
+        }
+        val workspacePath = workspace.absolutePath
+        val existing = recentWorkspaces().toMutableList()
+        // 使用绝对路径比较，移除重复项
+        existing.removeAll { it.absolutePath == workspacePath }
+        existing.add(0, workspace)
+        val top = existing.take(20) // 保留最近20个项目
+        // Clear old keys
+        settings.keys("workspaces.recent.").forEach { settings.remove(it) }
+        top.forEachIndexed { idx, f -> settings.put("workspaces.recent.$idx", f.absolutePath) }
         settings.sync()
     }
 }

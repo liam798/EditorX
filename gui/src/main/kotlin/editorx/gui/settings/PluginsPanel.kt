@@ -258,7 +258,8 @@ class PluginsPanel(
         val record = selectedRecord()
         enableBtn.isEnabled = record != null && (record.state != PluginState.STARTED || record.disabled)
         disableBtn.isEnabled = record != null && !record.disabled
-        uninstallBtn.isEnabled = record != null
+        // 内置插件（CLASSPATH）不可卸载
+        uninstallBtn.isEnabled = record != null && record.origin != PluginOrigin.CLASSPATH
     }
 
     private fun scanPlugins() {
@@ -299,6 +300,22 @@ class PluginsPanel(
 
     private fun uninstallSelected() {
         val record = selectedRecord() ?: return
+        
+        // 内置插件不可卸载
+        if (record.origin == PluginOrigin.CLASSPATH) {
+            val parent = SwingUtilities.getWindowAncestor(this)
+            JOptionPane.showMessageDialog(
+                parent,
+                if (isEnglish())
+                    "Built-in plugins cannot be uninstalled.\nPlugin: ${record.name} (${record.id})"
+                else
+                    "内置插件不可卸载。\n插件：${record.name}（${record.id}）",
+                if (isEnglish()) "Cannot Uninstall" else "无法卸载",
+                JOptionPane.WARNING_MESSAGE
+            )
+            return
+        }
+        
         val parent = SwingUtilities.getWindowAncestor(this)
         val confirm =
             JOptionPane.showConfirmDialog(
@@ -311,11 +328,24 @@ class PluginsPanel(
                 JOptionPane.YES_NO_OPTION
             )
         if (confirm != JOptionPane.YES_OPTION) return
-        pluginManager.unloadPlugin(record.id)
-        disabledSet.remove(record.id)
-        saveDisabledSet()
-        statusLabel.text = if (isEnglish()) "Removed: ${record.id}" else "已卸载：${record.id}"
-        reloadList()
+        
+        val success = pluginManager.unloadPlugin(record.id)
+        if (success) {
+            disabledSet.remove(record.id)
+            saveDisabledSet()
+            statusLabel.text = if (isEnglish()) "Removed: ${record.id}" else "已卸载：${record.id}"
+            reloadList()
+        } else {
+            JOptionPane.showMessageDialog(
+                parent,
+                if (isEnglish())
+                    "Failed to uninstall plugin: ${record.name} (${record.id})"
+                else
+                    "卸载插件失败：${record.name}（${record.id}）",
+                if (isEnglish()) "Error" else "错误",
+                JOptionPane.ERROR_MESSAGE
+            )
+        }
     }
 
     private fun installPlugin() {

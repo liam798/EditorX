@@ -85,7 +85,7 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
                 }
             }
     }
-    
+
     // 加载保存的主题
     environment.settings.get("ui.theme", null)?.let { themeName ->
         val theme = ThemeManager.loadTheme(themeName)
