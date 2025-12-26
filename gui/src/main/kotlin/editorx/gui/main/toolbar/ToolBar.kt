@@ -26,8 +26,8 @@ class ToolBar(private val mainWindow: MainWindow) : JPanel() {
             BorderFactory.createEmptyBorder(4, 8, 4, 8),
         )
         layout = BoxLayout(this, BoxLayout.X_AXIS)
-        // 初始时添加一个空的分隔符以保持布局
-        add(Box.createHorizontalStrut(12))
+        // 初始时没有 item，隐藏 ToolBar
+        isVisible = false
     }
 
     /**
@@ -89,16 +89,21 @@ class ToolBar(private val mainWindow: MainWindow) : JPanel() {
             itemsByPlugin.values.firstOrNull { it.containsKey(itemId) }?.get(itemId)
         }
 
-        allItems.forEachIndexed { index, button ->
-            add(button)
-            // 在按钮之间添加分隔符
-            if (index < allItems.size - 1) {
-                add(Box.createHorizontalStrut(6))
+        // 根据是否有 item 来决定是否显示 ToolBar
+        if (allItems.isEmpty()) {
+            isVisible = false
+        } else {
+            isVisible = true
+            allItems.forEachIndexed { index, button ->
+                add(button)
+                // 在按钮之间添加分隔符
+                if (index < allItems.size - 1) {
+                    add(Box.createHorizontalStrut(6))
+                }
             }
+            // 添加尾部分隔符
+            add(Box.createHorizontalStrut(12))
         }
-
-        // 添加尾部分隔符
-        add(Box.createHorizontalStrut(12))
 
         revalidate()
         repaint()
