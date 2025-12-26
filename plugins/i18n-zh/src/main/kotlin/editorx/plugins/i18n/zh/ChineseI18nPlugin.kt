@@ -159,9 +159,9 @@ private val dictionary = buildMap {
     put(I18nKeys.Editor.TOTAL_FILES, "共 %d 个文件/目录")
     put(I18nKeys.Editor.CANNOT_READ_ARCHIVE, "无法读取压缩包")
 
-    put(I18nKeys.Toolbar.GOTO_MANIFEST, "跳转到 AndroidManifest.xml")
-    put(I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY, "跳转到 MainActivity")
-    put(I18nKeys.Toolbar.GOTO_APPLICATION, "跳转到 Application")
+    put(I18nKeys.Toolbar.GOTO_MANIFEST, "打开 AndroidManifest.xml")
+    put(I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY, "打开 MainActivity")
+    put(I18nKeys.Toolbar.GOTO_APPLICATION, "打开 Application")
     put(I18nKeys.Toolbar.BUILD, "构建")
     put(I18nKeys.Toolbar.TOGGLE_SIDEBAR, "切换侧边栏")
     put(I18nKeys.Toolbar.GLOBAL_SEARCH, "全局搜索")
