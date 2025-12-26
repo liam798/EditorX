@@ -4,6 +4,7 @@ import editorx.core.filetype.FileTypeRegistry
 import editorx.core.filetype.FormatterRegistry
 import editorx.core.external.Jadx
 import editorx.core.external.Smali
+import editorx.core.plugin.gui.FileHandlerRegistry
 import editorx.gui.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
@@ -14,7 +15,6 @@ import org.fife.ui.rtextarea.RTextScrollPane
 import org.slf4j.LoggerFactory
 import java.awt.*
 import java.awt.dnd.*
-import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -445,6 +445,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         if (fileToTab.containsKey(file)) {
             tabbedPane.selectedIndex = fileToTab[file]!!
             updateNavigation(file)
+            return
+        }
+
+        // 先询问文件处理器是否要处理该文件
+        if (FileHandlerRegistry.handleOpenFile(file)) {
             return
         }
 

@@ -16,10 +16,42 @@ interface PluginGuiProvider {
     fun getWorkspaceRoot(): File?
 
     /**
+     * 打开工作区
+     * @param workspaceDir 工作区目录
+     */
+    fun openWorkspace(workspaceDir: File)
+
+    /**
      * 打开文件
      * @param file 要打开的文件
      */
     fun openFile(file: File)
+
+    /**
+     * 显示进度
+     * @param message 进度消息
+     */
+    fun showProgress(
+        message: String,
+        indeterminate: Boolean = true,
+        cancellable: Boolean = false,
+        onCancel: (() -> Unit)? = null,
+        maximum: Int = 100
+    )
+
+    /**
+     * 隐藏进度
+     */
+    fun hideProgress()
+
+    /**
+     * 在 ToolBar 添加一个快捷按钮
+     * @param id 按钮的唯一标识符
+     * @param icon 按钮图标
+     * @param text 按钮文本
+     * @param action 按钮点击时的动作
+     */
+    fun addToolBarItem(id: String, icon: Icon?, text: String, action: () -> Unit)
 
     /**
      * 注册文件类型
@@ -37,11 +69,8 @@ interface PluginGuiProvider {
     fun registerFormatter(language: Language, formatter: Formatter)
 
     /**
-     * 在 ToolBar 添加一个快捷按钮
-     * @param id 按钮的唯一标识符
-     * @param icon 按钮图标
-     * @param text 按钮文本
-     * @param action 按钮点击时的动作
+     * 注册文件处理器
+     * @param handler 文件处理器
      */
-    fun addToolBarItem(id: String, icon: Icon?, text: String, action: () -> Unit)
+    fun registerFileHandler(handler: FileHandler)
 }

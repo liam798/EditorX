@@ -1,6 +1,7 @@
 package editorx.gui
 
 import com.formdev.flatlaf.FlatLightLaf
+import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginState
 import editorx.core.plugin.loader.PluginLoaderImpl
@@ -9,14 +10,20 @@ import editorx.core.store.Store
 import editorx.core.util.StartupTimer
 import editorx.core.util.SystemUtils
 import editorx.core.workspace.DefaultWorkspace
+import editorx.gui.core.ShortcutIds
+import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.MainWindow
+import editorx.gui.search.SearchDialog
+import editorx.gui.settings.SettingsDialog
 import org.slf4j.LoggerFactory
 import java.awt.Image
 import java.awt.Taskbar
+import java.awt.event.KeyEvent
 import java.io.File
 import java.io.IOException
 import java.util.*
 import javax.imageio.ImageIO
+import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 
 /**
@@ -176,6 +183,7 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
 
         // 显示主窗口
         mainWindow.isVisible = true
+        setupShortcuts(mainWindow)
         startupTimer.mark("gui.ready")
 
         // 触发插件启动
@@ -195,4 +203,91 @@ private fun loadDisabledSet(settings: Store): Set<String> {
         ?.filter { it.isNotEmpty() }
         ?.toSet()
         ?: emptySet()
+}
+
+
+/**
+ * 统一设置所有快捷键
+ */
+private fun setupShortcuts(mainWindow: MainWindow) {
+    // 双击 Shift - 全局搜索
+    ShortcutRegistry.registerDoubleShortcut(
+        id = ShortcutIds.Global.SEARCH,
+        keyCode = KeyEvent.VK_SHIFT,
+        nameKey = I18nKeys.Action.GLOBAL_SEARCH,
+        descriptionKey = I18nKeys.Shortcut.GLOBAL_SEARCH,
+        action = { showSearchDialog(mainWindow) }
+    )
+
+    // Command+, - 打开设置
+    val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+    ShortcutRegistry.registerShortcut(
+        id = ShortcutIds.Global.SETTINGS,
+        keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask),
+        nameKey = I18nKeys.Toolbar.SETTINGS,
+        descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS,
+        action = { showSettings(mainWindow) }
+    )
+
+    // Command+N - 新建文件
+    ShortcutRegistry.registerShortcut(
+        id = ShortcutIds.Editor.NEW_FILE,
+        keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
+        nameKey = I18nKeys.Action.NEW_FILE,
+        descriptionKey = I18nKeys.Action.NEW_FILE,
+        action = { mainWindow.editor.newUntitledFile() }
+    )
+
+    // Command+W - 关闭当前标签页
+    ShortcutRegistry.registerShortcut(
+        id = ShortcutIds.Editor.CLOSE_TAB,
+        keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask),
+        nameKey = I18nKeys.Action.CLOSE,
+        descriptionKey = I18nKeys.Shortcut.CLOSE_TAB
+    ) {
+        // 检查焦点是否在 editor 上
+        val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+        if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, mainWindow.editor)) {
+            mainWindow.editor.closeCurrentTab()
+        }
+    }
+
+    // Option+Command+L (macOS) 或 Alt+Ctrl+L (其他系统) - 格式化文件
+    val formatShortcutMask = if (System.getProperty("os.name").lowercase().contains("mac")) {
+        java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.META_DOWN_MASK
+    } else {
+        java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.CTRL_DOWN_MASK
+    }
+    ShortcutRegistry.registerShortcut(
+        id = ShortcutIds.Editor.FORMAT_FILE,
+        keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask),
+        nameKey = I18nKeys.Action.FORMAT_FILE,
+        descriptionKey = I18nKeys.Shortcut.FORMAT_FILE
+    ) {
+        // 检查焦点是否在 editor 上
+        val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+        if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, mainWindow.editor)) {
+            mainWindow.editor.formatCurrentFile()
+        }
+    }
+}
+
+/**
+ * 显示全局搜索对话框
+ */
+private fun showSearchDialog(mainWindow: MainWindow) {
+    val dialog = SearchDialog(mainWindow, mainWindow)
+    dialog.showDialog()
+}
+
+/**
+ * 显示设置对话框
+ */
+private fun showSettings(mainWindow: MainWindow) {
+    SettingsDialog.showOrBringToFront(
+        mainWindow,
+        mainWindow.guiContext,
+        mainWindow.guiContext.getPluginManager(),
+        SettingsDialog.Section.APPEARANCE
+    )
 }

@@ -121,19 +121,17 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         add(lineColumnLabel)
     }
 
-    fun setMessage(msg: String, persistent: Boolean = false) {
+    fun setMessage(msg: String) {
         statusLabel.text = msg
-        if (!persistent) {
-            currentMessageTimer?.stop()
-            currentMessageTimer =
-                Timer(3000) {
-                    statusLabel.text = I18n.translate(I18nKeys.Status.READY)
-                    statusLabel.foreground = ThemeManager.currentTheme.statusBarForeground
-                }.apply {
-                    isRepeats = false
-                    start()
-                }
-        }
+        currentMessageTimer?.stop()
+        currentMessageTimer =
+            Timer(3000) {
+                statusLabel.text = I18n.translate(I18nKeys.Status.READY)
+                statusLabel.foreground = ThemeManager.currentTheme.statusBarForeground
+            }.apply {
+                isRepeats = false
+                start()
+            }
     }
 
 

@@ -2,6 +2,7 @@ package editorx.gui.main.explorer
 
 import editorx.core.external.ApkTool
 import editorx.core.filetype.FileTypeRegistry
+import editorx.core.plugin.gui.FileHandlerRegistry
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import editorx.core.util.IconUtils
@@ -1472,13 +1473,14 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
                             @Suppress("UNCHECKED_CAST")
                             val files = transferable.getTransferData(flavor) as List<File>
 
-                            // 检查是否拖拽的是单个APK文件（不支持目录）
+                            // 检查是否拖拽的是单个文件，先询问文件处理器
                             if (files.size == 1) {
                                 val file = files[0]
-                                if (file.isFile && file.extension.lowercase() == "apk") {
-                                    handleApkFileConversion(file)
-                                    dtde.dropComplete(true)
-                                    return
+                                if (file.isFile && file.canRead()) {
+                                    if (FileHandlerRegistry.handleOpenFile(file)) {
+                                        dtde.dropComplete(true)
+                                        return
+                                    }
                                 }
                             }
 

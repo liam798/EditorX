@@ -1,11 +1,7 @@
 package editorx.gui.main
 
 import editorx.core.gui.GuiContext
-import editorx.core.i18n.I18n
-import editorx.core.i18n.I18nKeys
 import editorx.core.util.SystemUtils
-import editorx.gui.core.ShortcutIds
-import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
 import editorx.gui.main.menubar.MenuBar
@@ -14,16 +10,15 @@ import editorx.gui.main.sidebar.SideBar
 import editorx.gui.main.statusbar.StatusBar
 import editorx.gui.main.titlebar.TitleBar
 import editorx.gui.main.toolbar.ToolBar
-import editorx.gui.search.SearchDialog
-import editorx.gui.settings.SettingsDialog
 import editorx.gui.widget.NoLineSplitPaneUI
 import java.awt.BorderLayout
 import java.awt.Dimension
-import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseMotionAdapter
 import java.io.File
-import javax.swing.*
+import javax.swing.JFrame
+import javax.swing.JPanel
+import javax.swing.JSplitPane
 
 class MainWindow(val guiContext: GuiContext) : JFrame() {
 
@@ -45,85 +40,14 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
     }
 
     init {
-        setupWindow()
+        initWindow()
         setupLayout()
-        tuneSplitPanes()
-        setupExplorer()
-        setupShortcuts()
     }
 
-    /**
-     * 统一设置所有快捷键
-     */
-    private fun setupShortcuts() {
-        // 双击 Shift - 全局搜索
-        ShortcutRegistry.registerDoubleShortcut(
-            id = ShortcutIds.Global.SEARCH,
-            keyCode = KeyEvent.VK_SHIFT,
-            nameKey = I18nKeys.Action.GLOBAL_SEARCH,
-            descriptionKey = I18nKeys.Shortcut.GLOBAL_SEARCH,
-            action = { showGlobalSearch() }
-        )
-
-        // Command+, - 打开设置
-        val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
-        ShortcutRegistry.registerShortcut(
-            id = ShortcutIds.Global.SETTINGS,
-            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask),
-            nameKey = I18nKeys.Toolbar.SETTINGS,
-            descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS
-        ) {
-            showSettings()
-        }
-
-        // Command+N - 新建文件
-        ShortcutRegistry.registerShortcut(
-            id = ShortcutIds.Editor.NEW_FILE,
-            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
-            nameKey = I18nKeys.Action.NEW_FILE,
-            descriptionKey = I18nKeys.Action.NEW_FILE // 新建文件没有单独的描述，使用名称
-        ) {
-            editor.newUntitledFile()
-        }
-
-        // Command+W - 关闭当前标签页
-        ShortcutRegistry.registerShortcut(
-            id = ShortcutIds.Editor.CLOSE_TAB,
-            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask),
-            nameKey = I18nKeys.Action.CLOSE,
-            descriptionKey = I18nKeys.Shortcut.CLOSE_TAB
-        ) {
-            // 检查焦点是否在 editor 上
-            val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
-            if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, editor)) {
-                editor.closeCurrentTab()
-            }
-        }
-
-        // Option+Command+L (macOS) 或 Alt+Ctrl+L (其他系统) - 格式化文件
-        val formatShortcutMask = if (System.getProperty("os.name").lowercase().contains("mac")) {
-            java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.META_DOWN_MASK
-        } else {
-            java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.CTRL_DOWN_MASK
-        }
-        ShortcutRegistry.registerShortcut(
-            id = ShortcutIds.Editor.FORMAT_FILE,
-            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask),
-            nameKey = I18nKeys.Action.FORMAT_FILE,
-            descriptionKey = I18nKeys.Shortcut.FORMAT_FILE
-        ) {
-            // 检查焦点是否在 editor 上
-            val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
-            if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, editor)) {
-                editor.formatCurrentFile()
-            }
-        }
-    }
-
-    private fun setupWindow() {
+    private fun initWindow() {
         // 窗口属性
         title = "EditorX"
-        defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+        defaultCloseOperation = EXIT_ON_CLOSE
         size = Dimension(1280, 800)
         setLocationRelativeTo(null)
         minimumSize = Dimension(800, 600)
@@ -162,16 +86,14 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
         }
         add(centerContainer, BorderLayout.CENTER)
         add(statusBar, BorderLayout.SOUTH)
-    }
 
-    private fun tuneSplitPanes() {
         horizontalSplit.setUI(NoLineSplitPaneUI())
         horizontalSplit.border = javax.swing.BorderFactory.createEmptyBorder()
         // 启用连续布局，减少布局跳动
         horizontalSplit.isContinuousLayout = true
 
         // 当用户手动拖动分割条时，同步 SideBar 状态
-        horizontalSplit.addPropertyChangeListener(javax.swing.JSplitPane.DIVIDER_LOCATION_PROPERTY) { _ ->
+        horizontalSplit.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY) { _ ->
             val visible = horizontalSplit.dividerLocation > 0
             // 同步SideBar内部状态与分割条位置
             sideBar.syncVisibilityWithDivider()
@@ -183,15 +105,18 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
             titleBar.updateSideBarIcon(visible)
         }
 
+        // 注册 Explorer，但不自动打开 SideBar（保持默认关闭状态）
+        sideBar.showView("explorer", Explorer(this), autoShow = false)
+
         // 添加自定义拖拽功能：在 SideBar 右边缘和 Editor 左边缘检测拖拽
-        setupCustomDrag()
+        addDragListeners()
     }
 
     private var isDragging = false
     private var dragStartX = 0
     private var dragStartLocation = 0
 
-    private fun setupCustomDrag() {
+    private fun addDragListeners() {
         // 在 SideBar 右边缘添加鼠标监听器
         sideBar.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: java.awt.event.MouseEvent) {
@@ -241,7 +166,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
             override fun mousePressed(e: java.awt.event.MouseEvent) {
                 val mouseX = e.x
                 // 检测是否在左边缘 5 像素范围内
-                if (mouseX >= 0 && mouseX <= 5 && horizontalSplit.dividerLocation > 0) {
+                if (mouseX in 0..5 && horizontalSplit.dividerLocation > 0) {
                     isDragging = true
                     dragStartX = e.xOnScreen
                     dragStartLocation = horizontalSplit.dividerLocation
@@ -270,43 +195,13 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
 
             override fun mouseMoved(e: java.awt.event.MouseEvent) {
                 val mouseX = e.x
-                if (mouseX >= 0 && mouseX <= 5 && horizontalSplit.dividerLocation > 0) {
+                if (mouseX in 0..5 && horizontalSplit.dividerLocation > 0) {
                     editor.cursor = java.awt.Cursor(java.awt.Cursor.E_RESIZE_CURSOR)
                 } else {
                     editor.cursor = java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR)
                 }
             }
         })
-    }
-
-    private fun setupExplorer() {
-        // 注册 Explorer，但不自动打开 SideBar（保持默认关闭状态）
-        sideBar.showView("explorer", Explorer(this), autoShow = false)
-    }
-
-    fun openFileChooserAndOpen() {
-        val chooser = JFileChooser().apply { fileSelectionMode = JFileChooser.FILES_ONLY; dialogTitle = "选择文件" }
-        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            val file: File = chooser.selectedFile
-            editor.openFile(file)
-            guiContext.getWorkspace().addRecentFile(file)
-        }
-    }
-
-
-    /**
-     * 显示全局搜索对话框
-     */
-    fun showGlobalSearch() {
-        val dialog = SearchDialog(this, this)
-        dialog.showDialog()
-    }
-
-    /**
-     * 显示设置对话框
-     */
-    fun showSettings() {
-        SettingsDialog.showOrBringToFront(this, guiContext, guiContext.getPluginManager(), SettingsDialog.Section.APPEARANCE)
     }
 
     /**

@@ -59,6 +59,9 @@ class AndroidPlugin : Plugin {
                 navigateToApplication(gui)
             }
         )
+
+        // 注册 APK 文件处理器
+        gui.registerFileHandler(ApkFileHandler(gui))
     }
 
     /**
@@ -481,4 +484,5 @@ class AndroidPlugin : Plugin {
         return File(defaultSmaliDir, path)
     }
 }
+
 

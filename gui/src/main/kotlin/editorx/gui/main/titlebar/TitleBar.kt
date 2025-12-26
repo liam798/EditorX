@@ -30,6 +30,7 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
 
     private var toggleSideBarButton: JButton? = null
     private var compileTask: Thread? = null
+    private var titleLabel: JLabel? = null
 
     // VCS Widget
     val vcsWidget = VcsWidget(mainWindow.guiContext.getWorkspace())
@@ -70,6 +71,7 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
 
     private fun updateTheme() {
         background = ThemeManager.currentTheme.toolbarBackground
+        titleLabel?.foreground = ThemeManager.currentTheme.onSurface
         revalidate()
         repaint()
     }
@@ -111,6 +113,8 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
     private fun buildActions() {
         setupLeftActions()
         add(Box.createHorizontalGlue())
+        setupCenterTitle()
+        add(Box.createHorizontalGlue())
         setupRightActions()
     }
 
@@ -123,6 +127,15 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
         // VCS Widget（最左侧）
         add(vcsWidget)
         add(Box.createHorizontalStrut(12))
+    }
+
+    private fun setupCenterTitle() {
+        titleLabel = JLabel("EditorX").apply {
+            font = font.deriveFont(Font.BOLD, 13f)
+            foreground = ThemeManager.currentTheme.onSurface
+            isOpaque = false
+        }
+        add(titleLabel)
     }
 
     private fun setupRightActions() {
@@ -339,10 +352,7 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
                         }
 
                         ApkTool.Status.CANCELLED -> {
-                            mainWindow.statusBar.setMessage(
-                                I18n.translate(I18nKeys.ToolbarMessage.COMPILE_CANCELLED),
-                                persistent = true
-                            )
+                            mainWindow.statusBar.setMessage(I18n.translate(I18nKeys.ToolbarMessage.COMPILE_CANCELLED))
                         }
 
                         ApkTool.Status.FAILED -> {

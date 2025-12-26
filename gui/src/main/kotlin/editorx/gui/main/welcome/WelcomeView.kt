@@ -2,6 +2,7 @@ package editorx.gui.main.welcome
 
 import editorx.core.i18n.I18n
 import editorx.core.i18n.I18nKeys
+import editorx.core.plugin.gui.FileHandlerRegistry
 import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import editorx.gui.ThemeManager
@@ -453,52 +454,15 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
             return
         }
 
-        val ext = selectedFile.extension.lowercase()
-
-        // 检查是否为 APK 文件（目前仅支持 APK）
-        if (ext == "apk") {
-            // 提示是否转为项目
-            val result = JOptionPane.showConfirmDialog(
-                mainWindow,
-                "检测到 APK 文件。是否要将其转换为项目（反编译）？",
-                "打开 APK 文件",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            )
-
-            when (result) {
-                JOptionPane.YES_OPTION -> {
-                    // 转为项目：使用 Explorer 的处理方法
-                    val explorer = mainWindow.sideBar.getView("explorer") as? editorx.gui.main.explorer.Explorer
-                    if (explorer != null) {
-                        explorer.handleApkFileConversion(selectedFile)
-                        // 显示资源管理器
-                        mainWindow.sideBar.showView("explorer")
-                        mainWindow.editor.showEditorContent()
-                    } else {
-                        JOptionPane.showMessageDialog(
-                            mainWindow,
-                            "无法获取 Explorer 实例，请稍后重试",
-                            "错误",
-                            JOptionPane.ERROR_MESSAGE
-                        )
-                    }
-                }
-
-                JOptionPane.NO_OPTION -> {
-                    // 直接打开文件
-                    mainWindow.editor.openFile(selectedFile)
-                    mainWindow.guiContext.getWorkspace().addRecentFile(selectedFile)
-                    mainWindow.editor.showEditorContent()
-                }
-                // 其他情况（关闭对话框）：什么都不做
-            }
-        } else {
-            // 直接打开文件
-            mainWindow.editor.openFile(selectedFile)
-            mainWindow.guiContext.getWorkspace().addRecentFile(selectedFile)
-            mainWindow.editor.showEditorContent()
+        // 先询问文件处理器是否要处理该文件
+        if (FileHandlerRegistry.handleOpenFile(selectedFile)) {
+            return
         }
+
+        // 直接打开文件
+        mainWindow.editor.openFile(selectedFile)
+        mainWindow.guiContext.getWorkspace().addRecentFile(selectedFile)
+        mainWindow.editor.showEditorContent()
     }
 
     private fun openProject() {

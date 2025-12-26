@@ -6,6 +6,7 @@ import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.Explorer
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
+import java.io.File
 import javax.swing.*
 
 class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
@@ -40,7 +41,7 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
             add(JMenuItem(I18n.translate(I18nKeys.Action.OPEN_FILE)).apply {
                 mnemonic = KeyEvent.VK_O
                 accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_O, shortcut)
-                addActionListener { mainWindow.openFileChooserAndOpen() }
+                addActionListener { openFileChooserAndOpen() }
             })
             add(JMenuItem(I18n.translate(I18nKeys.Action.OPEN_FOLDER)).apply {
                 mnemonic = KeyEvent.VK_D
@@ -118,6 +119,15 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
                 accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0)
                 addActionListener { showHelp() }
             })
+        }
+    }
+
+    private fun openFileChooserAndOpen() {
+        val chooser = JFileChooser().apply { fileSelectionMode = JFileChooser.FILES_ONLY; dialogTitle = "选择文件" }
+        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            val file: File = chooser.selectedFile
+            mainWindow.editor.openFile(file)
+            mainWindow.guiContext.getWorkspace().addRecentFile(file)
         }
     }
 
