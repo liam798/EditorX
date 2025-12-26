@@ -5,6 +5,7 @@ import editorx.core.i18n.I18n
 import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginState
+import editorx.gui.core.ShortcutIds
 import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
@@ -82,7 +83,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
     private fun setupShortcuts() {
         // 双击 Shift - 全局搜索
         ShortcutRegistry.registerDoubleShortcut(
-            id = "global.search",
+            id = ShortcutIds.Global.SEARCH,
             keyCode = KeyEvent.VK_SHIFT,
             nameKey = I18nKeys.Action.GLOBAL_SEARCH,
             descriptionKey = I18nKeys.Shortcut.GLOBAL_SEARCH,
@@ -92,7 +93,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
         // Command+, - 打开设置
         val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
         ShortcutRegistry.registerShortcut(
-            id = "global.settings",
+            id = ShortcutIds.Global.SETTINGS,
             keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask),
             nameKey = I18nKeys.Toolbar.SETTINGS,
             descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS
@@ -102,7 +103,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
 
         // Command+N - 新建文件
         ShortcutRegistry.registerShortcut(
-            id = "editor.newFile",
+            id = ShortcutIds.Editor.NEW_FILE,
             keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
             nameKey = I18nKeys.Action.NEW_FILE,
             descriptionKey = I18nKeys.Action.NEW_FILE // 新建文件没有单独的描述，使用名称
@@ -112,7 +113,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
 
         // Command+W - 关闭当前标签页
         ShortcutRegistry.registerShortcut(
-            id = "editor.closeTab",
+            id = ShortcutIds.Editor.CLOSE_TAB,
             keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask),
             nameKey = I18nKeys.Action.CLOSE,
             descriptionKey = I18nKeys.Shortcut.CLOSE_TAB
@@ -131,7 +132,7 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
             java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.CTRL_DOWN_MASK
         }
         ShortcutRegistry.registerShortcut(
-            id = "editor.formatFile",
+            id = ShortcutIds.Editor.FORMAT_FILE,
             keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask),
             nameKey = I18nKeys.Action.FORMAT_FILE,
             descriptionKey = I18nKeys.Shortcut.FORMAT_FILE

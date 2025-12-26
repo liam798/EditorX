@@ -8,6 +8,7 @@ import editorx.gui.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
 import editorx.core.util.IconUtils
+import editorx.gui.core.ShortcutIds
 import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.navigationbar.NavigationBar
 import org.fife.ui.rtextarea.RTextScrollPane
@@ -1540,7 +1541,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             menu.addSeparator()
 
             menu.add(JMenuItem("格式化文件").apply {
-                ShortcutRegistry.getShortcut("editor.formatFile")?.let { accelerator = it.keyStroke }
+                ShortcutRegistry.getShortcut(ShortcutIds.Editor.FORMAT_FILE)?.let { accelerator = it.keyStroke }
                 addActionListener { formatCurrentFile() }
             })
         }
