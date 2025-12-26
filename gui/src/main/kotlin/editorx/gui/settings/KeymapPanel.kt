@@ -38,19 +38,19 @@ class KeymapPanel : JPanel(BorderLayout()) {
     private fun getShortcuts(): List<ShortcutItem> {
         val shortcuts = mutableListOf<ShortcutItem>()
         val addedIds = mutableSetOf<String>()
-        
+
         // 从 ShortcutRegistry 获取已注册的快捷键
         ShortcutRegistry.getAllShortcuts().forEach { binding ->
             shortcuts.add(
                 ShortcutItem(
-                    action = getActionName(binding.id),
+                    action = binding.displayName,
                     shortcut = formatKeyStroke(binding.keyStroke),
                     description = binding.displayDescription
                 )
             )
             addedIds.add(binding.id)
         }
-        
+
         // 添加默认列表中的快捷键（这些是 Editor 等组件中直接注册的）
         // 避免与 ShortcutManager 中的重复
         getDefaultShortcuts().forEach { defaultItem ->
@@ -60,41 +60,30 @@ class KeymapPanel : JPanel(BorderLayout()) {
                 shortcuts.add(defaultItem)
             }
         }
-        
+
         return shortcuts.sortedBy { it.action }
     }
-    
-    /**
-     * 根据快捷键 ID 获取功能名称
-     */
-    private fun getActionName(id: String): String {
-        return when (id) {
-            "global.search" -> I18n.translate(I18nKeys.Action.GLOBAL_SEARCH)
-            "global.settings" -> I18n.translate(I18nKeys.Toolbar.SETTINGS)
-            else -> id // 如果找不到翻译，使用 ID
-        }
-    }
-    
+
     /**
      * 格式化 KeyStroke 为显示文本
      */
     private fun formatKeyStroke(keyStroke: KeyStroke): String {
         val modifiers = keyStroke.modifiers
         val keyCode = keyStroke.keyCode
-        
+
         // 处理双击 Shift 的特殊情况
         if (keyCode == KeyEvent.VK_SHIFT && modifiers == 0) {
             return if (isEnglish()) "Double Shift" else "双击Shift"
         }
-        
+
         // 转换为扩展掩码以正确显示
         val extendedModifiers = convertToExtendedModifiers(modifiers)
         val modText = KeyEvent.getModifiersExText(extendedModifiers)
         val keyText = KeyEvent.getKeyText(keyCode)
-        
+
         return if (modText.isNotEmpty()) "$modText+$keyText" else keyText
     }
-    
+
     /**
      * 将旧的修饰键掩码转换为扩展修饰键掩码
      */
@@ -114,18 +103,13 @@ class KeymapPanel : JPanel(BorderLayout()) {
         }
         return extended
     }
-    
+
     /**
      * 获取默认快捷键列表（当 ShortcutRegistry 不可用时使用）
      */
     private fun getDefaultShortcuts(): List<ShortcutItem> {
         val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
         return listOf(
-            ShortcutItem(
-                action = I18n.translate(I18nKeys.Action.GLOBAL_SEARCH),
-                shortcut = if (isEnglish()) "Double Shift" else "双击Shift",
-                description = I18n.translate(I18nKeys.Shortcut.GLOBAL_SEARCH)
-            ),
             ShortcutItem(
                 action = I18n.translate(I18nKeys.Action.FIND),
                 shortcut = formatKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcutMask)),
@@ -141,29 +125,14 @@ class KeymapPanel : JPanel(BorderLayout()) {
                 shortcut = formatKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_S, shortcutMask)),
                 description = I18n.translate(I18nKeys.Shortcut.SAVE)
             ),
-            ShortcutItem(
-                action = I18n.translate(I18nKeys.Action.CLOSE),
-                shortcut = formatKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask)),
-                description = I18n.translate(I18nKeys.Shortcut.CLOSE_TAB)
-            ),
-            ShortcutItem(
-                action = I18n.translate(I18nKeys.Action.FORMAT_FILE),
-                shortcut = formatFormatKeyStroke(),
-                description = I18n.translate(I18nKeys.Shortcut.FORMAT_FILE)
-            ),
-            ShortcutItem(
-                action = I18n.translate(I18nKeys.Toolbar.SETTINGS),
-                shortcut = formatKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask)),
-                description = I18n.translate(I18nKeys.Shortcut.OPEN_SETTINGS)
-            ),
         )
     }
-    
+
     private val tableModel = object : AbstractTableModel() {
         private fun getShortcuts(): List<ShortcutItem> {
             return this@KeymapPanel.getShortcuts()
         }
-        
+
         override fun getRowCount(): Int = getShortcuts().size
         override fun getColumnCount(): Int = 3
         override fun getColumnName(column: Int): String = when (column) {
@@ -239,20 +208,5 @@ class KeymapPanel : JPanel(BorderLayout()) {
         noteButton.toolTipText = I18n.translate(I18nKeys.Settings.ADD_NOTE_TOOLTIP)
         exportButton.text = I18n.translate(I18nKeys.Settings.EXPORT)
         exportButton.toolTipText = I18n.translate(I18nKeys.Settings.EXPORT_TOOLTIP)
-    }
-
-    /**
-     * 格式化格式化快捷键（Option+Command+L 或 Alt+Ctrl+L）
-     */
-    private fun formatFormatKeyStroke(): String {
-        val isMac = System.getProperty("os.name").lowercase().contains("mac")
-        val modifiers = if (isMac) {
-            InputEvent.ALT_DOWN_MASK or InputEvent.META_DOWN_MASK
-        } else {
-            InputEvent.ALT_DOWN_MASK or InputEvent.CTRL_DOWN_MASK
-        }
-        val modText = KeyEvent.getModifiersExText(modifiers)
-        val keyText = KeyEvent.getKeyText(KeyEvent.VK_L)
-        return "$modText+$keyText"
     }
 }

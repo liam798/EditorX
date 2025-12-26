@@ -20,14 +20,14 @@ abstract class SettingsPanel : JPanel(null) { // 使用 null layout 以便绝对
     /**
      * 临时更改缓存，用于存储未保存的更改
      */
-    protected val pendingChanges = mutableMapOf<String, Any?>()
+    private val pendingChanges = mutableMapOf<String, Any?>()
     
     /**
      * 还原更改按钮（位于右上角）
      */
     private val revertButton = JButton(I18n.translate(I18nKeys.Action.REVERT_CHANGES)).apply {
         isVisible = false
-        preferredSize = Dimension(100, 28)
+        minimumSize = Dimension(100, 28)
         addActionListener { 
             revertChanges()
             updateRevertButtonVisibility()

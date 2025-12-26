@@ -8,6 +8,7 @@ import editorx.gui.ThemeManager
 import editorx.gui.main.MainWindow
 import editorx.gui.main.explorer.ExplorerIcons
 import editorx.core.util.IconUtils
+import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.navigationbar.NavigationBar
 import org.fife.ui.rtextarea.RTextScrollPane
 import org.slf4j.LoggerFactory
@@ -47,19 +48,20 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val dirtyTabs = mutableSetOf<Int>()
     private val originalTextByIndex = mutableMapOf<Int, String>()
     private var untitledCounter = 1
-    
+
     // AndroidManifest 底部视图
     private var manifestViewTabs: JTabbedPane? = null
     private var isManifestMode = false
     private var manifestFile: File? = null
     private var manifestOriginalContent: String? = null
-    
+
     // Smali 底部视图
     private var smaliViewTabs: JTabbedPane? = null
     private var isSmaliMode = false
     private var smaliFile: File? = null
     private var smaliOriginalContent: String? = null
     private val smaliTabState = mutableMapOf<File, Int>()
+
     private data class SmaliJavaCacheEntry(
         val sourceLastModified: Long,
         val sourceLength: Long,
@@ -74,7 +76,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         }
     }
     private var smaliProgressVisible = false
-    
+
     private val bottomContainer = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
@@ -107,7 +109,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         // 设置JPanel的布局
         layout = java.awt.BorderLayout()
         updateTheme()
-        
+
         // 监听主题变更
         ThemeManager.addThemeChangeListener { updateTheme() }
 
@@ -145,60 +147,6 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         // 根据工作区状态显示欢迎界面或编辑器内容
         updateEditorContent()
 
-        // 注册快捷键：Command+N (macOS) 或 Ctrl+N (其他系统) 新建文件
-        // 在Editor本身注册，这样在WelcomeView显示时也能响应
-        val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
-        getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-            KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
-            "editor.newFile"
-        )
-        actionMap.put("editor.newFile", object : javax.swing.AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                newUntitledFile()
-            }
-        })
-        
-        // 同时在tabbedPane上注册，确保在编辑器内也能响应
-        tabbedPane.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-            KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
-            "editor.newFile"
-        )
-        tabbedPane.actionMap.put("editor.newFile", object : javax.swing.AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                newUntitledFile()
-            }
-        })
-
-        // 注册快捷键：Command+W (macOS) 或 Ctrl+W (其他系统) 关闭标签页
-        tabbedPane.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-            KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask),
-            "editor.closeTab"
-        )
-        tabbedPane.actionMap.put("editor.closeTab", object : javax.swing.AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                val currentIndex = tabbedPane.selectedIndex
-                if (currentIndex >= 0) {
-                    closeTab(currentIndex)
-                }
-            }
-        })
-
-        // 注册快捷键：Option+Command+L (macOS) 或 Alt+Ctrl+L (其他系统) 格式化代码
-        val formatShortcutMask = if (System.getProperty("os.name").lowercase().contains("mac")) {
-            InputEvent.ALT_DOWN_MASK or InputEvent.META_DOWN_MASK
-        } else {
-            InputEvent.ALT_DOWN_MASK or InputEvent.CTRL_DOWN_MASK
-        }
-        tabbedPane.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-            KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask),
-            "editor.formatCode"
-        )
-        tabbedPane.actionMap.put("editor.formatCode", object : javax.swing.AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                formatCurrentFile()
-            }
-        })
-
         // 切换标签时更新状态栏与事件
         tabbedPane.addChangeListener {
             val file = getCurrentFile()
@@ -227,10 +175,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
 
             updateTabHeaderStyles()
-            
+
             // 检测是否为 AndroidManifest.xml，显示/隐藏底部视图标签
             updateManifestViewTabs(file)
-            
+
             // 检测是否为 smali 文件，显示/隐藏底部视图标签
             updateSmaliViewTabs(file)
 
@@ -288,13 +236,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-    
+
     private fun updateTheme() {
         background = ThemeManager.currentTheme.editorBackground
         revalidate()
         repaint()
     }
-    
+
     private fun updateEditorContent() {
         removeAll()
         val workspaceRoot = mainWindow.guiContext.workspace.getWorkspaceRoot()
@@ -308,7 +256,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         revalidate()
         repaint()
     }
-    
+
     fun showEditorContent() {
         updateEditorContent()
     }
@@ -503,14 +451,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             updateNavigationBarPosition()
             return
         }
-        
+
         // 检测是否为 Android 压缩包文件（xapk、aab、aar）
         val fileType = FileTypeRegistry.getFileTypeByFileName(file.name)
         if (fileType?.getName() == "android-archive") {
             openArchiveFile(file)
             return
         }
-        
+
         val textArea = TextArea().apply {
             font = Font("Consolas", Font.PLAIN, 14)
             addCaretListener {
@@ -562,7 +510,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
             })
 
-            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask), "editor.replace")
+            getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask),
+                "editor.replace"
+            )
             actionMap.put("editor.replace", object : AbstractAction() {
                 override fun actionPerformed(e: java.awt.event.ActionEvent?) {
                     this@Editor.showReplaceBar()
@@ -634,16 +585,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         textArea.putClientProperty("suppressDirty", false)
         updateTabHeaderStyles()
         updateNavigation(file)
-        
+
         // 更新导航栏位置
         updateNavigationBarPosition()
-        
+
         // 检测是否为 AndroidManifest.xml，显示/隐藏底部视图标签
         updateManifestViewTabs(file)
-        
+
         // 检测是否为 smali 文件，显示/隐藏底部视图标签
         updateSmaliViewTabs(file)
-        
+
         // 打开文件后显示编辑器内容（隐藏欢迎界面）
         showEditorContent()
     }
@@ -652,7 +603,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         // 创建一个未命名文件标识（不创建实际文件）
         val untitledFileName = "untitled-${untitledCounter++}"
         val untitledFile = File(untitledFileName)
-        
+
         val textArea = TextArea().apply {
             font = Font("Consolas", Font.PLAIN, 14)
             text = ""  // 空内容
@@ -691,7 +642,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
             })
 
-            getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask), "editor.replace")
+            getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_R, shortcutMask),
+                "editor.replace"
+            )
             actionMap.put("editor.replace", object : AbstractAction() {
                 override fun actionPerformed(e: java.awt.event.ActionEvent?) {
                     this@Editor.showReplaceBar()
@@ -714,7 +668,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
             })
         }
-        
+
         val scroll = RTextScrollPane(textArea).apply {
             border = javax.swing.BorderFactory.createEmptyBorder()
             background = Color.WHITE
@@ -722,7 +676,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         }
         installFileDropTarget(scroll)
         installFileDropTarget(textArea)
-        
+
         val title = untitledFileName
         tabbedPane.addTab(title, resolveTabIcon(untitledFile), TabContent(scroll), null)
         val index = tabbedPane.tabCount - 1
@@ -733,7 +687,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         tabbedPane.setTabComponentAt(index, closeButton)
         attachPopupToHeader(closeButton)
         tabbedPane.selectedIndex = index
-        
+
         SwingUtilities.invokeLater {
             runCatching {
                 textArea.caretPosition = 0
@@ -742,22 +696,22 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 scroll.horizontalScrollBar.value = 0
             }
         }
-        
+
         originalTextByIndex[index] = ""
         dirtyTabs.remove(index)
         textArea.putClientProperty("suppressDirty", false)
         updateTabHeaderStyles()
         mainWindow.statusBar.setFileInfo(title, "0 B")
         mainWindow.statusBar.setLineColumn(1, 1)
-        
+
         // 更新导航栏位置
         updateNavigationBarPosition()
-        
+
         // 聚焦到编辑器
         SwingUtilities.invokeLater {
             textArea.requestFocusInWindow()
         }
-        
+
         // 新建文件后显示编辑器内容（隐藏欢迎界面）
         showEditorContent()
     }
@@ -787,7 +741,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-    
+
     fun showFindBar() {
         val file = getCurrentFile() ?: return
         val findBar = getFindBar(file)
@@ -796,7 +750,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
         findBar.open(FindReplaceBar.Mode.FIND, initial)
     }
-    
+
     fun showReplaceBar() {
         val file = getCurrentFile() ?: return
         val findBar = getFindBar(file)
@@ -1004,13 +958,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             if (dirtyTabs.contains(index)) {
                 val file = tabToFile[index]
                 val fileName = file?.name ?: "未命名文件"
-                
+
                 // 切换到要关闭的标签页（如果需要保存）
                 val wasSelected = tabbedPane.selectedIndex == index
                 if (!wasSelected) {
                     tabbedPane.selectedIndex = index
                 }
-                
+
                 // 显示保存提示对话框
                 val options = arrayOf("保存", "不保存", "取消")
                 val result = JOptionPane.showOptionDialog(
@@ -1023,7 +977,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     options,
                     options[0] // 默认选择"保存"
                 )
-                
+
                 when (result) {
                     JOptionPane.YES_OPTION -> {
                         // 保存文件
@@ -1033,16 +987,18 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             return
                         }
                     }
+
                     JOptionPane.NO_OPTION -> {
                         // 不保存，直接关闭
                     }
+
                     JOptionPane.CANCEL_OPTION, JOptionPane.CLOSED_OPTION -> {
                         // 取消关闭
                         return
                     }
                 }
             }
-            
+
             val file = tabToFile[index]
             tabbedPane.removeTabAt(index)
             file?.let {
@@ -1099,7 +1055,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
             updateNavigation(getCurrentFile())
             updateNavigationBarPosition()
-            
+
             // 如果所有标签都关闭了，显示欢迎界面
             if (tabbedPane.tabCount == 0) {
                 updateEditorContent()
@@ -1110,6 +1066,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     fun getCurrentFile(): File? = if (tabbedPane.selectedIndex >= 0) tabToFile[tabbedPane.selectedIndex] else null
 
     fun hasUnsavedChanges(): Boolean = dirtyTabs.isNotEmpty()
+
+    /**
+     * 关闭当前选中的标签页
+     */
+    fun closeCurrentTab() {
+        val currentIndex = tabbedPane.selectedIndex
+        if (currentIndex >= 0) {
+            closeTab(currentIndex)
+        }
+    }
 
     fun saveCurrent() {
         val idx = tabbedPane.selectedIndex
@@ -1125,7 +1091,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         if (index < 0 || index >= tabbedPane.tabCount) return false
         val file = tabToFile[index]
         val ta = tabTextAreas[index] ?: return true
-        
+
         // 如果文件存在且可写，直接保存
         if (file != null && file.exists() && file.canWrite()) {
             runCatching { Files.writeString(file.toPath(), ta.text) }
@@ -1136,7 +1102,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             mainWindow.statusBar.showSuccess("已保存: ${file.name}")
             return true
         }
-        
+
         // 文件不存在（未命名文件）或不可写，使用系统文件选择器另存为
         val fileDialog = java.awt.FileDialog(mainWindow, "保存文件", java.awt.FileDialog.SAVE).apply {
             isMultipleMode = false
@@ -1147,10 +1113,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
         fileDialog.isVisible = true
-        
+
         val fileName = fileDialog.file
         val dir = fileDialog.directory
-        
+
         if (fileName != null && dir != null) {
             val newFile = File(dir, fileName)
             runCatching { Files.writeString(newFile.toPath(), ta.text) }
@@ -1178,7 +1144,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         if (idx < 0) return
         val ta = tabTextAreas[idx] ?: return
         val currentFile = tabToFile[idx]
-        
+
         // 使用系统文件选择器
         val fileDialog = java.awt.FileDialog(mainWindow, "另存为", java.awt.FileDialog.SAVE).apply {
             isMultipleMode = false
@@ -1189,10 +1155,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
         fileDialog.isVisible = true
-        
+
         val fileName = fileDialog.file
         val dir = fileDialog.directory
-        
+
         if (fileName != null && dir != null) {
             val file = File(dir, fileName)
             runCatching { Files.writeString(file.toPath(), ta.text) }
@@ -1475,7 +1441,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     /**
      * 格式化当前文件
      */
-    private fun formatCurrentFile() {
+    fun formatCurrentFile() {
         val file = getCurrentFile() ?: return
         val textArea = getCurrentTextArea() ?: return
 
@@ -1513,12 +1479,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             if (formattedContent != currentContent) {
                 val caretPos = textArea.caretPosition
                 val currentIndex = tabbedPane.selectedIndex
-                
+
                 textArea.putClientProperty("suppressDirty", true)
-                
+
                 // 使用 replaceRange 替换整个文本，这样可以保持撤销历史
                 textArea.replaceRange(formattedContent, 0, currentContent.length)
-                
+
                 textArea.putClientProperty("suppressDirty", false)
 
                 // 手动更新脏标记（因为 suppressDirty 阻止了 DocumentListener 的更新）
@@ -1554,42 +1520,38 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
      */
     private fun showTextAreaContextMenu(textArea: TextArea, x: Int, y: Int) {
         val menu = JPopupMenu()
-        
+
         // 检查是否有格式化器可用
         val file = getCurrentFile()
         val hasFormatter = file != null && FormatterRegistry.getFormatter(file) != null
 
         menu.add(JMenuItem("查找...").apply {
-            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            accelerator =
+                KeyStroke.getKeyStroke(KeyEvent.VK_F, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
             addActionListener { showFindBar() }
         })
         menu.add(JMenuItem("替换...").apply {
-            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_R, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            accelerator =
+                KeyStroke.getKeyStroke(KeyEvent.VK_R, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
             addActionListener { showReplaceBar() }
         })
-        
+
         if (hasFormatter) {
             menu.addSeparator()
 
-            // 格式化快捷键：Option+Command+L (macOS) 或 Alt+Ctrl+L (其他系统)
-            val formatShortcutMask = if (System.getProperty("os.name").lowercase().contains("mac")) {
-                InputEvent.ALT_DOWN_MASK or InputEvent.META_DOWN_MASK
-            } else {
-                InputEvent.ALT_DOWN_MASK or InputEvent.CTRL_DOWN_MASK
-            }
             menu.add(JMenuItem("格式化文件").apply {
-                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask)
+                ShortcutRegistry.getShortcut("editor.formatFile")?.let { accelerator = it.keyStroke }
                 addActionListener { formatCurrentFile() }
             })
         }
-        
+
         menu.show(textArea, x, y)
     }
-    
+
     // 检测并更新 AndroidManifest 底部视图标签
     private fun updateManifestViewTabs(file: File?) {
         val isManifest = file?.name?.equals("AndroidManifest.xml", ignoreCase = true) == true
-        
+
         if (isManifest && file != null && file.exists()) {
             // 显示底部视图标签
             if (!isManifestMode) {
@@ -1602,7 +1564,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-    
+
     // 创建 AndroidManifest 底部视图标签
     private fun createManifestViewTabs(file: File) {
         try {
@@ -1610,10 +1572,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             manifestFile = file
             val content = Files.readString(file.toPath())
             manifestOriginalContent = content
-            
+
             // 解析 XML 内容
             val manifestData = parseAndroidManifest(content)
-            
+
             // 创建底部标签面板（简洁样式）
             manifestViewTabs = JTabbedPane().apply {
                 tabPlacement = JTabbedPane.TOP
@@ -1622,7 +1584,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 background = Color(250, 250, 250)
                 preferredSize = Dimension(0, 36)
                 maximumSize = Dimension(Int.MAX_VALUE, 36)
-                
+
                 // 设置简洁的标签页样式
                 setUI(object : javax.swing.plaf.basic.BasicTabbedPaneUI() {
                     override fun installDefaults() {
@@ -1632,15 +1594,24 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         selectedTabPadInsets = java.awt.Insets(0, 0, 0, 0)
                         contentBorderInsets = java.awt.Insets(0, 0, 0, 0)
                     }
-                    
-                    override fun paintTabBackground(g: Graphics, tabPlacement: Int, tabIndex: Int, x: Int, y: Int, w: Int, h: Int, isSelected: Boolean) {
+
+                    override fun paintTabBackground(
+                        g: Graphics,
+                        tabPlacement: Int,
+                        tabIndex: Int,
+                        x: Int,
+                        y: Int,
+                        w: Int,
+                        h: Int,
+                        isSelected: Boolean
+                    ) {
                         val g2d = g.create() as Graphics2D
                         try {
                             if (isSelected) {
                                 // 选中状态：白色背景
                                 g2d.color = Color.WHITE
                                 g2d.fillRect(x, y, w, h)
-                                
+
                                 // 蓝色底部边框
                                 g2d.color = Color(0, 120, 212)
                                 g2d.fillRect(x, y + h - 2, w, 2)
@@ -1653,22 +1624,39 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             g2d.dispose()
                         }
                     }
-                    
-                    override fun paintTabBorder(g: Graphics?, tabPlacement: Int, tabIndex: Int, x: Int, y: Int, w: Int, h: Int, isSelected: Boolean) {
+
+                    override fun paintTabBorder(
+                        g: Graphics?,
+                        tabPlacement: Int,
+                        tabIndex: Int,
+                        x: Int,
+                        y: Int,
+                        w: Int,
+                        h: Int,
+                        isSelected: Boolean
+                    ) {
                         // 不绘制边框
                     }
-                    
+
                     override fun paintContentBorder(g: Graphics?, tabPlacement: Int, selectedIndex: Int) {
                         // 不绘制内容边框
                     }
-                    
-                    override fun paintFocusIndicator(g: Graphics?, tabPlacement: Int, rects: Array<out Rectangle>?, tabIndex: Int, iconRect: Rectangle?, textRect: Rectangle?, isSelected: Boolean) {
+
+                    override fun paintFocusIndicator(
+                        g: Graphics?,
+                        tabPlacement: Int,
+                        rects: Array<out Rectangle>?,
+                        tabIndex: Int,
+                        iconRect: Rectangle?,
+                        textRect: Rectangle?,
+                        isSelected: Boolean
+                    ) {
                         // 不绘制焦点指示器
                     }
                 })
-                
+
                 font = Font("Dialog", Font.PLAIN, 12)
-                
+
                 // 监听标签切换事件
                 addChangeListener {
                     val selectedIndex = selectedIndex
@@ -1677,35 +1665,35 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     }
                 }
             }
-            
+
             // 添加"全部内容"标签（显示完整源码）
             manifestViewTabs!!.addTab("全部内容", JPanel())
-            
+
             // 添加权限标签 - 只有当存在权限时才显示
             if (manifestData.permissionsXml.isNotEmpty()) {
                 manifestViewTabs!!.addTab("Permission (${manifestData.permissionsXml.size})", JPanel())
             }
-            
+
             // 添加 Activity 标签 - 只有当存在Activity时才显示
             if (manifestData.activitiesXml.isNotEmpty()) {
                 manifestViewTabs!!.addTab("Activity (${manifestData.activitiesXml.size})", JPanel())
             }
-            
+
             // 添加 Service 标签 - 只有当存在Service时才显示
             if (manifestData.servicesXml.isNotEmpty()) {
                 manifestViewTabs!!.addTab("Service (${manifestData.servicesXml.size})", JPanel())
             }
-            
+
             // 添加 Receiver 标签 - 只有当存在Receiver时才显示
             if (manifestData.receiversXml.isNotEmpty()) {
                 manifestViewTabs!!.addTab("Receiver (${manifestData.receiversXml.size})", JPanel())
             }
-            
+
             // 添加 Provider 标签 - 只有当存在Provider时才显示
             if (manifestData.providersXml.isNotEmpty()) {
                 manifestViewTabs!!.addTab("Provider (${manifestData.providersXml.size})", JPanel())
             }
-            
+
             // 将底部标签面板添加到统一容器中，避免与查找条冲突
             // 如果已有 smaliViewTabs，需要处理布局
             if (smaliViewTabs != null) {
@@ -1741,25 +1729,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     bottomContainer.add(manifestViewTabs!!, BorderLayout.SOUTH)
                 }
             }
-            
+
             isManifestMode = true
             revalidate()
             repaint()
-            
+
         } catch (e: Exception) {
             logger.warn("构建 AndroidManifest 视图失败", e)
         }
     }
-    
+
     // 切换 AndroidManifest 视图
     private fun switchManifestView(tabIndex: Int, manifestData: ManifestData) {
         // 获取当前 AndroidManifest.xml 文件的编辑器索引
         val fileIndex = manifestFile?.let { fileToTab[it] } ?: return
         val textArea = tabTextAreas[fileIndex] ?: return
-        
+
         // 暂时禁用脏检测
         textArea.putClientProperty("suppressDirty", true)
-        
+
         try {
             when (manifestViewTabs!!.getTitleAt(tabIndex)) {
                 "全部内容" -> {
@@ -1768,6 +1756,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     textArea.isEditable = true
                     textArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_XML
                 }
+
                 else -> {
                     // 获取标签标题以确定显示哪个部分
                     val title = manifestViewTabs!!.getTitleAt(tabIndex)
@@ -1779,25 +1768,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         title.startsWith("Provider") -> manifestData.providersXml.joinToString("\n\n")
                         else -> ""
                     }
-                    
+
                     textArea.text = content
                     textArea.isEditable = false
                     textArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_XML
                 }
             }
-            
+
             // 滚动到顶部
             SwingUtilities.invokeLater {
                 textArea.caretPosition = 0
                 textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
             }
-            
+
         } finally {
             // 恢复脏检测
             textArea.putClientProperty("suppressDirty", false)
         }
     }
-    
+
     // 移除 AndroidManifest 底部视图标签
     private fun removeManifestViewTabs() {
         if (manifestViewTabs != null) {
@@ -1830,7 +1819,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             repaint()
         }
     }
-    
+
     // 解析 AndroidManifest.xml 内容，提取原始XML片段
     private fun parseAndroidManifest(content: String): ManifestData {
         val permissionsXml = mutableListOf<String>()
@@ -1838,63 +1827,63 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val servicesXml = mutableListOf<String>()
         val receiversXml = mutableListOf<String>()
         val providersXml = mutableListOf<String>()
-        
+
         try {
             // 提取权限 XML
             val permissionPattern = """<uses-permission[^>]*/>""".toRegex()
             permissionsXml.addAll(permissionPattern.findAll(content).map { it.value })
-            
+
             // 提取 Activity XML（完整的activity块，包括子元素）
             extractComponentXml(content, "activity", activitiesXml)
-            
+
             // 提取 Service XML（完整的service块，包括子元素）
             extractComponentXml(content, "service", servicesXml)
-            
+
             // 提取 Receiver XML（完整的receiver块，包括子元素）
             extractComponentXml(content, "receiver", receiversXml)
-            
+
             // 提取 Provider XML（完整的provider块，包括子元素）
             extractComponentXml(content, "provider", providersXml)
-            
+
         } catch (e: Exception) {
             logger.warn("解析 AndroidManifest 失败", e)
         }
-        
+
         return ManifestData(permissionsXml, activitiesXml, servicesXml, receiversXml, providersXml)
     }
-    
+
     // 提取指定组件的XML（统一处理activity、service、provider）
     private fun extractComponentXml(content: String, componentName: String, resultList: MutableList<String>) {
         // 首先查找所有自闭合标签
         val selfClosingPattern = """<$componentName[^>]*/\s*>""".toRegex()
         val selfClosingMatches = selfClosingPattern.findAll(content).toList()
-        
+
         // 然后查找所有开始标签
         val startPattern = """<$componentName\s+[^>]*>""".toRegex()
         val startMatches = startPattern.findAll(content).toList()
-        
+
         // 处理每个开始标签
         for (match in startMatches) {
             val startPos = match.range.first
-            
+
             // 检查这是否是自闭合标签（避免重复）
             val isSelfClosing = selfClosingMatches.any { it.range.first == startPos }
             if (isSelfClosing) {
                 resultList.add(match.value)
                 continue
             }
-            
+
             // 查找对应的结束标签
             val endTag = "</$componentName>"
             var endPos = startPos + match.value.length
             var depth = 1
             var searchPos = endPos
-            
+
             // 使用嵌套深度计数来处理嵌套标签
             while (depth > 0 && searchPos < content.length) {
                 val nextStart = content.indexOf("<$componentName", searchPos)
                 val nextEnd = content.indexOf(endTag, searchPos)
-                
+
                 when {
                     nextEnd == -1 -> break // 没找到结束标签
                     nextStart != -1 && nextStart < nextEnd -> {
@@ -1902,6 +1891,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         depth++
                         searchPos = nextStart + componentName.length + 1
                     }
+
                     else -> {
                         // 找到结束标签
                         depth--
@@ -1912,25 +1902,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     }
                 }
             }
-            
+
             if (depth == 0) {
                 val componentXml = content.substring(startPos, endPos)
                 resultList.add(formatXml(componentXml))
             }
         }
     }
-    
+
     // 格式化XML，重新计算缩进
     private fun formatXml(xml: String): String {
         val lines = xml.lines()
         if (lines.isEmpty()) return xml
-        
+
         // 找到所有非空行的最小缩进量（公共前导空格数）
         val minIndent = lines
             .filter { it.isNotBlank() }
             .map { line -> line.takeWhile { it == ' ' }.length }
             .minOrNull() ?: 0
-        
+
         // 移除公共缩进
         val unindentedLines = lines.map { line ->
             when {
@@ -1939,36 +1929,36 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 else -> line.trimStart()
             }
         }
-        
+
         // 重新计算缩进：根标签从第0列开始，子元素每级缩进4个空格
         val result = mutableListOf<String>()
         var indentLevel = 0
-        
+
         for (line in unindentedLines) {
             if (line.isBlank()) {
                 result.add("")
                 continue
             }
-            
+
             val trimmedLine = line.trim()
-            
+
             // 如果是结束标签，先减少缩进级别再添加
             if (trimmedLine.startsWith("</")) {
                 indentLevel = maxOf(0, indentLevel - 1)
             }
-            
+
             // 添加当前行
             result.add("    ".repeat(indentLevel) + trimmedLine)
-            
+
             // 如果是开始标签且不是自闭合标签，增加缩进级别
             if (trimmedLine.startsWith("<") && !trimmedLine.startsWith("</") && !trimmedLine.endsWith("/>")) {
                 indentLevel++
             }
         }
-        
+
         return result.joinToString("\n")
     }
-    
+
     private data class ManifestData(
         val permissionsXml: List<String>,
         val activitiesXml: List<String>,
@@ -2080,14 +2070,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         parent.repaint()
         smaliLoadingPanels.remove(file)
     }
-    
+
     // 检测并更新 Smali 底部视图标签
     private fun updateSmaliViewTabs(file: File?) {
-        val isSmali = file?.let { 
+        val isSmali = file?.let {
             val name = it.name.lowercase()
             name.endsWith(".smali", ignoreCase = true)
         } ?: false
-        
+
         if (isSmali && file != null && file.exists()) {
             // 显示底部视图标签
             if (!isSmaliMode) {
@@ -2123,7 +2113,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-    
+
     // 创建 Smali 底部视图标签
     private fun createSmaliViewTabs(file: File) {
         try {
@@ -2134,7 +2124,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             smaliFile = file
             val content = Files.readString(file.toPath())
             smaliOriginalContent = content
-            
+
             // 创建底部标签面板（参考 jadx 样式）
             smaliViewTabs = JTabbedPane().apply {
                 tabPlacement = JTabbedPane.TOP
@@ -2146,7 +2136,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 maximumSize = Dimension(Int.MAX_VALUE, 40)
                 isVisible = true
                 isOpaque = true
-                
+
                 // 设置简洁的标签页样式（参考 jadx）
                 setUI(object : javax.swing.plaf.basic.BasicTabbedPaneUI() {
                     override fun installDefaults() {
@@ -2156,15 +2146,24 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         selectedTabPadInsets = java.awt.Insets(0, 0, 0, 0)
                         contentBorderInsets = java.awt.Insets(0, 0, 0, 0)
                     }
-                    
-                    override fun paintTabBackground(g: Graphics, tabPlacement: Int, tabIndex: Int, x: Int, y: Int, w: Int, h: Int, isSelected: Boolean) {
+
+                    override fun paintTabBackground(
+                        g: Graphics,
+                        tabPlacement: Int,
+                        tabIndex: Int,
+                        x: Int,
+                        y: Int,
+                        w: Int,
+                        h: Int,
+                        isSelected: Boolean
+                    ) {
                         val g2d = g.create() as Graphics2D
                         try {
                             if (isSelected) {
                                 // 选中状态：白色背景
                                 g2d.color = Color.WHITE
                                 g2d.fillRect(x, y, w, h)
-                                
+
                                 // 蓝色底部边框
                                 g2d.color = Color(0, 120, 212)
                                 g2d.fillRect(x, y + h - 2, w, 2)
@@ -2177,29 +2176,46 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             g2d.dispose()
                         }
                     }
-                    
-                    override fun paintTabBorder(g: Graphics?, tabPlacement: Int, tabIndex: Int, x: Int, y: Int, w: Int, h: Int, isSelected: Boolean) {
+
+                    override fun paintTabBorder(
+                        g: Graphics?,
+                        tabPlacement: Int,
+                        tabIndex: Int,
+                        x: Int,
+                        y: Int,
+                        w: Int,
+                        h: Int,
+                        isSelected: Boolean
+                    ) {
                         // 不绘制边框
                     }
-                    
+
                     override fun paintContentBorder(g: Graphics?, tabPlacement: Int, selectedIndex: Int) {
                         // 不绘制内容边框
                     }
-                    
-                    override fun paintFocusIndicator(g: Graphics?, tabPlacement: Int, rects: Array<out Rectangle>?, tabIndex: Int, iconRect: Rectangle?, textRect: Rectangle?, isSelected: Boolean) {
+
+                    override fun paintFocusIndicator(
+                        g: Graphics?,
+                        tabPlacement: Int,
+                        rects: Array<out Rectangle>?,
+                        tabIndex: Int,
+                        iconRect: Rectangle?,
+                        textRect: Rectangle?,
+                        isSelected: Boolean
+                    ) {
                         // 不绘制焦点指示器
                     }
                 })
-                
+
                 font = Font("Dialog", Font.PLAIN, 12)
             }
-            
+
             // 添加 "Smali" 标签（默认选中）
             smaliViewTabs!!.addTab(SMALI_TAB_TITLE, JPanel())
-            
+
             // 添加 "Code" 标签
             smaliViewTabs!!.addTab(CODE_TAB_TITLE, JPanel())
-            
+
             // 恢复之前保存的 tab 状态，如果没有则默认选中 Smali (0)
             val safeTabIndex = savedTabIndex.coerceIn(0, smaliViewTabs!!.tabCount - 1)
             smaliViewTabs!!.selectedIndex = safeTabIndex
@@ -2214,7 +2230,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
             // 初始化内容（因为监听器在 restore 之后才安装）
             switchSmaliView(safeTabIndex)
-            
+
             // 将底部标签面板添加到统一容器中，避免与查找条冲突
             // 如果已有 manifestViewTabs，需要处理布局
             if (manifestViewTabs != null) {
@@ -2245,7 +2261,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 } else {
                     null
                 }
-                
+
                 if (existingContainer != null && existingContainer.layout is BorderLayout) {
                     // 已有容器，添加到容器中
                     existingContainer.add(smaliViewTabs!!, BorderLayout.SOUTH)
@@ -2255,20 +2271,20 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     bottomContainer.add(smaliViewTabs!!, BorderLayout.SOUTH)
                 }
             }
-            
+
             isSmaliMode = true
             bottomContainer.revalidate()
             bottomContainer.repaint()
             revalidate()
             repaint()
-            
+
             logger.debug("Smali 底部 tab 已创建并添加到界面")
-            
+
         } catch (e: Exception) {
             logger.warn("构建 Smali 视图失败", e)
         }
     }
-    
+
     // 切换 Smali 视图
     private fun switchSmaliView(tabIndex: Int) {
         // 获取当前 smali 文件的编辑器索引
@@ -2294,6 +2310,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
                 }
             }
+
             CODE_TAB_TITLE -> {
                 textArea.putClientProperty("suppressDirty", true)
                 textArea.isEditable = false
@@ -2318,7 +2335,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
         }
     }
-    
+
     private fun scheduleSmaliConversion(
         file: File,
         expectedTabIndex: Int,
@@ -2335,16 +2352,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val stillCurrentFile = smaliFile == file
                     val currentTabs = smaliViewTabs
                     val shouldUpdateTextArea = stillCurrentFile &&
-                        currentTabs != null &&
-                        currentTabs.selectedIndex == expectedTabIndex &&
-                        currentTabs.getTitleAt(expectedTabIndex) == CODE_TAB_TITLE
+                            currentTabs != null &&
+                            currentTabs.selectedIndex == expectedTabIndex &&
+                            currentTabs.getTitleAt(expectedTabIndex) == CODE_TAB_TITLE
 
                     if (shouldUpdateTextArea) {
                         val idx = fileToTab[file]
                         val activeTextArea = idx?.let { tabTextAreas[it] } ?: fallbackTextArea
                         activeTextArea.putClientProperty("suppressDirty", true)
                         activeTextArea.text = javaContent
-                        activeTextArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
+                        activeTextArea.syntaxEditingStyle =
+                            org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
                         activeTextArea.isEditable = false
                         activeTextArea.putClientProperty("suppressDirty", false)
                         SwingUtilities.invokeLater {
@@ -2368,14 +2386,15 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val stillCurrentFile = smaliFile == file
                     val currentTabs = smaliViewTabs
                     val shouldUpdateTextArea = stillCurrentFile &&
-                        currentTabs != null &&
-                        currentTabs.selectedIndex == expectedTabIndex &&
-                        currentTabs.getTitleAt(expectedTabIndex) == CODE_TAB_TITLE
+                            currentTabs != null &&
+                            currentTabs.selectedIndex == expectedTabIndex &&
+                            currentTabs.getTitleAt(expectedTabIndex) == CODE_TAB_TITLE
 
                     if (shouldUpdateTextArea) {
                         fallbackTextArea.putClientProperty("suppressDirty", true)
                         fallbackTextArea.text = "// 转换失败: ${e.message}"
-                        fallbackTextArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
+                        fallbackTextArea.syntaxEditingStyle =
+                            org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
                         fallbackTextArea.isEditable = false
                         fallbackTextArea.putClientProperty("suppressDirty", false)
                     }
@@ -2386,11 +2405,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
         smaliConversionTasks[file] = future
     }
-    
+
     // 获取 Smali 文件对应的 Java 代码
     private fun getJavaCodeForSmali(smaliFile: File): String {
         logger.info("开始获取 Java 代码，smali 文件: ${smaliFile.absolutePath}")
-        
+
         // 如果已经缓存了 Java 内容且源文件未变化，直接返回（文件级缓存）
         val cached = smaliJavaContentCache[smaliFile]
         if (cached != null) {
@@ -2401,7 +2420,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 return cached.javaContent
             }
         }
-        
+
         try {
             // 策略1: 查找对应的 Java 文件（如果是从 JADX 反编译的 APK）
             // smali 文件路径通常类似: .../smali/com/example/MyClass.smali
@@ -2412,7 +2431,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 smaliPath.replace("/smali/", "/sources/").replace(".smali", ".java"),
                 smaliPath.replace("/smali_classes", "/java_src").replace(".smali", ".java"),
             )
-            
+
             for (javaPath in javaPaths) {
                 val javaFile = File(javaPath)
                 if (javaFile.exists() && javaFile.canRead()) {
@@ -2425,7 +2444,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     return content
                 }
             }
-            
+
             // 策略2: 查找同一目录下的同名 .java 文件（向上查找）
             var currentDir = smaliFile.parentFile
             while (currentDir != null) {
@@ -2442,7 +2461,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 // 检查是否有 sources 或 java_src 目录
                 val sourcesDir = File(currentDir, "sources")
                 if (sourcesDir.exists() && sourcesDir.isDirectory) {
-                    val relativePath = smaliFile.relativeTo(currentDir).path.replace("/smali/", "/").replace(".smali", ".java")
+                    val relativePath =
+                        smaliFile.relativeTo(currentDir).path.replace("/smali/", "/").replace(".smali", ".java")
                     val javaFile2 = File(sourcesDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
@@ -2456,7 +2476,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
                 val javaSrcDir = File(currentDir, "java_src")
                 if (javaSrcDir.exists() && javaSrcDir.isDirectory) {
-                    val relativePath = smaliFile.relativeTo(currentDir).path.replace("/smali/", "/").replace(".smali", ".java")
+                    val relativePath =
+                        smaliFile.relativeTo(currentDir).path.replace("/smali/", "/").replace(".smali", ".java")
                     val javaFile2 = File(javaSrcDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
@@ -2470,7 +2491,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
                 currentDir = currentDir.parentFile
             }
-            
+
             // 策略3: 尝试使用 JADX 实时反编译（类似 MT 管理器）
             logger.info("策略3: 尝试使用 JADX 实时反编译")
             val decompiledJava = tryDecompileWithJadx(smaliFile)
@@ -2484,7 +2505,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 return decompiledJava
             }
             logger.warn("实时反编译失败")
-            
+
             // 策略4: 如果找不到，显示提示信息
             val failureMessage = """
                 // 未找到对应的 Java 源码文件
@@ -2505,7 +2526,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 javaContent = failureMessage
             )
             return failureMessage
-            
+
         } catch (e: Exception) {
             logger.warn("获取 Java 代码失败", e)
             val errorMessage = "// 获取 Java 代码时出错: ${e.message}"
@@ -2517,13 +2538,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             return errorMessage
         }
     }
-    
+
     // 尝试使用 JADX 实时反编译 smali 文件（类似 MT 管理器）
     // 策略：先将单个 smali 文件编译成 DEX，然后用 jadx 反编译
     private fun tryDecompileWithJadx(smaliFile: File): String? {
         try {
             logger.info("开始实时反编译 smali 文件: ${smaliFile.absolutePath}")
-            
+
             // 检查 jadx 和 smali 工具是否可用
             val jadxPath = Jadx.locate()
             if (jadxPath == null) {
@@ -2531,27 +2552,27 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 return null
             }
             logger.info("找到 JADX 工具: $jadxPath")
-            
+
             val smaliPath = Smali.locate()
             if (smaliPath == null) {
                 logger.warn("smali 工具未找到，尝试使用完整 DEX 文件反编译")
                 // 回退到使用完整 DEX 文件的方式
                 return tryDecompileWithFullDex(smaliFile)
             }
-            
+
             logger.info("找到 smali 工具: $smaliPath，使用单个文件编译方式")
-            
+
             // 计算 smali 文件对应的类名
             val className = extractClassNameFromSmaliPath(smaliFile.absolutePath)
             if (className == null) {
                 logger.debug("无法从 smali 路径提取类名: ${smaliFile.absolutePath}")
                 return null
             }
-            
+
             // 创建临时目录
             val tempDir = Files.createTempDirectory("smali_to_java_").toFile()
             tempDir.deleteOnExit()
-            
+
             // 步骤1: 使用 smali 工具将单个 smali 文件编译成 DEX
             val tempDexFile = File(tempDir, "classes.dex")
             logger.info("编译 smali 文件为 DEX: ${smaliFile.absolutePath} -> ${tempDexFile.absolutePath}")
@@ -2560,9 +2581,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             System.out.println("smali 工具: $smaliPath")
             System.out.println("输入文件: ${smaliFile.absolutePath}")
             System.out.println("输出文件: ${tempDexFile.absolutePath}")
-            
+
             val assembleResult = Smali.assemble(smaliFile, tempDexFile)
-            
+
             if (assembleResult.status != Smali.Status.SUCCESS) {
                 logger.error("smali 编译失败 (status=${assembleResult.status}, exitCode=${assembleResult.exitCode})")
                 logger.error("smali 编译错误输出: ${assembleResult.output}")
@@ -2573,7 +2594,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 tempDir.deleteRecursively()
                 return null
             }
-            
+
             if (!tempDexFile.exists()) {
                 logger.error("smali 编译完成但 DEX 文件不存在: ${tempDexFile.absolutePath}")
                 System.err.println("=== SMALI 编译完成但文件不存在 ===")
@@ -2581,21 +2602,21 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 tempDir.deleteRecursively()
                 return null
             }
-            
+
             logger.info("smali 编译成功，DEX 文件大小: ${tempDexFile.length()} 字节")
             System.out.println("✓ smali 编译成功，DEX 文件: ${tempDexFile.absolutePath} (${tempDexFile.length()} 字节)")
-            
+
             // 步骤2: 使用 JADX 反编译 DEX 文件
             val jadxOutputDir = File(tempDir, "jadx_output")
             logger.debug("使用 JADX 反编译 DEX: ${tempDexFile.absolutePath} -> ${jadxOutputDir.absolutePath}")
             val decompileResult = Jadx.decompile(tempDexFile, jadxOutputDir)
-            
+
             if (decompileResult.status != Jadx.Status.SUCCESS) {
                 logger.warn("JADX 反编译失败: ${decompileResult.output}")
                 tempDir.deleteRecursively()
                 return null
             }
-            
+
             // 步骤3: 查找对应的 Java 文件
             val javaRelativePath = className.replace(".", "/") + ".java"
             val possibleJavaPaths = listOf(
@@ -2603,7 +2624,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 File(jadxOutputDir, javaRelativePath),
                 File(jadxOutputDir, "src/main/java/$javaRelativePath"),
             )
-            
+
             for (javaFile in possibleJavaPaths) {
                 if (javaFile.exists() && javaFile.isFile) {
                     val content = Files.readString(javaFile.toPath())
@@ -2612,24 +2633,24 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     return content
                 }
             }
-            
+
             logger.debug("反编译后的 Java 文件不存在，类名: $className")
             tempDir.deleteRecursively()
             return null
-            
+
         } catch (e: Exception) {
             logger.warn("使用 smali+jadx 实时反编译失败", e)
             return null
         }
     }
-    
+
     // 回退方案：使用完整 DEX 文件反编译（如果 smali 工具不可用）
     private fun tryDecompileWithFullDex(smaliFile: File): String? {
         try {
             // 尝试找到对应的 DEX 文件
             var currentDir = smaliFile.parentFile
             var dexFile: File? = null
-            
+
             while (currentDir != null) {
                 val parent = currentDir.parentFile
                 if (parent != null && (currentDir.name == "smali" || currentDir.name.startsWith("smali_"))) {
@@ -2645,25 +2666,25 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
                 currentDir = parent
             }
-            
+
             if (dexFile == null || !dexFile.exists()) {
                 return null
             }
-            
+
             val className = extractClassNameFromSmaliPath(smaliFile.absolutePath) ?: return null
-            
+
             val tempDir = Files.createTempDirectory("jadx_decompile_").toFile()
             tempDir.deleteOnExit()
-            
+
             val result = Jadx.decompile(dexFile, tempDir)
             if (result.status != Jadx.Status.SUCCESS) {
                 tempDir.deleteRecursively()
                 return null
             }
-            
+
             val javaRelativePath = className.replace(".", "/") + ".java"
             val javaFile = File(tempDir, "sources/$javaRelativePath")
-            
+
             if (!javaFile.exists()) {
                 val javaFile2 = File(tempDir, javaRelativePath)
                 if (javaFile2.exists()) {
@@ -2674,17 +2695,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 tempDir.deleteRecursively()
                 return null
             }
-            
+
             val content = Files.readString(javaFile.toPath())
             tempDir.deleteRecursively()
             return content
-            
+
         } catch (e: Exception) {
             logger.warn("使用完整 DEX 反编译失败", e)
             return null
         }
     }
-    
+
     // 从 smali 文件路径提取类名
     private fun extractClassNameFromSmaliPath(smaliPath: String): String? {
         try {
@@ -2699,7 +2720,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             return null
         }
     }
-    
+
     // 移除 Smali 底部视图标签
     private fun removeSmaliViewTabs() {
         if (smaliViewTabs != null) {
@@ -2733,23 +2754,23 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             repaint()
         }
     }
-    
+
     // 打开压缩包文件（XAPK、AAB、AAR）
     private fun openArchiveFile(file: File) {
         try {
             // 创建压缩包浏览器视图
             val archiveView = createArchiveView(file)
-            
+
             // 创建一个包装面板来容纳压缩包视图
             val contentPanel = JPanel(BorderLayout()).apply {
                 isOpaque = false
                 border = BorderFactory.createEmptyBorder()
                 add(archiveView, BorderLayout.CENTER)
             }
-            
+
             val title = file.name
             tabbedPane.addTab(title, resolveTabIcon(file), contentPanel, null)
-            
+
             val index = tabbedPane.tabCount - 1
             fileToTab[file] = index
             tabToFile[index] = file
@@ -2758,16 +2779,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             tabbedPane.setTabComponentAt(index, closeButton)
             attachPopupToHeader(closeButton)
             tabbedPane.selectedIndex = index
-            
+
             mainWindow.statusBar.setFileInfo(file.name, Files.size(file.toPath()).toString() + " B")
             updateNavigation(file)
-            
+
         } catch (e: Exception) {
             logger.error("打开压缩包文件失败", e)
             mainWindow.statusBar.showError("无法打开压缩包: ${e.message}")
         }
     }
-    
+
     // 创建压缩包浏览器视图
     private fun createArchiveView(archiveFile: File): JPanel {
         val treeModel = DefaultTreeModel(DefaultMutableTreeNode("加载中..."))
@@ -2787,13 +2808,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 }
             })
         }
-        
+
         val infoLabel = JLabel().apply {
             border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
             font = font.deriveFont(Font.PLAIN, 11f)
             foreground = Color.GRAY
         }
-        
+
         val panel = JPanel(BorderLayout()).apply {
             val scrollPane = JScrollPane(fileTree).apply {
                 border = BorderFactory.createEmptyBorder()
@@ -2801,7 +2822,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             add(scrollPane, BorderLayout.CENTER)
             add(infoLabel, BorderLayout.SOUTH)
         }
-        
+
         // 异步加载压缩包内容
         Thread {
             try {
@@ -2809,16 +2830,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 val rootNode = DefaultMutableTreeNode(archiveFile.name)
                 val entries = zipFile.entries().toList()
                 val entryMap = mutableMapOf<String, DefaultMutableTreeNode>()
-                
+
                 entries.forEach { entry ->
                     val parts = entry.name.split("/").filter { it.isNotEmpty() }
                     var currentPath = ""
                     var parentNode = rootNode
-                    
+
                     parts.forEachIndexed { index, part ->
                         currentPath += if (currentPath.isEmpty()) part else "/$part"
                         val isDirectory = index < parts.size - 1 || entry.name.endsWith("/")
-                        
+
                         val node = entryMap.getOrPut(currentPath) {
                             val newNode = DefaultMutableTreeNode(entry)
                             parentNode.add(newNode)
@@ -2827,13 +2848,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         parentNode = node
                     }
                 }
-                
+
                 SwingUtilities.invokeLater {
                     treeModel.setRoot(rootNode)
                     fileTree.expandRow(0)
                     infoLabel.text = "共 ${entries.size} 个文件/目录"
                 }
-                
+
                 zipFile.close()
             } catch (e: Exception) {
                 SwingUtilities.invokeLater {
@@ -2846,17 +2867,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             isDaemon = true
             start()
         }
-        
+
         return panel
     }
-    
+
     // 打开压缩包中的文件条目
     private fun openZipEntry(archiveFile: File, entry: ZipEntry) {
         Thread {
             try {
                 val zipFile = ZipFile(archiveFile)
                 val zipEntry = zipFile.getEntry(entry.name) ?: return@Thread
-                
+
                 val inputStream = zipFile.getInputStream(zipEntry)
                 val content = try {
                     inputStream.bufferedReader().use { it.readText() }
@@ -2865,12 +2886,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     "// 二进制文件，无法以文本形式显示\n// 文件大小: ${zipEntry.size} 字节"
                 }
                 zipFile.close()
-                
+
                 // 创建临时文件并打开
                 val tempFile = File.createTempFile("archive_", "_${entry.name.split("/").last()}")
                 tempFile.writeText(content)
                 tempFile.deleteOnExit()
-                
+
                 SwingUtilities.invokeLater {
                     openFile(tempFile)
                 }
@@ -2902,7 +2923,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 component.topSlot.remove(navigationBar)
             }
         }
-        
+
         // 将导航栏添加到当前选中的标签页的 topSlot 中
         val selectedIndex = tabbedPane.selectedIndex
         if (selectedIndex >= 0) {

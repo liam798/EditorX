@@ -5,8 +5,7 @@ import editorx.core.i18n.I18n
 import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginState
-import editorx.gui.core.ShortcutRegistry.registerCustomShortcut
-import editorx.gui.core.ShortcutRegistry.registerDoubleShortcut
+import editorx.gui.core.ShortcutRegistry
 import editorx.gui.main.editor.Editor
 import editorx.gui.main.explorer.Explorer
 import editorx.gui.main.menubar.MenuBar
@@ -82,21 +81,67 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
      */
     private fun setupShortcuts() {
         // 双击 Shift - 全局搜索
-        registerDoubleShortcut(
+        ShortcutRegistry.registerDoubleShortcut(
             id = "global.search",
             keyCode = KeyEvent.VK_SHIFT,
+            nameKey = I18nKeys.Action.GLOBAL_SEARCH,
             descriptionKey = I18nKeys.Shortcut.GLOBAL_SEARCH,
             action = { showGlobalSearch() }
         )
 
         // Command+, - 打开设置
         val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
-        registerCustomShortcut(
+        ShortcutRegistry.registerShortcut(
             id = "global.settings",
             keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask),
-            descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS,
-            action = { showSettings() }
-        )
+            nameKey = I18nKeys.Toolbar.SETTINGS,
+            descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS
+        ) {
+            showSettings()
+        }
+
+        // Command+N - 新建文件
+        ShortcutRegistry.registerShortcut(
+            id = "editor.newFile",
+            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, shortcutMask),
+            nameKey = I18nKeys.Action.NEW_FILE,
+            descriptionKey = I18nKeys.Action.NEW_FILE // 新建文件没有单独的描述，使用名称
+        ) {
+            editor.newUntitledFile()
+        }
+
+        // Command+W - 关闭当前标签页
+        ShortcutRegistry.registerShortcut(
+            id = "editor.closeTab",
+            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_W, shortcutMask),
+            nameKey = I18nKeys.Action.CLOSE,
+            descriptionKey = I18nKeys.Shortcut.CLOSE_TAB
+        ) {
+            // 检查焦点是否在 editor 上
+            val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+            if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, editor)) {
+                editor.closeCurrentTab()
+            }
+        }
+
+        // Option+Command+L (macOS) 或 Alt+Ctrl+L (其他系统) - 格式化文件
+        val formatShortcutMask = if (System.getProperty("os.name").lowercase().contains("mac")) {
+            java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.META_DOWN_MASK
+        } else {
+            java.awt.event.InputEvent.ALT_DOWN_MASK or java.awt.event.InputEvent.CTRL_DOWN_MASK
+        }
+        ShortcutRegistry.registerShortcut(
+            id = "editor.formatFile",
+            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_L, formatShortcutMask),
+            nameKey = I18nKeys.Action.FORMAT_FILE,
+            descriptionKey = I18nKeys.Shortcut.FORMAT_FILE
+        ) {
+            // 检查焦点是否在 editor 上
+            val focusOwner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+            if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, editor)) {
+                editor.formatCurrentFile()
+            }
+        }
     }
 
     private fun setupWindow() {

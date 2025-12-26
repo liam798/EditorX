@@ -1,7 +1,6 @@
 package editorx.gui.core
 
 import editorx.core.i18n.I18n
-import editorx.core.i18n.I18nKeys
 import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.KeyEvent
@@ -20,9 +19,16 @@ object ShortcutRegistry {
     data class ShortcutBinding(
         val id: String,
         val keyStroke: KeyStroke,
-        val descriptionKey: String, // i18n 翻译 key
+        val nameKey: String, // i18n 翻译 key，用于功能名称
+        val descriptionKey: String, // i18n 翻译 key，用于描述文本
         val dispatcher: KeyEventDispatcher
     ) {
+        /**
+         * 获取已翻译的功能名称
+         */
+        val displayName: String
+            get() = I18n.translate(nameKey)
+
         /**
          * 获取已翻译的描述文本
          */
@@ -35,45 +41,16 @@ object ShortcutRegistry {
     private val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
 
     /**
-     * 设置默认快捷键
-     *
-     * @param onGlobalSearch 全局搜索回调
-     * @param onOpenSettings 打开设置回调
-     */
-    fun setupDefaultShortcuts(
-        onGlobalSearch: () -> Unit,
-        onOpenSettings: () -> Unit
-    ) {
-        // 双击 Shift - 全局搜索
-        registerDoubleShortcut(
-            id = "global.search",
-            keyCode = KeyEvent.VK_SHIFT,
-            descriptionKey = I18nKeys.Shortcut.GLOBAL_SEARCH,
-            action = onGlobalSearch
-        )
-
-        // Command+, - 打开设置
-        val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
-        registerCustomShortcut(
-            id = "global.settings",
-            keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, shortcutMask),
-            descriptionKey = I18nKeys.Shortcut.OPEN_SETTINGS
-        ) {
-            onOpenSettings()
-        }
-    }
-
-    // -----------------------------------------------------------------------------
-
-    /**
      * 注册全局快捷键（使用 KeyboardFocusManager）
      * 适用于需要在任何焦点状态下都能触发的快捷键
      *
-     * @param descriptionKey i18n 翻译 key，用于获取描述文本
+     * @param nameKey i18n 翻译 key，用于功能名称
+     * @param descriptionKey i18n 翻译 key，用于描述文本
      */
-    fun registerCustomShortcut(
+    fun registerShortcut(
         id: String,
         keyStroke: KeyStroke,
+        nameKey: String,
         descriptionKey: String,
         action: () -> Unit
     ) {
@@ -101,14 +78,24 @@ object ShortcutRegistry {
             ) {
                 val actualModifiers = e.modifiersEx
 
-                // 检查期望的修饰键是否都被按下，且没有其他修饰键
-                if ((actualModifiers and expectedModifiersEx) == expectedModifiersEx &&
-                    (actualModifiers and expectedModifiersEx.inv()) == 0
-                ) {
-                    javax.swing.SwingUtilities.invokeLater { action() }
-                    true // 消费事件
+                // 检查期望的修饰键是否都被按下
+                // 只检查期望的修饰键是否都按下，允许其他修饰键存在（更宽松的匹配）
+                if (expectedModifiersEx == 0) {
+                    // 如果没有修饰键要求，检查是否真的没有修饰键
+                    if (actualModifiers == 0) {
+                        javax.swing.SwingUtilities.invokeLater { action() }
+                        true // 消费事件
+                    } else {
+                        false
+                    }
                 } else {
-                    false
+                    // 检查期望的修饰键是否都被按下
+                    if ((actualModifiers and expectedModifiersEx) == expectedModifiersEx) {
+                        javax.swing.SwingUtilities.invokeLater { action() }
+                        true // 消费事件
+                    } else {
+                        false
+                    }
                 }
             } else {
                 false
@@ -116,48 +103,7 @@ object ShortcutRegistry {
         }
 
         focusManager.addKeyEventDispatcher(dispatcher)
-        globalBindings[id] = ShortcutBinding(id, keyStroke, descriptionKey, dispatcher)
-    }
-
-    /**
-     * 将旧的修饰键掩码转换为扩展修饰键掩码
-     */
-    private fun convertToExtendedModifiers(oldModifiers: Int): Int {
-        var extended = 0
-        if ((oldModifiers and java.awt.event.InputEvent.SHIFT_MASK) != 0) {
-            extended = extended or java.awt.event.InputEvent.SHIFT_DOWN_MASK
-        }
-        if ((oldModifiers and java.awt.event.InputEvent.CTRL_MASK) != 0) {
-            extended = extended or java.awt.event.InputEvent.CTRL_DOWN_MASK
-        }
-        if ((oldModifiers and java.awt.event.InputEvent.ALT_MASK) != 0) {
-            extended = extended or java.awt.event.InputEvent.ALT_DOWN_MASK
-        }
-        if ((oldModifiers and java.awt.event.InputEvent.META_MASK) != 0) {
-            extended = extended or java.awt.event.InputEvent.META_DOWN_MASK
-        }
-        return extended
-    }
-
-    /**
-     * 注册特殊的全局快捷键（如双击 Shift）
-     * 使用自定义的 KeyEventDispatcher 逻辑
-     *
-     * @param descriptionKey i18n 翻译 key，用于获取描述文本
-     */
-    fun registerCustomShortcut(
-        id: String,
-        keyStroke: KeyStroke,
-        descriptionKey: String,
-        dispatcher: KeyEventDispatcher
-    ) {
-        // 检查是否已注册
-        if (globalBindings.containsKey(id)) {
-            unregisterShortcut(id)
-        }
-
-        focusManager.addKeyEventDispatcher(dispatcher)
-        globalBindings[id] = ShortcutBinding(id, keyStroke, descriptionKey, dispatcher)
+        globalBindings[id] = ShortcutBinding(id, keyStroke, nameKey, descriptionKey, dispatcher)
     }
 
     /**
@@ -165,13 +111,15 @@ object ShortcutRegistry {
      *
      * @param id 快捷键 ID
      * @param keyCode 要检测的键码（如 KeyEvent.VK_SHIFT）
-     * @param descriptionKey i18n 翻译 key
+     * @param nameKey i18n 翻译 key，用于功能名称
+     * @param descriptionKey i18n 翻译 key，用于描述文本
      * @param interval 双击间隔时间（毫秒），默认 500ms
      * @param action 双击时的回调
      */
     fun registerDoubleShortcut(
         id: String,
         keyCode: Int,
+        nameKey: String,
         descriptionKey: String,
         interval: Long = 500L,
         action: () -> Unit
@@ -185,7 +133,7 @@ object ShortcutRegistry {
                 val timeSinceLastPress = currentTime - lastPressTime
 
                 // 如果两次按下间隔在指定时间内，视为双击
-                if (timeSinceLastPress > 0 && timeSinceLastPress < interval) {
+                if (timeSinceLastPress in 1..<interval) {
                     // 触发双击回调
                     SwingUtilities.invokeLater { action() }
                     lastPressTime = 0 // 重置，避免连续触发
@@ -205,11 +153,35 @@ object ShortcutRegistry {
         registerCustomShortcut(
             id = id,
             keyStroke = doubleKeyStroke,
+            nameKey = nameKey,
             descriptionKey = descriptionKey,
             dispatcher = dispatcher
         )
     }
 
+
+    /**
+     * 注册特殊的全局快捷键（如双击 Shift）
+     * 使用自定义的 KeyEventDispatcher 逻辑
+     *
+     * @param nameKey i18n 翻译 key，用于功能名称
+     * @param descriptionKey i18n 翻译 key，用于描述文本
+     */
+    fun registerCustomShortcut(
+        id: String,
+        keyStroke: KeyStroke,
+        nameKey: String,
+        descriptionKey: String,
+        dispatcher: KeyEventDispatcher
+    ) {
+        // 检查是否已注册
+        if (globalBindings.containsKey(id)) {
+            unregisterShortcut(id)
+        }
+
+        focusManager.addKeyEventDispatcher(dispatcher)
+        globalBindings[id] = ShortcutBinding(id, keyStroke, nameKey, descriptionKey, dispatcher)
+    }
 
     /**
      * 注销全局快捷键
@@ -239,6 +211,26 @@ object ShortcutRegistry {
      */
     fun getShortcut(id: String): ShortcutBinding? {
         return globalBindings[id]
+    }
+
+    /**
+     * 将旧的修饰键掩码转换为扩展修饰键掩码
+     */
+    private fun convertToExtendedModifiers(oldModifiers: Int): Int {
+        var extended = 0
+        if ((oldModifiers and java.awt.event.InputEvent.SHIFT_MASK) != 0) {
+            extended = extended or java.awt.event.InputEvent.SHIFT_DOWN_MASK
+        }
+        if ((oldModifiers and java.awt.event.InputEvent.CTRL_MASK) != 0) {
+            extended = extended or java.awt.event.InputEvent.CTRL_DOWN_MASK
+        }
+        if ((oldModifiers and java.awt.event.InputEvent.ALT_MASK) != 0) {
+            extended = extended or java.awt.event.InputEvent.ALT_DOWN_MASK
+        }
+        if ((oldModifiers and java.awt.event.InputEvent.META_MASK) != 0) {
+            extended = extended or java.awt.event.InputEvent.META_DOWN_MASK
+        }
+        return extended
     }
 }
 

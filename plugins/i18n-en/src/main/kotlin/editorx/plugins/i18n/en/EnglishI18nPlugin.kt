@@ -61,7 +61,7 @@ private val dictionary = buildMap {
     put(I18nKeys.Settings.KEYMAP, "Keymap")
     put(I18nKeys.Settings.PLUGINS, "Plugins")
     put(I18nKeys.Settings.CACHE, "Cache")
-    put(I18nKeys.Settings.KEYMAP_TITLE, "Keymap (Planned)")
+    put(I18nKeys.Settings.KEYMAP_TITLE, "Keymap")
     put(I18nKeys.Settings.KEYMAP_HINT, "<html>Current list shows default shortcuts. Customization/export is under planning.</html>")
     put(I18nKeys.Settings.ADD_NOTE, "Add Note…")
     put(I18nKeys.Settings.ADD_NOTE_TOOLTIP, "Shortcut customization is under development")
