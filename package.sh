@@ -182,6 +182,121 @@ create_distribution() {
     info "  - $zip_file"
 }
 
+# 生成 macOS .app（可选）
+create_macos_app() {
+    # 仅在 macOS 上执行
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        warn "当前系统非 macOS，跳过 .app 生成"
+        return 0
+    fi
+
+    info "生成 macOS .app（jpackage）..."
+
+    if ! command -v jpackage &> /dev/null; then
+        error "未找到 jpackage，请安装包含 jpackage 的 JDK（或将 jpackage 加入 PATH）"
+    fi
+
+    local install_dir="gui/build/install/gui"
+    if [ ! -d "$install_dir" ]; then
+        error "安装目录不存在: $install_dir"
+    fi
+
+    local jpackage_dir="gui/build/jpackage"
+    local input_dir="$jpackage_dir/input"
+    local iconset_dir="$jpackage_dir/EditorX.iconset"
+    local icns_file="$jpackage_dir/EditorX.icns"
+    local out_dir="gui/build/distributions"
+
+    rm -rf "$jpackage_dir"
+    mkdir -p "$input_dir"
+
+    # 拷贝应用依赖（lib/*.jar -> input/）
+    cp "$install_dir/lib/"*.jar "$input_dir/"
+
+    # 拷贝插件（plugins/*.jar -> input/plugins/）
+    if [ -d "$install_dir/plugins" ]; then
+        mkdir -p "$input_dir/plugins"
+        cp "$install_dir/plugins/"*.jar "$input_dir/plugins/" 2>/dev/null || true
+    fi
+
+    # 生成 icns 图标
+    local icon_src="gui/src/main/resources/icon.png"
+    if [ ! -f "$icon_src" ]; then
+        warn "未找到 $icon_src，跳过 --icon（.app 将使用默认图标）"
+        icns_file=""
+    else
+        rm -rf "$iconset_dir"
+        mkdir -p "$iconset_dir"
+
+        # iconutil 需要固定命名（icon_16x16.png 等）
+        # 说明：源图当前为 500x500，会按需缩放生成各尺寸。
+        sips -z 16 16   "$icon_src" --out "$iconset_dir/icon_16x16.png"       >/dev/null 2>&1
+        sips -z 32 32   "$icon_src" --out "$iconset_dir/icon_16x16@2x.png"    >/dev/null 2>&1
+        sips -z 32 32   "$icon_src" --out "$iconset_dir/icon_32x32.png"       >/dev/null 2>&1
+        sips -z 64 64   "$icon_src" --out "$iconset_dir/icon_32x32@2x.png"    >/dev/null 2>&1
+        sips -z 128 128 "$icon_src" --out "$iconset_dir/icon_128x128.png"     >/dev/null 2>&1
+        sips -z 256 256 "$icon_src" --out "$iconset_dir/icon_128x128@2x.png"  >/dev/null 2>&1
+        sips -z 256 256 "$icon_src" --out "$iconset_dir/icon_256x256.png"     >/dev/null 2>&1
+        sips -z 512 512 "$icon_src" --out "$iconset_dir/icon_256x256@2x.png"  >/dev/null 2>&1
+        sips -z 512 512 "$icon_src" --out "$iconset_dir/icon_512x512.png"     >/dev/null 2>&1
+        sips -z 1024 1024 "$icon_src" --out "$iconset_dir/icon_512x512@2x.png" >/dev/null 2>&1
+
+        if command -v iconutil &> /dev/null; then
+            iconutil -c icns "$iconset_dir" -o "$icns_file" >/dev/null 2>&1 || true
+        else
+            warn "未找到 iconutil，跳过生成 .icns（.app 将使用默认图标）"
+            icns_file=""
+        fi
+    fi
+
+    # 使用当前 java.home 作为 runtime-image（确保能运行当前编译产物）
+    local runtime_home
+    runtime_home=$(java -XshowSettings:properties -version 2>&1 | awk -F' = ' '/java.home =/ {print $2; exit}' | tr -d '\r')
+    if [ -z "$runtime_home" ] || [ ! -x "$runtime_home/bin/java" ]; then
+        error "无法解析 java.home 或找到 $runtime_home/bin/java；请确保 PATH 中的 java 可用"
+    fi
+
+    # 清理旧的 .app
+    rm -rf "$out_dir/EditorX.app"
+
+    # 生成 app-image（.app）
+    local jpackage_args=(
+        --type app-image
+        --name "EditorX"
+        --dest "$out_dir"
+        --input "$input_dir"
+        --main-jar "gui.jar"
+        --main-class "editorx.gui.GuiAppKt"
+        --runtime-image "$runtime_home"
+    )
+    if [ -n "$VERSION" ]; then
+        jpackage_args+=( --app-version "$VERSION" )
+    fi
+    if [ -n "$icns_file" ] && [ -f "$icns_file" ]; then
+        jpackage_args+=( --icon "$icns_file" )
+    fi
+
+    jpackage "${jpackage_args[@]}"
+
+    if [ ! -d "$out_dir/EditorX.app" ]; then
+        error ".app 生成失败：$out_dir/EditorX.app"
+    fi
+
+    # 生成可分发的 zip（macOS 推荐用 ditto 保留资源 fork）
+    local app_zip="$out_dir/EditorX-macOS.app.zip"
+    rm -f "$app_zip"
+    if command -v ditto &> /dev/null; then
+        (cd "$out_dir" && ditto -c -k --sequesterRsrc --keepParent "EditorX.app" "$(basename "$app_zip")")
+    else
+        warn "未找到 ditto，回退到 zip -r 打包 .app（可能丢失部分元数据）"
+        (cd "$out_dir" && zip -r "$(basename "$app_zip")" "EditorX.app" > /dev/null 2>&1)
+    fi
+
+    info "macOS 产物已生成："
+    info "  - $out_dir/EditorX.app"
+    info "  - $app_zip"
+}
+
 # 创建发布目录
 create_release_dir() {
     local version=${1:-"dev"}
@@ -190,8 +305,12 @@ create_release_dir() {
     info "创建发布目录: $release_dir"
     mkdir -p "$release_dir"
     
-    # 复制分发包（只复制 zip）
+    # 复制分发包（zip）
     cp gui/build/distributions/gui.zip "$release_dir/"
+    # 若存在 macOS .app zip，也一并复制（可选）
+    if [ -f "gui/build/distributions/EditorX-macOS.app.zip" ]; then
+        cp "gui/build/distributions/EditorX-macOS.app.zip" "$release_dir/"
+    fi
     
     # 获取版本信息（如果可能）
     if command -v git &> /dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
@@ -221,12 +340,14 @@ EditorX 打包脚本
     -v, --version VERSION    指定版本号（用于发布目录命名）
     -c, --clean               清理构建（默认会清理）
     -b, --build-only          仅构建，不创建分发包
+    --mac-app                 额外生成 macOS .app（需要 macOS + jpackage）
     -h, --help                显示此帮助信息
 
 示例:
     $0                        # 标准打包
     $0 -v 1.0.0              # 指定版本号打包
     $0 -b                    # 仅构建，不创建分发包
+    $0 --mac-app             # 标准打包 + 生成 macOS .app
     $0 --clean               # 清理并打包
 
 EOF
@@ -236,6 +357,7 @@ EOF
 VERSION=""
 CLEAN=true
 BUILD_ONLY=false
+MAC_APP=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -249,6 +371,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -b|--build-only)
             BUILD_ONLY=true
+            shift
+            ;;
+        --mac-app)
+            MAC_APP=true
             shift
             ;;
         -h|--help)
@@ -275,6 +401,10 @@ main() {
     
     if [ "$BUILD_ONLY" = false ]; then
         create_distribution
+
+        if [ "$MAC_APP" = true ]; then
+            create_macos_app
+        fi
         
         if [ -n "$VERSION" ]; then
             create_release_dir "$VERSION"
@@ -286,4 +416,3 @@ main() {
 
 # 执行主流程
 main
-

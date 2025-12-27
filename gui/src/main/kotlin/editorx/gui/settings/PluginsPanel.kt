@@ -7,13 +7,13 @@ import editorx.core.plugin.PluginOrigin
 import editorx.core.plugin.PluginSnapshot
 import editorx.core.plugin.PluginState
 import editorx.core.plugin.loader.DuplexPluginLoader
+import editorx.core.util.AppPaths
 import editorx.core.util.Store
 import editorx.gui.theme.ThemeManager
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.*
 import javax.swing.*
@@ -507,7 +507,7 @@ class PluginsPanel(
             return
         }
 
-        val pluginDir = Path.of("plugins")
+        val pluginDir = AppPaths.pluginsDir()
         runCatching { Files.createDirectories(pluginDir) }
 
         val target = pluginDir.resolve(selected.name)
@@ -551,7 +551,7 @@ class PluginsPanel(
     }
 
     private fun openPluginDir() {
-        val dir = Path.of("plugins").toFile()
+        val dir = AppPaths.pluginsDir().toFile()
         if (!dir.exists()) dir.mkdirs()
         val parent = SwingUtilities.getWindowAncestor(this)
         runCatching {
