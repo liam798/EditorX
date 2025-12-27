@@ -5,7 +5,6 @@ import editorx.core.i18n.I18n
 import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.*
 import editorx.core.service.BuildService
-import editorx.core.util.IconLoader
 import editorx.core.util.IconRef
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -19,8 +18,6 @@ import javax.swing.Timer
 class AndroidPlugin : Plugin {
     companion object {
         private val logger = LoggerFactory.getLogger(AndroidPlugin::class.java)
-        private const val ICON_SIZE = 14
-        private val BUILD_PROVIDER_CLASS: Class<BuildService> = BuildService::class.java
     }
 
     override fun getInfo() = PluginInfo(
@@ -39,20 +36,14 @@ class AndroidPlugin : Plugin {
 
         // 创建并注册 BuildProvider 服务
         buildProvider = ApkBuildService()
-        pluginContext.registerService(BUILD_PROVIDER_CLASS, buildProvider!!)
+        pluginContext.registerService(BuildService::class.java, buildProvider!!)
 
         val gui = pluginContext.gui() ?: return
 
         // 注册 AndroidManifest.xml 跳转按钮
         gui.addToolBarItem(
             id = "android.manifest",
-            icon = IconLoader.getIcon(
-                IconRef("icons/gui/android-manifest.svg"),
-                ICON_SIZE,
-                adaptToTheme = true,
-                getThemeColor = { gui.getThemeTextColor() },
-                getDisabledColor = { gui.getThemeDisabledTextColor() }
-            ),
+            iconRef = IconRef("icons/android-manifest.svg", AndroidPlugin::class.java.classLoader),
             text = I18n.translate(I18nKeys.Toolbar.GOTO_MANIFEST),
             action = {
                 navigateToAndroidManifest(gui)
@@ -62,13 +53,7 @@ class AndroidPlugin : Plugin {
         // 注册 MainActivity 跳转按钮
         gui.addToolBarItem(
             id = "android.mainactivity",
-            icon = IconLoader.getIcon(
-                IconRef("icons/gui/main-activity.svg"),
-                ICON_SIZE,
-                adaptToTheme = true,
-                getThemeColor = { gui.getThemeTextColor() },
-                getDisabledColor = { gui.getThemeDisabledTextColor() }
-            ),
+            iconRef = IconRef("icons/android-main-activity.svg", AndroidPlugin::class.java.classLoader),
             text = I18n.translate(I18nKeys.Toolbar.GOTO_MAIN_ACTIVITY),
             action = {
                 navigateToMainActivity(gui)
@@ -78,13 +63,7 @@ class AndroidPlugin : Plugin {
         // 注册 Application 跳转按钮
         gui.addToolBarItem(
             id = "android.application",
-            icon = IconLoader.getIcon(
-                IconRef("icons/gui/application.svg"),
-                ICON_SIZE,
-                adaptToTheme = true,
-                getThemeColor = { gui.getThemeTextColor() },
-                getDisabledColor = { gui.getThemeDisabledTextColor() }
-            ),
+            iconRef = IconRef("icons/android-application.svg", AndroidPlugin::class.java.classLoader),
             text = I18n.translate(I18nKeys.Toolbar.GOTO_APPLICATION),
             action = {
                 navigateToApplication(gui)
@@ -104,7 +83,7 @@ class AndroidPlugin : Plugin {
     override fun deactivate() {
         // 取消注册 BuildProvider 服务
         buildProvider?.let { provider ->
-            pluginContext?.unregisterService(BUILD_PROVIDER_CLASS, provider)
+            pluginContext?.unregisterService(BuildService::class.java, provider)
         }
         buildProvider = null
 

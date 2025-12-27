@@ -237,7 +237,7 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
 
     private fun getSideBarIcon(): Icon? {
         val isVisible = mainWindow.sideBar.isSideBarVisible()
-        val iconName = if (isVisible) "icons/gui/layout-sidebar-left.svg" else "icons/gui/layout-sidebar-left-off.svg"
+        val iconName = if (isVisible) "icons/common/layout-sidebar-left.svg" else "icons/common/layout-sidebar-left-off.svg"
         return IconLoader.getIcon(
             IconRef(iconName), 
             ICON_SIZE,

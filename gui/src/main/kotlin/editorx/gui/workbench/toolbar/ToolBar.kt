@@ -1,5 +1,7 @@
 package editorx.gui.workbench.toolbar
 
+import editorx.core.util.IconLoader
+import editorx.core.util.IconRef
 import editorx.gui.theme.ThemeManager
 import editorx.gui.MainWindow
 import org.slf4j.LoggerFactory
@@ -44,14 +46,25 @@ class ToolBar(private val mainWindow: MainWindow) : JPanel() {
      * 添加 ToolBar 按钮
      * @param pluginId 插件 ID
      * @param id 按钮的唯一标识符
-     * @param icon 按钮图标
+     * @param iconRef 图标引用（图标尺寸由 ToolBar 统一设置）
      * @param text 按钮文本
      * @param action 按钮点击时的动作
      */
-    fun addItem(pluginId: String, id: String, icon: Icon?, text: String, action: () -> Unit) {
+    fun addItem(pluginId: String, id: String, iconRef: IconRef?, text: String, action: () -> Unit) {
         // 如果已存在相同 ID 的按钮，先移除
         if (itemOrder.contains(id)) {
             removeItem(pluginId, id)
+        }
+
+        // 统一加载图标并设置尺寸，支持主题适配
+        val icon = iconRef?.let {
+            IconLoader.getIcon(
+                it,
+                ICON_SIZE,
+                adaptToTheme = true,
+                getThemeColor = { ThemeManager.currentTheme.onSurface },
+                getDisabledColor = { ThemeManager.currentTheme.onSurfaceVariant }
+            )
         }
 
         val button = buildToolBarItem(icon, text, action)

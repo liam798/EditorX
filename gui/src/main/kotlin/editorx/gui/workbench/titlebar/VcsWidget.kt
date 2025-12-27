@@ -159,7 +159,7 @@ class VcsWidget(private val workspace: Workspace) : JPanel() {
         return try {
             // 尝试从主资源加载，使用主题自适应
             IconLoader.getIcon(
-                IconRef("icons/gui/git-branch.svg"), 
+                IconRef("icons/common/git-branch.svg"),
                 12,
                 adaptToTheme = true,
                 getThemeColor = { ThemeManager.currentTheme.onSurface }

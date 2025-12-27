@@ -5,9 +5,9 @@ import editorx.core.filetype.Formatter
 import editorx.core.filetype.Language
 import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.plugin.FileHandler
+import editorx.core.util.IconRef
 import java.awt.Color
 import java.io.File
-import javax.swing.Icon
 
 interface GuiExtension {
 
@@ -49,11 +49,11 @@ interface GuiExtension {
     /**
      * 在 ToolBar 添加一个快捷按钮
      * @param id 按钮的唯一标识符
-     * @param icon 按钮图标
+     * @param iconRef 图标引用（图标尺寸由 ToolBar 统一设置）
      * @param text 按钮文本
      * @param action 按钮点击时的动作
      */
-    fun addToolBarItem(id: String, icon: Icon?, text: String, action: () -> Unit)
+    fun addToolBarItem(id: String, iconRef: IconRef?, text: String, action: () -> Unit)
 
     /**
      * 设置 ToolBar 按钮的启用/禁用状态

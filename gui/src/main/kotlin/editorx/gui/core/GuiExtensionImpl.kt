@@ -7,10 +7,10 @@ import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.gui.GuiContext
 import editorx.core.plugin.FileHandler
 import editorx.core.gui.GuiExtension
+import editorx.core.util.IconRef
 import editorx.gui.MainWindow
 import editorx.gui.theme.ThemeManager
 import java.io.File
-import javax.swing.Icon
 
 class GuiExtensionImpl(
     private val pluginId: String,
@@ -50,8 +50,8 @@ class GuiExtensionImpl(
         mainWindow?.statusBar?.hideProgress()
     }
 
-    override fun addToolBarItem(id: String, icon: Icon?, text: String, action: () -> Unit) {
-        mainWindow?.toolBar?.addItem(pluginId, id, icon, text, action)
+    override fun addToolBarItem(id: String, iconRef: IconRef?, text: String, action: () -> Unit) {
+        mainWindow?.toolBar?.addItem(pluginId, id, iconRef, text, action)
     }
 
     override fun setToolBarItemEnabled(id: String, enabled: Boolean) {

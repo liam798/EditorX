@@ -152,7 +152,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         // 打开文件 按钮
         val openFileBtn = createActionButton(
             icon = IconLoader.getIcon(
-                IconRef("icons/common/anyType.svg"), 
+                IconRef("icons/filetype/anyType.svg"),
                 24,
                 adaptToTheme = false,
                 getThemeColor = { ThemeManager.currentTheme.onSurface }
@@ -167,7 +167,7 @@ class WelcomeView(private val mainWindow: MainWindow) : JPanel() {
         // 打开项目 按钮
         val openProjectBtn = createActionButton(
             icon = IconLoader.getIcon(
-                IconRef("icons/common/folder.svg"), 
+                IconRef("icons/filetype/folder.svg"),
                 24,
                 adaptToTheme = false,
                 getThemeColor = { ThemeManager.currentTheme.onSurface }

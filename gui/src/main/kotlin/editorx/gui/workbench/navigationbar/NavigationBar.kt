@@ -1,5 +1,7 @@
 package editorx.gui.workbench.navigationbar
 
+import editorx.core.i18n.I18n
+import editorx.core.i18n.I18nKeys
 import editorx.gui.MainWindow
 import editorx.gui.workbench.explorer.Explorer
 import editorx.gui.core.FileTypeManager
@@ -55,7 +57,7 @@ class NavigationBar(private val mainWindow: MainWindow) : JPanel() {
 
         removeAll()
         if (crumbs.isEmpty()) {
-            add(JLabel("未打开文件").apply { font = font.deriveFont(Font.PLAIN, 12f) })
+            add(JLabel(I18n.translate(I18nKeys.Navigation.NO_FILE_OPENED)).apply { font = font.deriveFont(Font.PLAIN, 12f) })
         } else {
             crumbs.forEachIndexed { index, crumb ->
                 add(createCrumbComponent(crumb))
