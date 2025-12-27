@@ -1,93 +1,108 @@
 # EditorX
 
-EditorX 是一个基于 Kotlin/JVM 的可扩展桌面编辑器，采用模块化与插件化架构，内置活动栏、侧边栏以及插件系统（源码插件与 JAR 插件）。插件体系参考了 PF4J 的思想，并结合本项目的 UI/交互做了精简实现。
+[![Kotlin](https://img.shields.io/badge/kotlin-2.1.x-blue.svg)](https://kotlinlang.org)
+[![JVM](https://img.shields.io/badge/JVM-21-orange.svg)](https://adoptium.net)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
-## 构建与运行
+EditorX 是一个基于 Kotlin/JVM 的可扩展桌面编辑器，采用模块化与插件化架构，支持源码插件和 JAR 插件的动态加载。插件系统参考了 PF4J 的设计思想，并结合本项目的 UI/交互做了精简实现。
 
-- 启动 GUI：`./gradlew :gui:run`
-- 构建所有模块：`./gradlew build`
+## ✨ 主要特性
 
-运行后会自动发现并加载：
-- 源码插件（同进程类路径）：使用 `ServiceLoader<editorx.core.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤。
-- JAR 插件（隔离类加载）：读取运行目录 `plugins/` 下的 JAR，优先使用 Manifest 的 `Main-Class` 作为插件主类；若缺失则回退扫描 JAR 内实现了 `Plugin` 的具体类。
+- 🔌 **插件化架构**：支持源码插件和 JAR 插件，支持动态加载、卸载和热插拔
+- 🌍 **国际化支持**：基于插件的多语言系统，支持运行时切换语言
+- 🎨 **现代化 UI**：基于 Swing + FlatLaf，提供 Material3 主题支持
+- 📝 **多标签页编辑器**：支持多文件同时编辑，支持语法高亮和代码格式化
+- 🗂️ **工作区管理**：支持工作区级别的文件管理和项目上下文
+- 🔧 **服务注册机制**：插件可注册服务供其他组件使用（如构建服务、反编译服务等）
 
-## 主要特性
+## 🚀 快速开始
 
-### 核心架构
-- **模块化设计**：`core`、`gui`、`icons`、`i18n-keys`、`plugins` 模块分离
-- **插件系统**：支持源码插件和JAR插件，自动类发现
-- **事件总线（可选）**：core 提供事件总线实现，但默认 GUI 未注入使用
-- **国际化支持**：基于插件的多语言系统，支持运行时切换语言
-- **图标系统**：统一的图标资源管理，支持 GUI 和插件共享通用图标
+### 系统要求
 
-### 用户界面
-- **ActivityBar**：左侧活动栏，包含Explorer等工具
-- **SideBar**：侧边栏，显示活动栏选中的内容
-- **Editor**：主编辑器区域，支持多标签页
-- **StatusBar**：底部状态栏，显示文件信息
-- **TitleBar**：顶部菜单栏
+- JDK 21 或更高版本
+- Gradle 8.0 或更高版本（已包含 Gradle Wrapper）
 
-### 插件系统
-- **ID 唯一**：以 `PluginInfo.id` 作为唯一标识进行索引与卸载。
-- **发现与加载**：源码通过 `ServiceLoader`；JAR 在 `plugins/` 目录，Manifest-first，类扫描兜底。
-- **生命周期与事件**：基础状态参考 PF4J（`CREATED/LOADED/STARTED/STOPPED/FAILED`）。如需要事件通知，可在创建 `PluginManager` 时注入事件总线以发布 `PluginLoaded/PluginUnloaded`。
-- **资源隔离**：JAR 插件使用独立 `URLClassLoader`；源码插件复用应用类加载器。
+### 构建与运行
 
-### 国际化系统
-- **插件化语言包**：每个语言包作为独立插件，一个插件对应一种语言
-- **实时翻译**：翻译结果实时从提供器获取，支持动态更新
-- **智能回退**：支持语言回退机制（如 `zh_TW` → `zh` → `zh_CN`）
-- **翻译键常量**：所有翻译键集中在 `i18n-keys` 模块，提供类型安全的常量类
-- **动态语言选择**：设置界面根据已注册的语言包动态显示语言选项
+```bash
+# 克隆仓库
+git clone <repository-url>
+cd editorx
 
-### 图标系统
-- **统一管理**：所有图标资源集中在 `icons` 模块，便于维护和版本控制
-- **分类组织**：通用图标（`common/`）和 GUI 专用图标（`gui/`）分类存放
-- **资源共享**：GUI 和插件都可以使用通用图标，避免重复资源
-- **智能加载**：`IconLoader` 支持多 ClassLoader 查找，自动发现 icons 模块资源
-- **SVG 支持**：支持 SVG 格式图标，可无损缩放
+# 运行应用
+./gradlew :gui:run
 
-### 编辑器功能
-- **多标签页**：支持多个文件同时编辑
-- **文件操作**：打开、保存、另存为
-- **拖拽支持**：拖拽文件到编辑器打开
-- **状态显示**：显示当前文件的行列信息
+# 构建所有模块
+./gradlew build
 
-## 模块结构
+# 运行测试
+./gradlew test
+```
+
+首次运行后，应用会在用户目录下创建 `.editorx` 配置目录。
+
+### 插件安装
+
+JAR 插件安装：
+1. 将插件 JAR 文件放入应用运行目录的 `plugins/` 文件夹
+2. 重启应用或通过设置界面重新扫描插件
+
+## 📦 项目结构
 
 ```
-EditorX
+EditorX/
 ├── core/                    # 核心模块
-│   ├── plugin/             # 插件API
-│   ├── event/              # 事件总线（可选）
+│   ├── plugin/             # 插件 API 和运行时
+│   │   ├── loader/         # 插件加载器（SourcePluginLoader, JarPluginLoader, DuplexPluginLoader）
+│   │   └── ...
+│   ├── service/            # 服务注册表（ServiceRegistry）
+│   ├── gui/                # GUI 扩展接口（GuiExtension）
 │   ├── i18n/               # 国际化服务
-│   ├── settings/           # 设置管理
 │   └── workspace/          # 工作区管理
-├── icons/                   # 图标资源模块
-│   └── resources/icons/
-│       ├── common/         # 通用图标（GUI和插件共享）
-│       └── gui/            # GUI专用图标
-├── i18n-keys/              # 翻译键常量模块
-├── gui/                    # GUI模块
+├── gui/                    # GUI 模块
 │   ├── main/               # 主窗口和组件
 │   │   ├── activitybar/    # 活动栏
 │   │   ├── sidebar/        # 侧边栏
 │   │   ├── editor/         # 编辑器
 │   │   ├── titlebar/       # 标题栏
 │   │   └── statusbar/      # 状态栏
-│   ├── ui/                 # UI组件
-│   └── services/           # GUI服务
+│   └── core/               # GUI 核心实现
+├── icons/                  # 图标资源模块
+│   └── resources/icons/
+│       ├── common/         # 通用图标（GUI 和插件共享）
+│       └── gui/            # GUI 专用图标
+├── i18n-keys/              # 翻译键常量模块
 └── plugins/                # 插件模块
+    ├── android/            # Android 插件（APK 构建支持）
+    ├── xml/                # XML 文件类型支持
+    ├── json/               # JSON 文件类型支持
+    ├── yaml/               # YAML 文件类型支持
+    ├── smali/              # Smali 文件类型支持
+    ├── git/                # Git 集成
     ├── i18n-zh/            # 中文语言包
-    ├── i18n-en/            # 英文语言包
-    └── ...                 # 其他功能插件
+    └── i18n-en/            # 英文语言包
 ```
 
-## 插件开发
+## 🔌 插件开发
 
-### 源码插件（ServiceLoader）
-1) 编写插件类并实现 `editorx.core.plugin.Plugin`
+### 插件类型
+
+EditorX 支持两种类型的插件：
+
+1. **源码插件（SOURCE）**：随应用一起编译，通过 `ServiceLoader` 机制发现
+2. **JAR 插件（JAR）**：独立的 JAR 文件，放置在 `plugins/` 目录，支持热插拔
+
+### 创建源码插件
+
+1. **实现 Plugin 接口**
+
 ```kotlin
+package editorx.plugins.myplugin
+
+import editorx.core.plugin.Plugin
+import editorx.core.plugin.PluginInfo
+import editorx.core.plugin.PluginContext
+
 class MyPlugin : Plugin {
     override fun getInfo(): PluginInfo {
         return PluginInfo(
@@ -99,131 +114,173 @@ class MyPlugin : Plugin {
     
     override fun activate(context: PluginContext) {
         // 插件激活逻辑
+        val gui = context.gui() ?: return
+        
+        // 注册文件类型
+        gui.registerFileType(MyFileType())
+        
+        // 注册服务
+        context.registerService(BuildService::class.java, MyBuildService())
     }
     
     override fun deactivate() {
-        // 插件禁用逻辑
+        // 插件禁用逻辑，清理资源
     }
 }
 ```
-2) 在插件模块的资源目录添加服务声明文件：`META-INF/services/editorx.core.plugin.Plugin`
-   内容为实现类的完全限定名，例如：
+
+2. **添加服务声明文件**
+
+在 `src/main/resources/META-INF/services/editorx.core.plugin.Plugin` 中添加：
+
 ```
 editorx.plugins.myplugin.MyPlugin
 ```
-3) 包名需以 `editorx.` 开头方会被加载器接受（用于限制加载范围）。
 
-### JAR 插件（Manifest-first）
-1) 实现 `Plugin` 接口并提供无参构造函数。
-2) JAR 的 Manifest 建议设置 `Main-Class` 指向该实现类（如缺失将回退扫描，建议显式设置）：
-```
-Main-Class: editorx.plugins.explorer.ExplorerPlugin
-```
-3) 将 JAR 放入应用运行目录的 `plugins/` 文件夹。
-4) 插件的名称、版本等元信息来自 `Plugin.getInfo()`，Manifest 中可保留其他元数据供将来扩展。
+3. **包名要求**
 
-### 语言包插件开发
-语言包插件用于提供多语言支持，每个语言包插件对应一种语言。
+插件类的包名必须以 `editorx.` 开头，这是为了限制加载范围，确保只加载受信任的插件。
 
-1) 继承 `I18nPlugin` 基类：
+### 创建 JAR 插件
+
+1. **实现 Plugin 接口**（同上）
+
+2. **配置 JAR Manifest**（推荐）
+
+在 `build.gradle.kts` 中配置：
+
 ```kotlin
-import editorx.core.i18n.I18nPlugin
-import editorx.core.i18n.I18nKeys
-import editorx.core.plugin.PluginInfo
-import java.util.Locale
-
-class MyLanguagePlugin : I18nPlugin(Locale("ja")) {  // 例如：日语
-    
-    override fun getInfo() = PluginInfo(
-        id = "i18n-ja",
-        name = "Japanese (i18n)",
-        version = "0.0.1"
-    )
-    
-    override fun translate(key: String): String? {
-        // 返回 key 对应的翻译，如果不存在则返回 null
-        return dictionary[key]
+tasks.jar {
+    manifest {
+        attributes(
+            "Main-Class" to "editorx.plugins.myplugin.MyPlugin"
+        )
     }
-    
-    override fun getAllKeys(): List<String> {
-        // 可选：返回该语言包支持的所有 key 列表
-        // 用于帮助开发者了解需要翻译哪些 key
-        return dictionary.keys.toList()
-    }
-    
-    private val dictionary = mapOf(
-        I18nKeys.Menu.FILE to "ファイル",
-        I18nKeys.Menu.EDIT to "編集",
-        // ... 更多翻译
-    )
 }
 ```
 
-2) 在资源目录添加服务声明：`META-INF/services/editorx.core.plugin.Plugin`
-   内容为插件类的完全限定名。
+如果未设置 `Main-Class`，加载器会回退到扫描 JAR 内所有实现 `Plugin` 接口的类。
 
-3) 在 `build.gradle.kts` 中添加依赖：
+3. **打包并部署**
+
+```bash
+./gradlew :plugins:myplugin:jar
+cp plugins/myplugin/build/libs/myplugin.jar plugins/
+```
+
+### 插件上下文（PluginContext）
+
+`PluginContext` 提供插件与系统交互的接口：
+
+- **GUI 扩展**：通过 `gui()` 获取 `GuiExtension`，可以注册文件类型、语法高亮、格式化器等
+- **服务注册**：通过 `registerService()` 注册服务供其他组件使用
+- **插件信息**：通过 `pluginId()` 和 `pluginInfo()` 获取插件标识和信息
+
+### 服务注册
+
+插件可以注册服务供其他组件使用：
+
 ```kotlin
-dependencies {
-    implementation(project(":core"))
-    implementation(project(":i18n-keys"))  // 用于访问 I18nKeys 常量
+override fun activate(context: PluginContext) {
+    // 注册构建服务
+    val buildService = MyBuildService()
+    context.registerService(BuildService::class.java, buildService)
+}
+
+override fun deactivate() {
+    // 取消注册服务（在 PluginManager 中自动处理）
 }
 ```
 
-4) 翻译键使用 `I18nKeys` 常量，避免硬编码字符串。
+### GUI 扩展
 
-5) 语言名称翻译：使用 `lang.{locale}` 格式的 key（如 `lang.ja`），如果语言包未提供，系统会自动使用 `Locale.getDisplayName()` 作为回退。
+通过 `GuiExtension` 接口，插件可以：
 
-### 图标使用
-插件可以使用 `icons` 模块中的通用图标，避免重复资源。
+- 注册文件类型（`registerFileType`）
+- 注册语法高亮（`registerSyntaxHighlighter`）
+- 注册格式化器（`registerFormatter`）
+- 注册文件处理器（`registerFileHandler`）
+- 添加工具栏按钮（`addToolBarItem`）
+- 打开文件和工作区（`openFile`, `openWorkspace`）
 
-1) 在 `build.gradle.kts` 中添加依赖：
-```kotlin
-dependencies {
-    implementation(project(":core"))
-    implementation(project(":icons"))  // 用于访问通用图标
-}
-```
+在 `deactivate()` 中应该调用对应的 `unregisterAll*()` 方法清理资源。
 
-2) 使用 `IconLoader` 加载图标：
-```kotlin
-import editorx.core.util.IconLoader
-import editorx.core.util.IconRef
+### 插件生命周期
 
-// 使用通用图标
-val folderIcon = IconLoader.getIcon(IconRef("icons/common/folder.svg"), 16)
+插件生命周期状态：
+- `LOADED`：插件已加载但未激活
+- `STARTED`：插件已激活
+- `STOPPED`：插件已停止
+- `FAILED`：插件激活失败
 
-// 使用 GUI 专用图标（需要 GUI 模块依赖）
-val sidebarIcon = IconLoader.getIcon(IconRef("icons/gui/layout-sidebar-left.svg"), 16)
-```
+插件可以通过 `activationEvents()` 声明激活时机：
+- `OnStartup`：应用启动时激活（默认）
+- `OnCommand(commandId)`：特定命令触发时激活
+- `OnDemand`：按需激活
 
-3) 图标路径规范：
-   - 通用图标：`icons/common/xxx.svg`（推荐插件使用）
-   - GUI 专用：`icons/gui/xxx.svg`（GUI 模块专用）
-   - 插件专用：可保留在插件模块中，或未来迁移到 `icons/plugins/xxx.svg`
-
-4) `IconLoader` 会自动从多个 ClassLoader 查找图标资源，包括 icons 模块的 ClassLoader。
-
-### UI 扩展
-注意：插件不再支持在 SideBar 中注册视图。SideBar 固定显示 Explorer。
-
-## 技术栈
+## 🛠️ 技术栈
 
 - **语言**：Kotlin 2.1.x
 - **运行时**：JVM 21
 - **构建工具**：Gradle (Kotlin DSL)
-- **UI框架**：Swing
+- **UI 框架**：Swing
 - **主题**：FlatLaf + Material3
 - **国际化**：基于 Java `Locale` 的插件化多语言系统
 - **图标**：SVG 格式，统一管理在 `icons` 模块
+- **日志**：SLF4J
 
-## 开发规范
+## 📚 文档
 
-更多协作规范见 `AGENTS.md`。
+- [架构文档](docs/ARCHITECTURE.md) - 详细的项目架构说明
+- [开发指南](AGENTS.md) - 开发者协作指南（包含 AI 代理指南）
 
-## 注意事项
-- 主类设置：`gui/build.gradle.kts` 中应用入口配置为 `editorx.gui.EditorGuiKt`。若运行失败，请确认包含 `main()` 的 Kotlin 文件名与入口类名一致（Kotlin 顶级函数生成的类名通常为 `文件名Kt`）。
+## 🤝 贡献指南
 
-## 许可证
+我们欢迎所有形式的贡献！
 
-本项目采用开源许可证，具体信息请查看LICENSE文件。
+### 贡献流程
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 开启 Pull Request
+
+### 代码规范
+
+- 使用 Kotlin 官方编码规范
+- 包名统一使用 `editorx` 作为顶级包
+- 插件类包名必须以 `editorx.` 开头
+- 遵循模块边界：`core` 不应依赖 `gui` 具体实现
+
+### 提交信息规范
+
+提交信息应清晰描述更改内容，建议格式：
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- `type`: feat, fix, docs, style, refactor, test, chore
+- `scope`: 影响的模块或组件
+- `subject`: 简短描述
+- `body`: 详细说明（可选）
+- `footer`: 相关 issue 或 breaking changes（可选）
+
+## 📄 许可证
+
+本项目采用 Apache 2.0 许可证，详见 [LICENSE](LICENSE) 文件。
+
+## 🙏 致谢
+
+- [PF4J](https://github.com/pf4j/pf4j) - 插件系统设计参考
+- [FlatLaf](https://github.com/JFormDesigner/FlatLaf) - 现代化 Swing 外观
+- [RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) - 代码编辑器组件
+
+---
+
+如有问题或建议，欢迎开启 Issue 或 Pull Request！

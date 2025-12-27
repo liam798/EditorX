@@ -1,86 +1,430 @@
-# EditorX 架构与重构说明（草案）
+# EditorX 架构设计文档
 
-> 目标：在不牺牲迭代速度的前提下，把 EditorX 从“功能堆叠型 Swing 工具”逐步演进为“核心能力可复用、平台实现可替换、插件可动态装卸”的可扩展产品。
+本文档详细说明 EditorX 的架构设计、核心组件和设计决策。
 
-## 0. 目标制定
+## 目录
 
-### 0.1 核心设计原则（不变的基石）
+- [架构概述](#架构概述)
+- [核心设计原则](#核心设计原则)
+- [模块架构](#模块架构)
+- [插件系统](#插件系统)
+- [服务注册机制](#服务注册机制)
+- [GUI 扩展机制](#gui-扩展机制)
+- [数据流](#数据流)
+- [关键组件](#关键组件)
 
-- **主程序只是空壳容器**：仅负责生命周期管理与 UI 容器化，不直接承载反编译、解密、资源解析等业务能力，也不绑定 JADX、CFR、Apktool 等具体引擎。
-- **一切能力皆为插件**：所有用户可见功能（含“打开 APK”）必须由插件提供；插件通过声明式 `activationEvents` 按需加载，避免无谓初始化。
-- **零阻塞启动**：主线程只负责 UI 渲染，所有 I/O、类加载与初始化工作一律异步或延迟执行，确保冷启动无卡顿。
+## 架构概述
 
-### 0.2 架构目标（可落地的技术规范）
+EditorX 采用**分层模块化架构**，核心设计思想是**主程序作为容器，一切能力由插件提供**。
 
-1. **插件彻底解耦**：应用模块仅依赖 `plugin-api` 与 `common`，插件之间通过核心接口通信，不允许出现直接依赖；通过 Gradle 依赖图与 ArchUnit 规则持续校验。
-2. **插件按需加载**：插件在首个激活事件触发时才装载对应 Class，加载后方可参与交互。
-3. **热启/热停能力**：支持在不重启主程序的前提下禁用、启用或卸载插件，并及时释放资源。
+```
+┌─────────────────────────────────────────┐
+│           Application (GUI)             │
+│  ┌──────────────┐  ┌─────────────────┐ │
+│  │ PluginManager│  │  ServiceRegistry│ │
+│  └──────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────┘
+           │                    │
+           │                    │
+    ┌──────┴──────┐    ┌────────┴────────┐
+    │   Plugins   │    │   Core API      │
+    │             │    │                 │
+    │ - Android   │    │ - Plugin        │
+    │ - XML/JSON  │    │ - GuiExtension  │
+    │ - I18n      │    │ - Service       │
+    │ - ...       │    │ - Workspace     │
+    └─────────────┘    └─────────────────┘
+```
 
-### 0.3 用户体验目标（让“快”被感知）
+## 核心设计原则
 
-1. **启动体验需具备“秒开”感**：窗口即刻出现并可交互，后台继续准备其余资源。
-2. **文件加载无卡顿且有反馈**：打开文件时保证丝滑体验，同时提供清晰的进度或状态提示。
+### 1. 容器化设计
 
-### 0.4 安全与可维护性
+主程序（GUI）仅负责：
+- UI 容器和生命周期管理
+- 插件发现、加载和管理
+- 服务注册表的维护
+- 工作区和设置的持久化
 
-1. **崩溃隔离**：通过独立 `ClassLoader` 或后续沙箱机制，确保单个插件的异常不会拖累主程序。
-2. **插件热安装策略**：支持部分插件即装即用，另一些在提示后待下次重启生效，策略由插件元数据声明。
-3. **统一的插件清单（规划）**：后续可引入集中化的元数据清单以描述名称、版本、依赖和激活策略；当前由插件代码直接声明 `activationEvents`。
+业务能力（文件类型、语法高亮、构建、反编译等）均由插件提供。
 
-### 0.5 执行方案（落地路线）
+### 2. 模块边界清晰
 
-| 步骤 | 目标要点 | 安排与交付物 | 验证方式 |
-| --- | --- | --- | --- |
-| Step-1 架构瘦身 | 主程序空壳、核心接口最小化 | - 抽取 `core-api`（纯 Kotlin）接口，只保留插件运行时与服务契约<br>- 把 GUI/工具链依赖迁移到 `platform-swing` 层或插件模块<br>- 建立 `ActivationEvent` 等按需加载机制 | 依赖图（Gradle + `./gradlew :core:dependencies`）无 Swing；ArchUnit 规则通过 |
-| Step-2 插件运行时 | 插件按需加载、禁用/卸载 | - 插件通过代码声明 `activationEvents` 与 `restartPolicy`<br>- `PluginManager` 支持懒加载、状态持久化、禁用集<br>- 引入 `PluginLifecycleLogger` 统一日志 | 日志包含加载/激活时间戳；插件管理面板可启停且重启后记忆 |
-| Step-3 功能插件化 | “一切能力皆插件” | - 将可替换能力（如 Settings、语言包、反编译器等）拆分为插件<br>- 插件提供默认 activationEvents（如 `onStartupFinished`, `onCommand:openFile`）<br>- 引入 `core-services`（ProjectService、DecompilerService 等）供插件调用 | 在主程序禁用对应插件后，功能消失且不会崩溃 |
-| Step-4 UI/体验 | 顶部搜索、设置布局、国际化 | - 统一 `FindReplaceBar` 布局；提供命令式搜索/替换 API<br>- 设置窗口改为双栏 + 默认选中外观 + Reset/Cancel/Confirm 排列<br>- I18n 插件模式：按需加载语言包资源 | 手工走查 UI，命令键（⌘F/⌘R）可触发；语言切换持久化 |
-| Step-5 引擎插件 | 集成 JADX + Smali | - 新建 `plugins:jadx`/`plugins:smali` 模块，实现 `DecompilerService` 和 `SmaliViewProvider`<br>- 支持 Smali/Java 双视图切换，按需激活 | 加载示例 APK，日志确认 ClassLoader 按需加载 |
-| Step-6 性能与稳定 | 启动≤800ms、日志分级、崩溃隔离 | - 启动流程拆分：UI 线程只构建骨架，后台加载插件<br>- 引入 `StartupTimer`，记录阶段耗时并输出到日志<br>- 对插件 ClassLoader 提供 `close()`，禁用插件释放资源 | 自动化脚本测量冷启动；运行禁用/卸载后内存无增长 |
+- **core 模块**：纯业务逻辑，不依赖 GUI 实现
+- **gui 模块**：Swing 实现，依赖 core 模块
+- **plugins 模块**：功能实现，只依赖 core 模块
 
-## 1. 当前现状与主要问题
+### 3. 插件化一切
 
-- **核心逻辑与 UI/框架耦合**：`core` 目前直接依赖 Swing/FlatLaf/RSyntaxTextArea（例如 `FileType` 含 `Icon`、语法高亮注册直接操作 `TokenMakerFactory`），导致核心层无法在无 GUI 环境复用，也限制后续替换 UI 技术栈。
-- **插件生命周期不完整**：现有插件仅支持启动时加载与激活，缺少卸载/禁用、资源回收与状态管理；JAR 插件 ClassLoader 未关闭，存在潜在内存泄漏风险。
-- **注册表不可回收**：`FileTypeRegistry`/`SyntaxHighlighterRegistry` 仅支持注册不支持撤销，无法支撑插件动态卸载。
-- **日志与错误处理不一致**：同时使用 `java.util.logging`、`println` 与 `slf4j`，难以统一定位问题与监控。
+所有可扩展的能力都通过插件机制提供：
+- 文件类型识别
+- 语法高亮
+- 代码格式化
+- 构建能力
+- 反编译能力
+- 国际化资源
 
-## 2. 目标架构（分层/边界）
+### 4. 服务注册机制
 
-建议以“核心（Core）/平台（Platform）/插件（Plugins）”三层为主线，逐步落地：
+插件通过服务注册机制暴露能力，其他组件通过服务注册表查找和使用服务。
 
-### 2.1 Core（纯业务/可复用）
+## 模块架构
 
-- **仅包含**：模型、用例（UseCases）、服务接口、插件运行时（Plugin Runtime）、工具链抽象（Decompile/Build 等）。
-- **不应依赖**：Swing、RSyntaxTextArea、FlatLaf 等 UI/平台细节（最终目标）。
-- **对外暴露**：稳定的 API（如 `Plugin`、`PluginContext`、`DecompileService` 等）。
+### Core 模块
 
-### 2.2 Platform（Swing 实现）
+**职责**：定义核心 API 和插件运行时
 
-- **包含**：窗口、面板、渲染、快捷键、主题、编辑器控件适配（RSyntaxTextArea）。
-- **负责**：把 Core 的抽象接口“落地”为 Swing 具体实现（例如语法高亮注册、ActivityBar/SideBar 的 UI 操作）。
+**关键组件**：
+- `Plugin` - 插件接口
+- `PluginContext` - 插件上下文（类）
+- `PluginManager` - 插件管理器
+- `PluginLoader` - 插件加载器接口
+- `ServiceRegistry` - 服务注册表
+- `GuiExtension` - GUI 扩展接口
+- `Workspace` - 工作区抽象
+- `I18n` - 国际化服务
 
-### 2.3 Plugins（功能模块）
+**依赖**：仅依赖 Kotlin 标准库和少量第三方库（如 SLF4J），不依赖 Swing。
 
-- **只依赖**：Core 的 API（必要时可依赖 Platform 的“契约接口”，但避免直接依赖 Swing 具体组件）。
-- **贡献点**（建议）：视图入口、文件类型、语法高亮、工具链能力（如 JADX 反编译）、国际化资源等。
-- **生命周期**：加载（Loaded）→ 启动（Started）→ 停止（Stopped）→ 卸载（Unloaded），并支持失败态（Failed）。
-- **示例**：文件类型插件（XML/JSON/YAML/Smali）通过 `activationEvents` 约定在首次需要时激活；核心 Explorer/Search 作为基础组件保留在 GUI 模块中。
+### GUI 模块
 
-## 3. 本轮重构落地边界（可编译可运行优先）
+**职责**：提供 Swing 实现的桌面应用
 
-为了控制风险，本轮优先落地“插件运行时 + 可卸载 + 管理 UI + 日志统一”，其余目标采用“抽象接口 + 骨架实现”逐步替换：
+**关键组件**：
+- `MainWindow` - 主窗口
+- `Editor` - 代码编辑器
+- `SideBar` / `ActivityBar` - 侧边栏和活动栏
+- `TitleBar` / `StatusBar` - 标题栏和状态栏
+- `GuiExtensionImpl` - GUI 扩展实现
+- `GuiContext` - GUI 上下文
 
-1) 插件系统：引入插件状态、动态启用/停用/卸载、JAR ClassLoader 生命周期管理；  
-2) 注册表：为文件类型/语法高亮注册引入 ownerId，支持按插件卸载回收；  
-3) UI：提供插件管理页面（列表/状态/启用停用/加载卸载/错误展示）；  
-4) 日志：统一到 SLF4J（避免 `println` 与 `java.util.logging` 混用）；  
-5) 反编译（JADX）：先抽象 `Decompiler` 接口与 GUI 入口，逐步集成实现；  
-6) 国际化：先提供 i18n 基础设施与插件扩展点，再逐步把硬编码文案迁移为 key。
+**依赖**：依赖 core 模块，以及 Swing、FlatLaf、RSyntaxTextArea 等 UI 库。
 
-## 4. 推荐的后续演进路线（分阶段）
+### Plugins 模块
 
-- **阶段 A（本轮）**：插件动态装卸 + 管理 UI + 日志统一 + 注册表可回收  
-- **阶段 B**：抽离 `core` 对 Swing/RSyntaxTextArea 的依赖（引入 `platform-swing` 适配层）  
-- **阶段 C**：集成 JADX 反编译（输出 Java 源码树 + 跳转/搜索），并与 Smali 视图联动  
-- **阶段 D**：国际化插件（zh/en）+ 响应式布局与加载反馈统一（SwingWorker/进度条规范化）  
+**职责**：提供各种功能插件
+
+**示例插件**：
+- `android` - Android APK 构建支持
+- `xml`, `json`, `yaml`, `smali` - 文件类型支持
+- `i18n-zh`, `i18n-en` - 国际化资源
+- `git` - Git 集成
+
+**依赖**：仅依赖 core 模块。
+
+## 插件系统
+
+### 插件加载机制
+
+EditorX 实现了三种插件加载器：
+
+1. **SourcePluginLoader**
+   - 从 ClassPath 加载插件
+   - 使用 `ServiceLoader<Plugin>` 发现插件
+   - 插件来源标记为 `PluginOrigin.SOURCE`
+   - 用于随应用一起编译的插件
+
+2. **JarPluginLoader**
+   - 从 `plugins/` 目录加载 JAR 文件
+   - 每个 JAR 使用独立的 `URLClassLoader`
+   - 插件来源标记为 `PluginOrigin.JAR`
+   - 支持热插拔
+
+3. **DuplexPluginLoader**
+   - 组合 `SourcePluginLoader` 和 `JarPluginLoader`
+   - 同时加载两种类型的插件
+   - 默认使用的加载器
+
+### 插件生命周期
+
+```
+发现 (Discovery)
+  ↓
+加载 (Loaded) ────┐
+  ↓                │
+激活事件触发      │
+  ↓                │
+启动 (Started) ←───┘ 失败 → (Failed)
+  ↓
+停止 (Stopped)
+  ↓
+卸载 (Unloaded)
+```
+
+**状态说明**：
+- `LOADED`：插件已加载到内存，但尚未激活
+- `STARTED`：插件已激活，`activate()` 已调用
+- `STOPPED`：插件已停止，`deactivate()` 已调用
+- `FAILED`：插件激活或运行时出错
+
+### 插件激活策略
+
+插件通过 `activationEvents()` 声明激活时机：
+
+- `OnStartup`：应用启动时自动激活（默认）
+- `OnCommand(commandId)`：特定命令触发时激活
+- `OnDemand`：按需激活
+
+### 插件上下文（PluginContext）
+
+`PluginContext` 是类（不是接口），每个插件实例拥有独立的上下文。
+
+**提供的功能**：
+- `gui(): GuiExtension?` - 获取 GUI 扩展接口
+- `registerService(serviceClass, instance)` - 注册服务
+- `unregisterService(serviceClass, instance)` - 取消注册服务
+- `pluginId()`, `pluginInfo()` - 获取插件标识和信息
+- `active()`, `deactivate()`, `isActive()` - 生命周期管理
+
+### 资源管理
+
+插件在激活时可以注册资源（文件类型、语法高亮等），在停用时必须清理：
+
+```kotlin
+override fun activate(context: PluginContext) {
+    val gui = context.gui() ?: return
+    gui.registerFileType(MyFileType())
+    gui.registerSyntaxHighlighter(Language.XML, MyHighlighter())
+}
+
+override fun deactivate() {
+    val gui = pluginContext?.gui()
+    gui?.unregisterAllFileTypes()
+    gui?.unregisterAllSyntaxHighlighters()
+}
+```
+
+系统通过 `ownerId`（插件 ID）跟踪资源归属，确保卸载插件时资源被正确清理。
+
+## 服务注册机制
+
+### ServiceRegistry
+
+`ServiceRegistry` 是核心服务注册表，支持**多实例注册**（同一服务类型可以注册多个实例）。
+
+**接口定义**：
+```kotlin
+interface ServiceRegistry {
+    fun <T : Any> getService(serviceClass: Class<T>): List<T>
+    fun <T : Any> registerService(serviceClass: Class<T>, instance: T)
+    fun <T : Any> unregisterService(serviceClass: Class<T>, instance: T)
+}
+```
+
+### 服务注册流程
+
+1. **插件注册服务**：
+   ```kotlin
+   override fun activate(context: PluginContext) {
+       val buildService = MyBuildService()
+       context.registerService(BuildService::class.java, buildService)
+   }
+   ```
+
+2. **其他组件查找服务**：
+   ```kotlin
+   val buildServices = serviceRegistry.getService(BuildService::class.java)
+   val provider = buildServices.firstOrNull { it.canBuild(workspaceRoot) }
+   ```
+
+3. **插件卸载时自动清理**：
+   系统在插件 `deactivate()` 时自动取消注册该插件的所有服务。
+
+### 服务示例
+
+- **BuildService**：提供构建能力（如 Android APK 构建）
+- **DecompilerService**：提供反编译能力（规划中）
+
+## GUI 扩展机制
+
+### GuiExtension 接口
+
+`GuiExtension` 接口位于 `editorx.core.gui` 包，定义了插件与 GUI 系统交互的契约。
+
+**主要能力**：
+1. **文件类型注册**：`registerFileType`, `unregisterAllFileTypes`
+2. **语法高亮注册**：`registerSyntaxHighlighter`, `unregisterAllSyntaxHighlighters`
+3. **格式化器注册**：`registerFormatter`, `unregisterAllFormatters`
+4. **文件处理器注册**：`registerFileHandler`, `unregisterAllFileHandlers`
+5. **工具栏管理**：`addToolBarItem`, `setToolBarItemEnabled`
+6. **工作区操作**：`openWorkspace`, `openFile`
+7. **进度显示**：`showProgress`, `hideProgress`
+8. **主题颜色**：`getThemeTextColor`, `getThemeDisabledTextColor`
+
+### GuiExtensionImpl
+
+`GuiExtensionImpl` 是 `GuiExtension` 的 Swing 实现，位于 `editorx.gui.core` 包。
+
+**实现细节**：
+- 通过 `ownerId`（插件 ID）跟踪资源归属
+- 委托给 GUI 模块的注册表（`FileTypeRegistry`, `SyntaxHighlighterRegistry` 等）
+- 确保资源按插件隔离，支持独立卸载
+
+### 资源注册表
+
+GUI 模块维护多个资源注册表：
+- `FileTypeRegistry` - 文件类型注册表
+- `SyntaxHighlighterRegistry` - 语法高亮注册表
+- `FormatterRegistry` - 格式化器注册表
+- `FileHandlerRegistry` - 文件处理器注册表
+
+每个注册表都支持按 `ownerId` 批量卸载资源。
+
+## 数据流
+
+### 应用启动流程
+
+```
+1. GuiApp.main()
+   ↓
+2. 初始化 GUI（主题、外观等）
+   ↓
+3. 创建 PluginManager
+   ↓
+4. 使用 DuplexPluginLoader 扫描插件
+   ├─ SourcePluginLoader 加载源码插件
+   └─ JarPluginLoader 加载 JAR 插件
+   ↓
+5. 加载插件到内存（Loaded 状态）
+   ↓
+6. 触发 OnStartup 事件，激活插件（Started 状态）
+   ↓
+7. 显示主窗口，应用就绪
+```
+
+### 插件激活流程
+
+```
+1. PluginManager.triggerStartup()
+   ↓
+2. 查找所有 OnStartup 插件
+   ↓
+3. 对每个插件调用 startPlugin(pluginId)
+   ↓
+4. PluginContext.active()
+   ↓
+5. Plugin.activate(context)
+   ├─ 注册文件类型
+   ├─ 注册语法高亮
+   ├─ 注册服务
+   └─ 其他初始化
+   ↓
+6. 状态更新为 STARTED
+```
+
+### 服务查找流程
+
+```
+1. 组件需要某个服务（如 BuildService）
+   ↓
+2. 调用 ServiceRegistry.getService(BuildService::class.java)
+   ↓
+3. 返回所有已注册的 BuildService 实例列表
+   ↓
+4. 组件根据业务逻辑筛选合适的服务
+   ↓
+5. 调用服务方法
+```
+
+## 关键组件
+
+### PluginManager
+
+**职责**：
+- 插件发现和加载
+- 插件生命周期管理
+- 插件状态跟踪
+- 插件启用/禁用管理
+- ClassLoader 生命周期管理（JAR 插件）
+
+**关键方法**：
+- `scanPlugins(loader: PluginLoader)` - 扫描并加载插件
+- `startPlugin(pluginId: String)` - 启动插件
+- `stopPlugin(pluginId: String)` - 停止插件
+- `unloadPlugin(pluginId: String)` - 卸载插件
+- `findBuildService(workspaceRoot: File)` - 查找构建服务
+
+### PluginContext
+
+**职责**：
+- 提供插件与系统交互的接口
+- 管理插件状态
+- 委托服务注册到 ServiceRegistry
+- 提供 GUI 扩展访问
+
+**设计决策**：
+- 设计为类而非接口，简化实现
+- 每个插件实例拥有独立的上下文
+- 通过构造函数注入 `ServiceRegistry`，避免全局状态
+
+### ServiceRegistry
+
+**职责**：
+- 服务实例的注册和查找
+- 支持多实例注册（同一服务类型可以有多个实现）
+
+**设计决策**：
+- 使用 `Map<Class<*>, List<Any>>` 存储多实例
+- 接口和实现分离，便于测试和扩展
+
+### PluginLoader 层次结构
+
+```
+PluginLoader (接口)
+  ├─ SourcePluginLoader (源码插件加载)
+  ├─ JarPluginLoader (JAR 插件加载)
+  └─ DuplexPluginLoader (组合加载器)
+       ├─ SourcePluginLoader
+       └─ JarPluginLoader
+```
+
+**设计优势**：
+- 单一职责：每个加载器只负责一种插件类型
+- 易于扩展：可以添加新的加载器而不影响现有代码
+- 灵活组合：可以根据需要组合不同的加载器
+
+## 设计模式应用
+
+### 1. 插件模式（Plugin Pattern）
+
+通过 `Plugin` 接口定义插件契约，实现功能的模块化和可扩展性。
+
+### 2. 注册表模式（Registry Pattern）
+
+使用 `ServiceRegistry` 和服务注册机制，实现服务的发现和依赖注入。
+
+### 3. 策略模式（Strategy Pattern）
+
+`PluginLoader` 接口及其实现（`SourcePluginLoader`, `JarPluginLoader`）体现了策略模式。
+
+### 4. 外观模式（Facade Pattern）
+
+`GuiExtension` 接口作为 GUI 系统的外观，隐藏内部复杂性，提供简洁的 API。
+
+### 5. 组合模式（Composite Pattern）
+
+`DuplexPluginLoader` 组合多个加载器，统一接口。
+
+## 未来演进方向
+
+### 短期目标
+
+1. **完善服务机制**：添加更多服务类型（如 `DecompilerService`, `TestService`）
+2. **插件依赖管理**：支持插件间依赖声明和解析
+3. **插件配置系统**：支持插件配置文件和管理界面
+
+### 中期目标
+
+1. **性能优化**：插件懒加载优化，启动性能提升
+2. **错误处理**：改进插件错误的隔离和恢复机制
+3. **插件沙箱**：增强插件安全隔离（如果需要）
+
+### 长期目标
+
+1. **跨平台支持**：考虑非 Swing 的 UI 实现（如 Compose Multiplatform）
+2. **插件市场**：插件发现、安装和管理的一体化解决方案
+3. **API 稳定性**：建立稳定的插件 API 版本管理机制
+
+---
+
+**文档维护**：本文档应随架构变更及时更新。重大架构决策应在此文档中记录。

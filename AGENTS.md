@@ -1,74 +1,190 @@
-# EditorX – 开发者与代理协作指南 (AGENTS)
+# EditorX 开发者与 AI 代理协作指南
 
-本仓库是一个基于 Kotlin/JVM 的桌面应用，项目名为 EditorX，包含 GUI、核心 API 与插件示例。本文档为在本仓库内协作的「代码代理（Agents）」提供约定与操作指引。
+本文档为参与 EditorX 项目开发的开发者和 AI 代码代理（Agents）提供技术规范与协作约定。
 
 ## 项目概览
 
-- 语言/运行时：Kotlin 2.1.x，JVM Toolchain 21
-- 模块：
-  - `core`：插件 API 与通用工具（包根：`editorx.*`）
-  - `gui`：桌面应用 GUI（入口：`editorx.gui.EditorGuiKt`）
-  - `plugins/testplugin`：示例插件（可作为模板）
-- 构建工具：Gradle（Kotlin DSL）
+- **语言/运行时**：Kotlin 2.1.x，JVM Toolchain 21
+- **构建工具**：Gradle（Kotlin DSL）
+- **主要模块**：
+  - `core`：核心 API 与插件运行时（包根：`editorx.*`）
+  - `gui`：桌面应用 GUI 实现（入口：`editorx.gui.GuiAppKt`）
+  - `plugins/*`：功能插件模块
 
-## 构建与运行
+## 核心架构原则
 
-- 运行 GUI 应用：`./gradlew :gui:run`
-- 构建所有模块：`./gradlew build`
-  打包的 JAR 插件放入运行目录的 `plugins/` 以供加载（见下方“插件系统”）。
+### 1. 模块边界
 
-## 包与命名
+- **`core` 模块**：不应依赖 `gui` 模块的具体实现
+- **`gui` 模块**：通过 `GuiExtension` 接口与插件交互
+- **插件模块**：只依赖 `core` 模块的 API
 
-- 顶级包名统一为：`editorx`
-- 重要命名空间：
-  - GUI：`editorx.gui.*`
-  - 插件 API：`editorx.core.plugin.*`
-  - 工具类：`editorx.core.util.*`
-- 应用入口类：`editorx.gui.EditorGuiKt`
-- 源码插件要求包前缀：`editorx`（ServiceLoader 发现后按此前缀过滤，见 `core/src/main/kotlin/editorx/plugin/PluginManager.kt`）
+### 2. 包命名规范
 
-## 插件系统
+- **顶级包名**：统一使用 `editorx`
+- **插件包名**：必须以 `editorx.plugins.*` 开头（源码插件）
+- **核心 API**：`editorx.core.plugin.*`、`editorx.core.gui.*`、`editorx.core.service.*`
+- **GUI 实现**：`editorx.gui.*`
 
-- 类型与来源（PF4J 思想的轻量实现）：
-  - 源码插件（SOURCE）：通过 `ServiceLoader<editorx.core.plugin.Plugin>` 发现，并按包前缀 `editorx.` 过滤；需在资源文件添加 `META-INF/services/editorx.core.plugin.Plugin` 指向实现类。
-  - JAR 插件（JAR）：放入运行目录 `plugins/`；优先以 JAR Manifest 的 `Main-Class` 为主类，缺失时回退扫描实现 `Plugin` 的具体类；每个 JAR 使用独立 `URLClassLoader`。
-- 标识与状态：
-  - 插件以 `PluginInfo.id` 为唯一键（全局唯一且稳定），重复 ID 会被拒绝加载。
-  - 维护基础生命周期状态：`CREATED` → `LOADED` → `STARTED`（失败则 `FAILED`；卸载为 `STOPPED`）。
-  - 如需事件通知，可在创建 `PluginManager` 时注入事件总线以发布 `PluginLoaded` / `PluginUnloaded` 事件（GUI 默认未启用）。
-- 卸载：
-  - 使用 `PluginManager.unloadPlugin(pluginId: String)`（以 ID 卸载）。
-- 插件上下文与交互：
-  - 接口：`editorx.core.plugin.PluginContext`
-  - 视图契约：`editorx.gui.ViewProvider` / `editorx.gui.CachedViewProvider`（ActivityBar 仅控制 SideBar）
-  - GUI 侧实现：`editorx.gui.plugin.GuiPluginContext`
+### 3. 插件系统
 
-## UI 布局约定（重要）
+#### 插件类型与来源
 
-以下规则用于指导 UI 插件的放置与交互：
+- **SOURCE 插件**：通过 `SourcePluginLoader` 从 ClassPath 加载，使用 `ServiceLoader<Plugin>` 发现
+- **JAR 插件**：通过 `JarPluginLoader` 从 `plugins/` 目录加载，使用独立 `URLClassLoader`
+- **组合加载**：`DuplexPluginLoader` 同时加载两种类型的插件
 
-1. `SideBar` 与 `Panel` 都是容器，但 ActivityBar 仅控制 `SideBar`。
-2. `ActivityBar` 与 `TitleBar` 用于控制插件内容的打开/关闭。
-3. 插件在 `ActivityBar` 注册入口按钮；点击后内容显示在 `SideBar`。
+#### 插件标识
 
-请在实现与评审时共同遵循以上统一约定。
+- 插件以 `PluginInfo.id` 作为唯一标识（全局唯一且稳定）
+- 重复 ID 会被拒绝加载
+- 插件生命周期状态：`LOADED` → `STARTED` → `STOPPED` / `FAILED`
 
-## 目录结构（简）
+#### 插件上下文（PluginContext）
 
-- `core/src/main/kotlin/editorx/`：插件 API、工具类
-- `gui/src/main/kotlin/editorx/`：应用入口与 GUI 组件
-- `plugins/testplugin/src/main/kotlin/editorx/plugins/testplugin/TestPlugin.kt`
+`PluginContext` 是类（非接口），提供：
+- `gui(): GuiExtension?` - 获取 GUI 扩展接口
+- `registerService(serviceClass, instance)` - 注册服务
+- `unregisterService(serviceClass, instance)` - 取消注册服务
+- `pluginId()`, `pluginInfo()` - 获取插件信息
 
-## 对代理（Agents）的具体要求
+#### GUI 扩展（GuiExtension）
 
-- 修改或新增代码时务必使用 `editorx` 顶级包。
-- 若涉及插件：
-  - 源码插件应放入 `editorx.plugins.*` 命名空间；
-  - JAR 插件需正确配置 Manifest 的 `Main-Class` 与元信息。
-- 更新入口或清单时保持一致：`gui` 的 `mainClass` 必须为 `editorx.gui.EditorGuiKt`。
-- 遵循模块边界：
-- `core` 不应依赖 GUI 具体实现；`editorx.gui.ViewProvider` 作为契约接口（位于 core 的 `editorx.gui` 命名空间）仅用于解耦。
-  - `gui` 通过 `PluginContext` 等接口与插件交互。
-- 变更涉及命名/路径时，同步更新构建脚本与引用。
+`GuiExtension` 接口位于 `editorx.core.gui` 包，提供：
+- 文件类型注册（`registerFileType`, `unregisterAllFileTypes`）
+- 语法高亮注册（`registerSyntaxHighlighter`, `unregisterAllSyntaxHighlighters`）
+- 格式化器注册（`registerFormatter`, `unregisterAllFormatters`）
+- 文件处理器注册（`registerFileHandler`, `unregisterAllFileHandlers`）
+- 工具栏按钮管理（`addToolBarItem`, `setToolBarItemEnabled`）
+- 工作区和文件操作（`openWorkspace`, `openFile`）
 
-如需扩展本文件，请保持条目简洁、面向执行与评审，避免与代码注释重复。
+**重要**：插件在 `deactivate()` 时必须调用对应的 `unregisterAll*()` 方法清理资源。
+
+### 4. 服务注册机制
+
+- **ServiceRegistry**：核心服务注册表，支持多实例注册
+- **服务注册**：插件通过 `PluginContext.registerService()` 注册服务
+- **服务查找**：通过 `ServiceRegistry.getService(serviceClass)` 获取所有注册的服务实例
+- **示例服务**：`BuildService`（构建能力）、`DecompilerService`（反编译能力）
+
+### 5. 关键数据结构
+
+- **LoadedPlugin**：加载后的插件数据（包含 `plugin`, `origin`, `path`, `classLoader`, `closeable`）
+- **PluginSnapshot**：插件快照信息（用于 UI 展示，包含 `info`, `origin`, `state`, `path`, `disabled`）
+- **PluginOrigin**：插件来源枚举（`SOURCE`, `JAR`）
+
+## 代码规范
+
+### 命名约定
+
+- 类名使用 PascalCase
+- 函数和变量使用 camelCase
+- 常量使用 UPPER_SNAKE_CASE
+- 包名全部小写，单词间无分隔符
+
+### 模块依赖规则
+
+```
+core (不依赖 gui)
+  ↑
+  ├── gui (依赖 core)
+  └── plugins/* (依赖 core)
+```
+
+### 插件开发规范
+
+1. **插件类实现**：实现 `editorx.core.plugin.Plugin` 接口
+2. **服务声明**：在 `META-INF/services/editorx.core.plugin.Plugin` 中声明实现类
+3. **资源清理**：在 `deactivate()` 中调用 `GuiExtension` 的 `unregisterAll*()` 方法
+4. **服务注册**：在 `activate()` 中注册服务，系统会在 `deactivate()` 时自动取消注册
+
+### 文件组织
+
+```
+core/src/main/kotlin/editorx/core/
+  ├── plugin/              # 插件 API
+  │   ├── loader/         # 插件加载器
+  │   ├── Plugin.kt
+  │   ├── PluginContext.kt
+  │   ├── PluginManager.kt
+  │   └── ...
+  ├── service/            # 服务注册表
+  ├── gui/                # GUI 扩展接口
+  └── ...
+
+gui/src/main/kotlin/editorx/gui/
+  ├── core/               # GUI 核心实现
+  │   ├── GuiExtensionImpl.kt
+  │   └── ...
+  └── ...
+```
+
+## 常见任务指南
+
+### 添加新的插件加载器
+
+如果需要在现有 `SourcePluginLoader` 和 `JarPluginLoader` 基础上添加新的加载方式：
+
+1. 创建新的加载器类，实现 `PluginLoader` 接口
+2. 在 `DuplexPluginLoader` 中集成新加载器（或创建新的组合加载器）
+3. 更新 `GuiApp` 使用新的组合加载器
+
+### 添加新的服务类型
+
+1. 在 `core/src/main/kotlin/editorx/core/service/` 中定义服务接口
+2. 插件实现该接口并注册：`context.registerService(ServiceClass::class.java, instance)`
+3. 其他组件通过 `ServiceRegistry.getService(ServiceClass::class.java)` 获取服务
+
+### 添加新的 GUI 扩展能力
+
+1. 在 `editorx.core.gui.GuiExtension` 接口中添加新方法
+2. 在 `editorx.gui.core.GuiExtensionImpl` 中实现该方法
+3. 插件通过 `context.gui()?.newMethod()` 使用新能力
+
+## 对 AI 代理的特殊要求
+
+### 代码修改规则
+
+1. **包名检查**：所有新增代码必须使用 `editorx` 顶级包
+2. **模块边界**：确保不违反模块依赖规则（`core` 不依赖 `gui`）
+3. **接口 vs 实现**：
+   - `PluginContext` 是类，不是接口
+   - `GuiExtension` 是接口，位于 `editorx.core.gui` 包
+   - `GuiExtensionImpl` 是实现类，位于 `editorx.gui.core` 包
+4. **命名一致性**：
+   - 使用 `LoadedPlugin`（不是 `DiscoveredPlugin`）
+   - 使用 `PluginSnapshot`（不是 `PluginRecord`）
+   - 使用 `PluginOrigin.SOURCE`（不是 `CLASSPATH`）
+   - 使用 `GuiExtension`（不是 `PluginGuiProvider`）
+
+### 代码审查检查清单
+
+修改代码时，请确保：
+
+- [ ] 包名符合规范（`editorx.*`）
+- [ ] 模块依赖方向正确（`core` ← `gui` ← `plugins/*`）
+- [ ] 插件在 `deactivate()` 中正确清理资源
+- [ ] 服务注册和取消注册配对
+- [ ] 类型名称使用最新命名（`LoadedPlugin`, `PluginSnapshot`, `GuiExtension` 等）
+- [ ] 编译通过（`./gradlew build`）
+- [ ] 无 lint 错误
+
+### 测试建议
+
+虽然项目当前可能缺少自动化测试，但建议：
+
+1. 手动验证插件加载、激活、停用流程
+2. 验证资源清理（卸载插件后资源是否释放）
+3. 验证服务注册和查找功能
+4. 验证跨模块调用不会导致循环依赖
+
+## 参考资源
+
+- [架构文档](docs/ARCHITECTURE.md) - 详细的架构设计说明
+- [README](README.md) - 项目概览和使用指南
+- Kotlin 官方编码规范
+- Gradle Kotlin DSL 文档
+
+---
+
+**最后更新**：请保持本文档与代码实现同步。如有架构变更，请及时更新本文档。
