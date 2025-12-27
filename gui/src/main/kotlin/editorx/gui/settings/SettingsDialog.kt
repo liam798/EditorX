@@ -4,7 +4,8 @@ import editorx.core.i18n.I18n
 import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.gui.GuiContext
-import editorx.gui.main.MainWindow
+import editorx.gui.RestartHelper
+import editorx.gui.MainWindow
 import editorx.gui.theme.ThemeManager
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -426,7 +427,7 @@ class SettingsDialog(
                 if (needRestart && appearancePanel.showRestartDialog()) {
                     // 用户选择重启，执行重启
                     dispose()
-                    editorx.gui.core.RestartHelper.restart()
+                    RestartHelper.restart()
                 } else {
                     dispose()
                 }

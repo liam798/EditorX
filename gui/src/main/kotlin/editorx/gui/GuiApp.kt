@@ -10,11 +10,12 @@ import editorx.core.util.Store
 import editorx.core.util.StartupTimer
 import editorx.core.util.SystemUtils
 import editorx.core.workspace.DefaultWorkspace
-import editorx.gui.core.ShortcutIds
-import editorx.gui.core.ShortcutRegistry
-import editorx.gui.main.MainWindow
+import editorx.gui.core.GuiContextImpl
+import editorx.gui.core.PluginGuiProviderImpl
 import editorx.gui.search.SearchDialog
 import editorx.gui.settings.SettingsDialog
+import editorx.gui.shortcut.ShortcutIds
+import editorx.gui.shortcut.ShortcutRegistry
 import editorx.gui.theme.ThemeManager
 import org.slf4j.LoggerFactory
 import java.awt.Image
