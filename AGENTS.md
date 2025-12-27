@@ -104,19 +104,41 @@ core (不依赖 gui)
 core/src/main/kotlin/editorx/core/
   ├── plugin/              # 插件 API
   │   ├── loader/         # 插件加载器
+  │   │   ├── SourcePluginLoader.kt
+  │   │   ├── JarPluginLoader.kt
+  │   │   ├── DuplexPluginLoader.kt
+  │   │   └── PluginLoader.kt
   │   ├── Plugin.kt
   │   ├── PluginContext.kt
   │   ├── PluginManager.kt
   │   └── ...
   ├── service/            # 服务注册表
+  │   ├── ServiceRegistry.kt
+  │   └── BuildService.kt
   ├── gui/                # GUI 扩展接口
-  └── ...
+  │   └── GuiExtension.kt
+  ├── i18n/               # 国际化服务
+  ├── workspace/          # 工作区管理
+  └── util/               # 工具类
 
 gui/src/main/kotlin/editorx/gui/
+  ├── workbench/          # 工作台组件
+  │   ├── activitybar/
+  │   ├── sidebar/
+  │   ├── editor/
+  │   ├── titlebar/
+  │   ├── statusbar/
+  │   ├── toolbar/
+  │   ├── menubar/
+  │   └── navigationbar/
   ├── core/               # GUI 核心实现
   │   ├── GuiExtensionImpl.kt
+  │   ├── GuiContextImpl.kt
   │   └── ...
-  └── ...
+  ├── settings/           # 设置相关
+  ├── search/             # 搜索功能
+  ├── shortcut/           # 快捷键管理
+  └── theme/              # 主题管理
 ```
 
 ## 常见任务指南

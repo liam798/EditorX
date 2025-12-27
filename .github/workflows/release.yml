@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送 v 开头的标签时触发（如 v1.0.0）
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      version:
+        description: '版本号（如 1.0.0）'
+        required: true
+        type: string
+      tag:
+        description: '是否创建 Git 标签'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  JAVA_VERSION: '21'
+  GRADLE_VERSION: '8.5'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录（用于生成 changelog）
+      
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'gradle'
+      
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${VERSION}"
+            
+            # 如果用户选择了创建标签，则创建 Git 标签
+            if [[ "${{ github.event.inputs.tag }}" == "true" ]]; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag -a "${TAG}" -m "Release ${VERSION}"
+              git push origin "${TAG}" || echo "Tag push failed (may already exist)"
+            fi
+          else
+            # 从标签提取版本号
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"  # 移除 v 前缀
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+          echo "Tag: ${TAG}"
+      
+      - name: Install zip utility
+        run: sudo apt-get update && sudo apt-get install -y zip
+      
+      - name: Grant execute permission for gradlew and package.sh
+        run: |
+          chmod +x gradlew
+          chmod +x package.sh
+      
+      - name: Run package script
+        run: ./package.sh -v "${{ steps.version.outputs.version }}" --clean
+      
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release
+          # package.sh 会将 zip 放到 release/editorx-${version}/ 目录
+          if [ -f "release/editorx-${{ steps.version.outputs.version }}/gui.zip" ]; then
+            cp release/editorx-${{ steps.version.outputs.version }}/gui.zip release/
+          else
+            # 如果 package.sh 的 release 目录不存在，从 distributions 目录复制
+            cp gui/build/distributions/gui.zip release/
+          fi
+          
+          # 复制版本信息
+          if [ -f "release/editorx-${{ steps.version.outputs.version }}/VERSION" ]; then
+            cp release/editorx-${{ steps.version.outputs.version }}/VERSION release/
+          else
+            echo "${{ steps.version.outputs.version }}" > release/VERSION
+          fi
+          
+          echo "${{ steps.version.outputs.tag }}" > release/TAG
+          
+          # 创建构建信息
+          cat > release/BUILD_INFO << EOF
+          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Build Commit: ${{ github.sha }}
+          Build Ref: ${{ github.ref }}
+          Java Version: ${{ env.JAVA_VERSION }}
+          Gradle Version: ${{ env.GRADLE_VERSION }}
+          Runner OS: ${{ runner.os }}
+          EOF
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "Previous tag: $PREV_TAG"
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges > changelog.txt || echo "- Initial release" > changelog.txt
+          else
+            echo "No previous tag found, using recent commits"
+            git log --pretty=format:"- %s (%h)" --no-merges -20 > changelog.txt || echo "- Initial release" > changelog.txt
+          fi
+          
+          # 使用 heredoc 方式输出多行内容到 GITHUB_OUTPUT
+          {
+            echo 'changelog<<EOF'
+            cat changelog.txt
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+          
+          # 显示生成的 changelog（用于调试）
+          echo "Generated changelog:"
+          cat changelog.txt
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## EditorX ${{ steps.version.outputs.version }}
+            
+            ### 变更日志
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### 下载
+            
+            - **ZIP 包**: [gui.zip](gui.zip)
+            
+            ### 构建信息
+            
+            构建日期: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            提交: ${{ github.sha }}
+          files: |
+            release/gui.zip
+            release/VERSION
+            release/BUILD_INFO
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: editorx-${{ steps.version.outputs.version }}
+          path: |
+            release/gui.zip
+            release/VERSION
+            release/BUILD_INFO
+          retention-days: 30
+      
+      - name: Summary
+        run: |
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
+

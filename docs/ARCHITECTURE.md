@@ -91,12 +91,20 @@ EditorX 采用**分层模块化架构**，核心设计思想是**主程序作为
 **职责**：提供 Swing 实现的桌面应用
 
 **关键组件**：
-- `MainWindow` - 主窗口
-- `Editor` - 代码编辑器
-- `SideBar` / `ActivityBar` - 侧边栏和活动栏
-- `TitleBar` / `StatusBar` - 标题栏和状态栏
-- `GuiExtensionImpl` - GUI 扩展实现
-- `GuiContext` - GUI 上下文
+- `MainWindow` - 主窗口（位于 `gui/` 包）
+- `Editor` - 代码编辑器（位于 `gui/workbench/editor/`）
+- `SideBar` / `ActivityBar` - 侧边栏和活动栏（位于 `gui/workbench/sidebar/`, `gui/workbench/activitybar/`）
+- `TitleBar` / `StatusBar` - 标题栏和状态栏（位于 `gui/workbench/titlebar/`, `gui/workbench/statusbar/`）
+- `GuiExtensionImpl` - GUI 扩展实现（位于 `gui/core/`）
+- `GuiContextImpl` - GUI 上下文实现（位于 `gui/core/`）
+
+**目录结构**：
+- `gui/workbench/` - 工作台组件（活动栏、侧边栏、编辑器、工具栏等）
+- `gui/core/` - GUI 核心实现（扩展实现、上下文实现等）
+- `gui/settings/` - 设置相关组件
+- `gui/search/` - 搜索功能
+- `gui/shortcut/` - 快捷键管理
+- `gui/theme/` - 主题管理
 
 **依赖**：依赖 core 模块，以及 Swing、FlatLaf、RSyntaxTextArea 等 UI 库。
 

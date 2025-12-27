@@ -30,3 +30,8 @@ dependencies {
 application {
     mainClass.set("editorx.gui.GuiAppKt")
 }
+
+// 禁用 distTar 任务，只生成 zip
+tasks.named<Tar>("distTar") {
+    enabled = false
+}
