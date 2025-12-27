@@ -1,30 +1,53 @@
 package editorx.core.plugin
 
-interface PluginContext {
+import editorx.core.service.MutableServiceRegistry
 
-    fun pluginId(): String
+class PluginContext(
+    private val plugin: Plugin,
+    private val servicesRegistry: MutableServiceRegistry,
+) : Comparable<PluginContext> {
+    private var hasActive = false
 
-    fun pluginInfo(): PluginInfo
+    var guiProvider: PluginGuiProvider? = null
 
-    fun gui(): PluginGuiProvider?
+    fun pluginId(): String {
+        return plugin.getInfo().id
+    }
 
-    fun active()
+    fun pluginInfo(): PluginInfo {
+        return plugin.getInfo()
+    }
 
-    fun deactivate()
+    fun gui(): PluginGuiProvider? {
+        return guiProvider
+    }
 
-    fun isActive(): Boolean
+    fun active() {
+        if (hasActive) return
+        plugin.activate(this)
+        hasActive = true
+    }
 
-    /**
-     * 注册服务（支持多实例）
-     * @param serviceClass 服务类型
-     * @param instance 服务实例
-     */
-    fun <T : Any> registerService(serviceClass: Class<T>, instance: T)
+    fun deactivate() {
+        if (hasActive) {
+            plugin.deactivate()
+            hasActive = false
+        }
+    }
 
-    /**
-     * 取消注册服务
-     * @param serviceClass 服务类型
-     * @param instance 服务实例
-     */
-    fun <T : Any> unregisterService(serviceClass: Class<T>, instance: T)
+    fun isActive(): Boolean {
+        return hasActive
+    }
+
+    fun <T : Any> registerService(serviceClass: Class<T>, instance: T) {
+        servicesRegistry.registerService(serviceClass, instance)
+    }
+
+    fun <T : Any> unregisterService(serviceClass: Class<T>, instance: T) {
+        servicesRegistry.unregisterService(serviceClass, instance)
+    }
+
+    override fun compareTo(other: PluginContext): Int {
+        return this.pluginId().compareTo(other.pluginId())
+    }
 }

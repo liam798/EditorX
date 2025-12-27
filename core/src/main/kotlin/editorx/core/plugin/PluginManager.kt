@@ -1,5 +1,6 @@
 package editorx.core.plugin
 
+import editorx.core.plugin.loader.PluginLoader
 import editorx.core.service.BuildService
 import editorx.core.service.MutableServiceRegistry
 import org.slf4j.LoggerFactory
@@ -23,7 +24,7 @@ class PluginManager {
         val info: PluginInfo,
         val activationEvents: List<ActivationEvent>,
         val restartPolicy: PluginRestartPolicy,
-        val context: PluginContextImpl,
+        val context: PluginContext,
         val origin: PluginOrigin,
         val source: java.nio.file.Path?,
         val classLoader: ClassLoader,
@@ -36,7 +37,7 @@ class PluginManager {
     private val pluginsById: SortedMap<String, PluginRuntime> = TreeMap()
     private val activationRoutes: MutableMap<ActivationEvent, MutableSet<String>> = mutableMapOf()
     private val disabledPluginIds: MutableSet<String> = linkedSetOf()
-    private var guiProviderFactory: ((PluginContextImpl) -> PluginGuiProvider?)? = null
+    private var guiProviderFactory: ((PluginContext) -> PluginGuiProvider?)? = null
     private val pluginStateListeners: MutableList<PluginStateListener> = mutableListOf()
 
     // JAR 插件：ClassLoader 需要引用计数，避免一个 JAR 内多个插件时被提前关闭
@@ -80,7 +81,7 @@ class PluginManager {
      * 设置 GUI Provider 工厂函数。
      * 会对"已加载"的插件立即执行一次。
      */
-    fun setGuiProviderFactory(factory: (PluginContextImpl) -> PluginGuiProvider?) {
+    fun setGuiProviderFactory(factory: (PluginContext) -> PluginGuiProvider?) {
         guiProviderFactory = factory
         pluginsById.values.forEach { ctx ->
             ctx.context.guiProvider = factory(ctx.context)
@@ -234,7 +235,7 @@ class PluginManager {
             return false
         }
         val events = plugin.activationEvents().ifEmpty { listOf(ActivationEvent.OnStartup) }
-        val pluginContext = PluginContextImpl(plugin, servicesRegistry)
+        val pluginContext = PluginContext(plugin, servicesRegistry)
         val initialState = if (disabledPluginIds.contains(pluginId)) {
             PluginState.STOPPED
         } else {

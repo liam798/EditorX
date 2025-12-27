@@ -4,7 +4,7 @@ import com.formdev.flatlaf.FlatLightLaf
 import editorx.core.i18n.I18nKeys
 import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginState
-import editorx.core.plugin.PluginLoaderImpl
+import editorx.core.plugin.loader.DuplexPluginLoader
 import editorx.core.util.FileStore
 import editorx.core.util.Store
 import editorx.core.util.StartupTimer
@@ -159,7 +159,7 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
     val disabledPlugins = loadDisabledSet(settings)
     val pluginManager = PluginManager().apply {
         setInitialDisabled(disabledPlugins)
-        scanPlugins(PluginLoaderImpl())
+        scanPlugins(DuplexPluginLoader())
     }
 
     SwingUtilities.invokeLater {

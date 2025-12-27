@@ -6,7 +6,7 @@ import editorx.core.plugin.PluginManager
 import editorx.core.plugin.PluginOrigin
 import editorx.core.plugin.PluginRecord
 import editorx.core.plugin.PluginState
-import editorx.core.plugin.PluginLoaderImpl
+import editorx.core.plugin.loader.DuplexPluginLoader
 import editorx.core.util.Store
 import editorx.gui.theme.ThemeManager
 import java.awt.BorderLayout
@@ -414,7 +414,7 @@ class PluginsPanel(
 
     private fun scanPlugins() {
         val before = pluginManager.listPlugins().map { it.id }.toSet()
-        pluginManager.scanPlugins(PluginLoaderImpl())
+        pluginManager.scanPlugins(DuplexPluginLoader())
         reloadList()
         val after = pluginManager.listPlugins().map { it.id }
         val newlyLoaded = after.filterNot { before.contains(it) }
@@ -539,7 +539,7 @@ class PluginsPanel(
         }
 
         val before = pluginManager.listPlugins().map { it.id }.toSet()
-        pluginManager.scanPlugins(PluginLoaderImpl())
+        pluginManager.scanPlugins(DuplexPluginLoader())
         val newRecords = pluginManager.listPlugins().filterNot { before.contains(it.id) }
         newRecords.forEach { pluginManager.startPlugin(it.id) }
         reloadList()
