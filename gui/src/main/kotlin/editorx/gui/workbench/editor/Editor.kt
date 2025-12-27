@@ -367,6 +367,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     // VSCode 风格的 Tab 头：固定槽位 + hover/选中显示 close 按钮
     private fun createVSCodeTabHeader(file: File): JPanel = JPanel().apply {
         layout = java.awt.BorderLayout(); isOpaque = true; background = ThemeManager.currentTheme.surface
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         val header = this
         var hovering = false
         val titleLabel = JLabel(file.name).apply {
@@ -374,6 +375,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             horizontalAlignment = JLabel.LEFT
             icon = resolveTabIcon(file)
             iconTextGap = 6
+            cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         }
         add(titleLabel, java.awt.BorderLayout.CENTER)
 
@@ -951,11 +953,13 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
     private fun createTabHeader(file: File): JPanel = JPanel().apply {
         layout = java.awt.BorderLayout(); isOpaque = true; background = ThemeManager.currentTheme.surface
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         val titleLabel = JLabel(file.name).apply {
             border = BorderFactory.createEmptyBorder(0, 8, 0, 6)
             horizontalAlignment = JLabel.LEFT
             icon = resolveTabIcon(file)
             iconTextGap = 6
+            cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         }
         add(titleLabel, java.awt.BorderLayout.CENTER)
 

@@ -3,6 +3,7 @@ package editorx.core.plugin.loader
 import editorx.core.plugin.LoadedPlugin
 import editorx.core.plugin.Plugin
 import editorx.core.plugin.PluginOrigin
+import editorx.core.util.AppPaths
 import org.slf4j.LoggerFactory
 import java.net.URL
 import java.net.URLClassLoader
@@ -26,7 +27,7 @@ class JarPluginLoader : PluginLoader {
     }
 
     private fun loadInstalledPlugins(map: MutableMap<Class<out Plugin>, LoadedPlugin>) {
-        val pluginDir = Path.of("plugins")
+        val pluginDir = AppPaths.pluginsDir()
         pluginDir.toFile().listFiles()
             ?.filter { it.isFile && it.extension.lowercase() == "jar" }
             ?.forEach { jar -> loadFromJar(map, jar.toPath()) }
@@ -84,4 +85,3 @@ class JarPluginLoader : PluginLoader {
 
     private fun thisClassLoader() = this::class.java.classLoader
 }
-

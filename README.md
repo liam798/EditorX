@@ -41,6 +41,29 @@ cd editorx
 
 首次运行后，应用会在用户目录下创建 `.editorx` 配置目录。
 
+### 打包发布
+
+项目提供了面向最终用户的打包脚本（默认产物均输出到 `gui/build/distributions/`）：
+
+```bash
+# 通用 zip 分发包（bin/ lib/ plugins/）
+./package.sh
+
+# zip 分发包内置 Java 运行时（生成 gui-bundled-java.zip，下载即用）
+./package.sh --bundle-java
+
+# macOS: 额外生成 .app（以及可分发的 .app.zip）
+./package.sh --mac-app
+```
+
+Windows（需在 Windows 环境运行，建议 PowerShell 7+）：
+
+```powershell
+pwsh -File package-windows.ps1 -Type app-image -Version 1.0.0
+# 若需要 exe 安装包（可能需要 WiX Toolset）
+pwsh -File package-windows.ps1 -Type exe -Version 1.0.0
+```
+
 ### 插件安装
 
 JAR 插件安装：
