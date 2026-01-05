@@ -69,7 +69,11 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private data class SmaliJavaCacheEntry(
         val sourceLastModified: Long,
         val sourceLength: Long,
-        val javaContent: String
+        val javaContent: String,
+        // Java 内容来源（可选）：用于在 JADX 全量产物就绪后覆盖旧缓存
+        val javaSourcePath: String? = null,
+        val javaSourceLastModified: Long? = null,
+        val javaSourceLength: Long? = null,
     )
 
     private val smaliJavaContentCache = mutableMapOf<File, SmaliJavaCacheEntry>()
@@ -2268,6 +2272,20 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             content.startsWith("// 获取 Java 代码时出错")) {
             return null
         }
+
+        // 若 JADX 全量产物已就绪（.jadx/sources 存在），则优先使用对应的 Java 文件。
+        // 如果当前缓存不是来自该 Java 文件（或文件已更新），返回 null 以触发重新加载。
+        val jadxJavaFile = findJadxJavaSourceForSmali(smaliFile)
+        if (jadxJavaFile != null) {
+            val jadxLm = runCatching { jadxJavaFile.lastModified() }.getOrDefault(0L)
+            val jadxLen = runCatching { jadxJavaFile.length() }.getOrDefault(-1L)
+            if (cached.javaSourcePath != jadxJavaFile.absolutePath ||
+                cached.javaSourceLastModified != jadxLm ||
+                cached.javaSourceLength != jadxLen
+            ) {
+                return null
+            }
+        }
         return content
     }
 
@@ -2688,15 +2706,50 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun getJavaCodeForSmali(smaliFile: File): String {
         logger.info("开始获取 Java 代码，smali 文件: ${smaliFile.absolutePath}")
 
-        // 如果已经缓存了 Java 内容且源文件未变化，直接返回（文件级缓存）
-        val cached = smaliJavaContentCache[smaliFile]
-        if (cached != null) {
-            val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
-            val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
-            if (cached.sourceLastModified == lm && cached.sourceLength == len) {
-                logger.info("使用缓存的 Java 内容（文件: ${smaliFile.name}）")
+        val smaliLastModified = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
+        val smaliLength = runCatching { smaliFile.length() }.getOrDefault(-1L)
+
+        // JADX 全量反编译完成后（.jadx/sources 存在）：
+        // Smali -> Code 优先直接读取 JADX 生成的 Java 文件，避免走“实时 smali->dex->jadx”流程。
+        val jadxJavaFile = findJadxJavaSourceForSmali(smaliFile)
+        if (jadxJavaFile != null) {
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消")
+            }
+            val jadxLm = runCatching { jadxJavaFile.lastModified() }.getOrDefault(0L)
+            val jadxLen = runCatching { jadxJavaFile.length() }.getOrDefault(-1L)
+            val cached = smaliJavaContentCache[smaliFile]
+            if (cached != null &&
+                cached.sourceLastModified == smaliLastModified &&
+                cached.sourceLength == smaliLength &&
+                cached.javaSourcePath == jadxJavaFile.absolutePath &&
+                cached.javaSourceLastModified == jadxLm &&
+                cached.javaSourceLength == jadxLen
+            ) {
+                logger.info("使用缓存的 JADX Java 内容（文件: ${smaliFile.name}）")
                 return cached.javaContent
             }
+
+            val content = Files.readString(jadxJavaFile.toPath())
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消")
+            }
+            smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
+                sourceLastModified = smaliLastModified,
+                sourceLength = smaliLength,
+                javaContent = content,
+                javaSourcePath = jadxJavaFile.absolutePath,
+                javaSourceLastModified = jadxLm,
+                javaSourceLength = jadxLen,
+            )
+            return content
+        }
+
+        // 如果已经缓存了 Java 内容且源文件未变化，直接返回（文件级缓存）
+        val cached = smaliJavaContentCache[smaliFile]
+        if (cached != null && cached.sourceLastModified == smaliLastModified && cached.sourceLength == smaliLength) {
+            logger.info("使用缓存的 Java 内容（文件: ${smaliFile.name}）")
+            return cached.javaContent
         }
 
         try {
@@ -2723,8 +2776,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         throw CancellationException("任务被取消")
                     }
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                        sourceLastModified = smaliFile.lastModified(),
-                        sourceLength = smaliFile.length(),
+                        sourceLastModified = smaliLastModified,
+                        sourceLength = smaliLength,
                         javaContent = content
                     )
                     return content
@@ -2746,8 +2799,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         throw CancellationException("任务被取消")
                     }
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                        sourceLastModified = smaliFile.lastModified(),
-                        sourceLength = smaliFile.length(),
+                        sourceLastModified = smaliLastModified,
+                        sourceLength = smaliLength,
                         javaContent = content
                     )
                     return content
@@ -2765,8 +2818,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             throw CancellationException("任务被取消")
                         }
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                            sourceLastModified = smaliFile.lastModified(),
-                            sourceLength = smaliFile.length(),
+                            sourceLastModified = smaliLastModified,
+                            sourceLength = smaliLength,
                             javaContent = content
                         )
                         return content
@@ -2784,8 +2837,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             throw CancellationException("任务被取消")
                         }
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                            sourceLastModified = smaliFile.lastModified(),
-                            sourceLength = smaliFile.length(),
+                            sourceLastModified = smaliLastModified,
+                            sourceLength = smaliLength,
                             javaContent = content
                         )
                         return content
@@ -2808,8 +2861,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     throw CancellationException("任务被取消")
                 }
                 smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                    sourceLastModified = smaliFile.lastModified(),
-                    sourceLength = smaliFile.length(),
+                    sourceLastModified = smaliLastModified,
+                    sourceLength = smaliLength,
                     javaContent = decompiledJava
                 )
                 return decompiledJava
@@ -2832,6 +2885,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 // 提示：
                 // 1. 如果这是从 APK 反编译的 smali 文件，请确保已使用 JADX 反编译生成 Java 源码
                 // 2. Java 源码通常位于以下目录之一：
+                //    - .jadx/sources/
                 //    - java_src/
                 //    - sources/
                 //    - 与 smali 文件同目录
@@ -3037,6 +3091,27 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             logger.warn("提取类名失败", e)
             return null
         }
+    }
+
+    private fun findJadxJavaSourceForSmali(smaliFile: File): File? {
+        val workspaceRoot = mainWindow.guiContext.getWorkspace().getWorkspaceRoot() ?: return null
+        val sourcesRoot = File(workspaceRoot, ".jadx/sources")
+        if (!sourcesRoot.exists() || !sourcesRoot.isDirectory) return null
+
+        val className = extractClassNameFromSmaliPath(smaliFile.absolutePath) ?: return null
+        val rel = className.replace('.', '/')
+        val direct = File(sourcesRoot, "$rel.java")
+        if (direct.exists() && direct.canRead()) return direct
+
+        // 内部类/匿名类：Jadx 可能合并到外部类文件里，尝试回退到外部类
+        val outer = className.substringBefore('$', missingDelimiterValue = "")
+        if (outer.isNotEmpty()) {
+            val outerRel = outer.replace('.', '/')
+            val outerJava = File(sourcesRoot, "$outerRel.java")
+            if (outerJava.exists() && outerJava.canRead()) return outerJava
+        }
+
+        return null
     }
 
     // 移除 Smali 底部视图标签
