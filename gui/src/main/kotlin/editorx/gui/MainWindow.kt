@@ -2,7 +2,6 @@ package editorx.gui
 
 import editorx.core.gui.GuiContext
 import editorx.core.util.SystemUtils
-import editorx.gui.core.FileHandlerManager
 import editorx.gui.widget.NoLineSplitPaneUI
 import editorx.gui.workbench.activitybar.ActivityBar
 import editorx.gui.workbench.editor.Editor
@@ -14,7 +13,6 @@ import editorx.gui.workbench.statusbar.StatusBar
 import editorx.gui.workbench.titlebar.TitleBar
 import editorx.gui.workbench.toolbar.ToolBar
 import java.awt.BorderLayout
-import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseMotionAdapter
@@ -35,27 +33,9 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
     val statusBar by lazy { StatusBar(this) }
     val navigationBar by lazy { NavigationBar(this) }
 
-    // Editor 左侧拖拽柄（用于在 dividerSize=0 时仍可拖动打开 SideBar）
-    private val editorResizeHandle by lazy {
-        JPanel().apply {
-            isOpaque = false
-            preferredSize = Dimension(6, 0)
-            cursor = Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR)
-        }
-    }
-
-    // Editor 包装容器：左侧拖拽柄 + Editor 内容
-    private val editorContainer by lazy {
-        JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(editorResizeHandle, BorderLayout.WEST)
-            add(editor, BorderLayout.CENTER)
-        }
-    }
-
     // SideBar 和 Editor 的水平分割（ActivityBar 独立在外层）
     private val horizontalSplit by lazy {
-        JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideBar, editorContainer).apply {
+        JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideBar, editor).apply {
             dividerLocation = 0  // 初始时 SideBar 隐藏
             isOneTouchExpandable = false
             dividerSize = 0  // 初始时 SideBar 关闭，隐藏拖拽条
@@ -225,35 +205,6 @@ class MainWindow(val guiContext: GuiContext) : JFrame() {
                     sideBar.cursor = java.awt.Cursor(java.awt.Cursor.E_RESIZE_CURSOR)
                 } else {
                     sideBar.cursor = java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR)
-                }
-            }
-        })
-
-        // 在 Editor 左侧拖拽柄添加鼠标监听器（避免修改 Editor 本体 cursor，导致全局显示为“拖拽/拉伸”）
-        editorResizeHandle.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: java.awt.event.MouseEvent) {
-                if (horizontalSplit.dividerLocation > 0) {
-                    isDragging = true
-                    dragStartX = e.xOnScreen
-                    dragStartLocation = horizontalSplit.dividerLocation
-                }
-            }
-
-            override fun mouseReleased(e: java.awt.event.MouseEvent) {
-                if (isDragging) {
-                    isDragging = false
-                    sideBar.cursor = java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR)
-                }
-            }
-        })
-
-        editorResizeHandle.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(e: java.awt.event.MouseEvent) {
-                if (isDragging) {
-                    val deltaX = e.xOnScreen - dragStartX
-                    val newLocation = (dragStartLocation + deltaX).coerceAtLeast(0)
-                        .coerceAtMost(horizontalSplit.width)
-                    horizontalSplit.dividerLocation = newLocation
                 }
             }
         })
