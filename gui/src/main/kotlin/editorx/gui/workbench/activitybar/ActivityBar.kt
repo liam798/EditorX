@@ -1,10 +1,12 @@
 package editorx.gui.workbench.activitybar
 
 import editorx.core.util.IconRef
+import editorx.core.gui.CachedGuiViewProvider
 import editorx.core.gui.GuiViewProvider
 import editorx.gui.Constants
 import editorx.gui.theme.ThemeManager
 import editorx.gui.MainWindow
+import editorx.gui.workbench.explorer.Explorer
 import editorx.core.util.IconLoader
 import java.awt.*
 import java.awt.geom.RoundRectangle2D
@@ -28,12 +30,13 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
 
     init {
         setupActivityBar()
+        setupDefaultActivityBarItems()
     }
 
     private fun setupActivityBar() {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         preferredSize = Dimension(38, 0)
-        minimumSize = Dimension(38, 0)
+        minimumSize = Dimension(38, 38)  // 确保最小宽度和高度
         maximumSize = Dimension(38, Int.MAX_VALUE)
         // 在靠近可拖拽区域一侧增加一条细分割线以增强层次
         val separator = ThemeManager.separator
@@ -61,30 +64,9 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         revalidate(); repaint()
 
         // 默认选中逻辑（无持久化）：
-        // 1) 若注册的是配置中的默认插件，则默认选中它
-        // 2) 否则在第一个条目注册完成时，默认激活第一个
-        // 3) 若之前是自动选中的非默认，后续默认插件注册时，切换到默认插件
-        val isPreferred = id == Constants.ACTIVITY_BAR_DEFAULT_ID
-        when {
-            // 尚未有任何选中：优先选择首选，否则选择第一个
-            activeId == null && isPreferred -> {
-                handleButtonClick(id, userInitiated = false)
-                autoSelected = true
-                updateAllButtonStates()
-            }
-
-            activeId == null && wasEmpty -> {
-                handleButtonClick(id, userInitiated = false)
-                autoSelected = true
-                updateAllButtonStates()
-            }
-            // 若当前是自动选中的非首选，而新来的正好是首选，则切换到首选
-            isPreferred && autoSelected && activeId != id -> {
-                handleButtonClick(id, userInitiated = false)
-                autoSelected = true
-                updateAllButtonStates()
-            }
-        }
+        // 不自动展开 SideBar，也不自动高亮
+        // 高亮状态应该与 SideBar 的实际显示状态同步
+        // 用户需要点击按钮才会展开对应的视图并高亮
     }
 
     private fun createDefaultIcon(): Icon {
@@ -156,7 +138,7 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
         val viewProvider = guiViewProviderMap[id] ?: return
         // VSCode 模式：ActivityBar 仅控制 SideBar
         val isCurrentlyDisplayed =
-            mainWindow.sideBar.getCurrentViewId() == id && mainWindow.sideBar.isActuallyVisible() == true
+            mainWindow.sideBar.getCurrentViewId() == id && mainWindow.sideBar.isActuallyVisible()
         if (isCurrentlyDisplayed) {
             mainWindow.sideBar.hideSideBar(); activeId = null
             // 用户触发隐藏时，视为用户决定
@@ -259,5 +241,20 @@ class ActivityBar(private val mainWindow: MainWindow) : JPanel() {
                 add(Box.createVerticalStrut(5))
             }
         }
+    }
+
+    /**
+     * 设置默认的 ActivityBar 项
+     */
+    private fun setupDefaultActivityBarItems() {
+        // 注册 Explorer 到 ActivityBar
+        addItem(
+            Constants.ACTIVITY_BAR_DEFAULT_ID,
+            "Explorer",
+            iconPath = "icons/filetype/folder.svg",
+            object : CachedGuiViewProvider() {
+                override fun createView() = Explorer(mainWindow)
+            }
+        )
     }
 }

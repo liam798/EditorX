@@ -6,11 +6,12 @@ import editorx.core.filetype.Language
 import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.gui.EditorMenuItem
 import editorx.core.gui.GuiContext
-import editorx.core.plugin.FileHandler
 import editorx.core.gui.GuiExtension
+import editorx.core.plugin.FileHandler
 import editorx.core.util.IconRef
 import editorx.gui.MainWindow
 import editorx.gui.theme.ThemeManager
+import editorx.gui.workbench.explorer.Explorer
 import java.io.File
 
 class GuiExtensionImpl(
@@ -25,12 +26,21 @@ class GuiExtensionImpl(
 
     override fun openWorkspace(workspaceDir: File) {
         guiContext.getWorkspace().openWorkspace(workspaceDir)
-        mainWindow?.sideBar?.showView("explorer")
-        val explorer = mainWindow?.sideBar?.getView("explorer")
-        (explorer as? editorx.gui.workbench.explorer.Explorer)?.refreshRoot()
+        // 通过 ActivityBar 显示 Explorer（会自动更新高亮状态）
+        mainWindow?.activityBar?.activateItem("explorer")
         mainWindow?.editor?.showEditorContent()
         mainWindow?.titleBar?.updateVcsDisplay()
         mainWindow?.updateNavigation(null)
+
+        // 刷新 Explorer
+        val explorer = mainWindow?.sideBar?.getView("explorer")
+        val explorerInstance = explorer as? Explorer
+        explorerInstance?.refreshRoot()
+
+        // 检查并创建 Git 仓库（延迟执行，避免阻塞）
+        javax.swing.SwingUtilities.invokeLater {
+            explorerInstance?.checkAndPromptCreateGitRepository(workspaceDir)
+        }
     }
 
     override fun openFile(file: File) {

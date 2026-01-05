@@ -68,7 +68,7 @@ class SearchDialog(
         selectionMode = ListSelectionModel.SINGLE_SELECTION
         val rootPath = workspaceRoot()?.toPath()
         cellRenderer = ResultRenderer(rootPath)
-        fixedCellHeight = 0
+        fixedCellHeight = -1
     }
 
     private val statusLabel = JLabel(" ").apply {
@@ -388,6 +388,7 @@ class SearchDialog(
 
         override fun process(chunks: MutableList<SearchMatch>) {
             chunks.forEach(onMatch)
+            onProgress(filesScanned, matches)
         }
 
         override fun done() {
@@ -406,7 +407,6 @@ class SearchDialog(
 
         private fun searchFile(file: File, queryLower: String) {
             val fileExt = file.extension.lowercase()
-            val fileName = file.name.lowercase()
 
             // 根据文件类型和搜索选项决定是否搜索
             val isJavaFile = fileExt in setOf("java", "kt", "kts")
@@ -515,13 +515,36 @@ class SearchDialog(
         }
 
         private fun shouldSkip(path: Path): Boolean {
-            val name = path.fileName.toString()
-            return SKIP_DIR_NAMES.contains(name) || name.startsWith(".")
+            val rel = try {
+                rootPath.relativize(path).toString().replace('\\', '/')
+            } catch (_: Exception) {
+                path.toString()
+            }
+            val parts = rel.split('/')
+            if (parts.any { it in SKIP_DIR_NAMES }) return true
+
+            val name = path.fileName?.toString()?.lowercase().orEmpty()
+            // 允许扫描内部的 JADX 产物目录（用于 Java 源码搜索）
+            if (name.startsWith(".") && name != ".jadx") return true
+
+            val ext = name.substringAfterLast('.', "")
+            if (ext in BINARY_EXTS) return true
+
+            return false
         }
 
         private fun isLikelyBinary(file: File): Boolean {
-            val ext = file.extension.lowercase()
-            return BINARY_EXTS.contains(ext)
+            return runCatching {
+                FileInputStream(file).use { input ->
+                    val buf = ByteArray(4096)
+                    val n = input.read(buf)
+                    if (n <= 0) return@runCatching false
+                    for (i in 0 until n) {
+                        if (buf[i].toInt() == 0) return@runCatching true
+                    }
+                    false
+                }
+            }.getOrDefault(true)
         }
     }
 
@@ -571,10 +594,10 @@ class SearchDialog(
 private fun java.io.BufferedReader.readLinesWithLineNumber(
     action: (Int, String) -> Boolean
 ) {
-    var lineNo = 1
-    forEachLine { line ->
-        if (!action(lineNo, line)) return@forEachLine
+    var lineNo = 0
+    while (true) {
+        val line = readLine() ?: break
         lineNo++
+        if (!action(lineNo, line)) break
     }
 }
-

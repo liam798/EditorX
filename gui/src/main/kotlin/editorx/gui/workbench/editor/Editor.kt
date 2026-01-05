@@ -2243,13 +2243,32 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         future?.cancel(true)
         hideSmaliLoadingOverlay(file)
         hideSmaliLoadingIndicatorIfIdle()
+        // 清除可能被取消任务写入的错误缓存，允许重新加载
+        val cached = smaliJavaContentCache[file]
+        if (cached != null) {
+            val content = cached.javaContent
+            if (content.startsWith("// 未找到对应的 Java 源码文件") ||
+                content.startsWith("// 获取 Java 代码时出错")) {
+                smaliJavaContentCache.remove(file)
+            }
+        }
     }
 
     private fun getCachedJavaIfFresh(smaliFile: File): String? {
         val cached = smaliJavaContentCache[smaliFile] ?: return null
         val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
         val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
-        return if (cached.sourceLastModified == lm && cached.sourceLength == len) cached.javaContent else null
+        if (cached.sourceLastModified != lm || cached.sourceLength != len) {
+            return null
+        }
+        // 如果缓存的是错误消息，返回 null 以触发重新加载
+        // 这样即使之前加载失败，用户切换视图后也能重新尝试
+        val content = cached.javaContent
+        if (content.startsWith("// 未找到对应的 Java 源码文件") ||
+            content.startsWith("// 获取 Java 代码时出错")) {
+            return null
+        }
+        return content
     }
 
     private fun getFindBar(file: File): FindReplaceBar {
@@ -2588,6 +2607,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             try {
                 val javaContent = getJavaCodeForSmali(file)
                 runOnEdt {
+                    // 检查任务是否还在 smaliConversionTasks 中（可能已被取消）
+                    // 如果任务被取消，cancelSmaliConversion 会将其从 smaliConversionTasks 中移除
+                    val taskStillActive = smaliConversionTasks.containsKey(file)
                     smaliConversionTasks.remove(file)
                     hideSmaliLoadingOverlay(file)
                     val stillCurrentFile = smaliFile == file
@@ -2609,6 +2631,21 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         SwingUtilities.invokeLater {
                             activeTextArea.caretPosition = 0
                             activeTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                        }
+                    }
+                    // 只有当任务仍然活跃且成功获取到内容时，才写入缓存
+                    // 如果内容是错误消息，不写入缓存，避免任务被取消后缓存错误消息
+                    // 注意：成功的内容已经在 getJavaCodeForSmali 中写入缓存了
+                    // 这里主要是为了确保错误消息不会被缓存
+                    if (!taskStillActive) {
+                        // 任务已被取消，清除可能被写入的错误缓存
+                        val cached = smaliJavaContentCache[file]
+                        if (cached != null) {
+                            val content = cached.javaContent
+                            if (content.startsWith("// 未找到对应的 Java 源码文件") ||
+                                content.startsWith("// 获取 Java 代码时出错")) {
+                                smaliJavaContentCache.remove(file)
+                            }
                         }
                     }
                     hideSmaliLoadingIndicatorIfIdle()
@@ -2674,9 +2711,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             )
 
             for (javaPath in javaPaths) {
+                // 检查线程是否被中断（任务被取消）
+                if (Thread.currentThread().isInterrupted) {
+                    throw CancellationException("任务被取消")
+                }
                 val javaFile = File(javaPath)
                 if (javaFile.exists() && javaFile.canRead()) {
                     val content = Files.readString(javaFile.toPath())
+                    // 再次检查是否被中断，避免在写入缓存时被取消
+                    if (Thread.currentThread().isInterrupted) {
+                        throw CancellationException("任务被取消")
+                    }
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                         sourceLastModified = smaliFile.lastModified(),
                         sourceLength = smaliFile.length(),
@@ -2689,9 +2734,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             // 策略2: 查找同一目录下的同名 .java 文件（向上查找）
             var currentDir = smaliFile.parentFile
             while (currentDir != null) {
+                // 检查线程是否被中断（任务被取消）
+                if (Thread.currentThread().isInterrupted) {
+                    throw CancellationException("任务被取消")
+                }
                 val javaFile = File(currentDir, smaliFile.nameWithoutExtension + ".java")
                 if (javaFile.exists() && javaFile.canRead()) {
                     val content = Files.readString(javaFile.toPath())
+                    // 再次检查是否被中断，避免在写入缓存时被取消
+                    if (Thread.currentThread().isInterrupted) {
+                        throw CancellationException("任务被取消")
+                    }
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                         sourceLastModified = smaliFile.lastModified(),
                         sourceLength = smaliFile.length(),
@@ -2707,6 +2760,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val javaFile2 = File(sourcesDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
+                        // 再次检查是否被中断，避免在写入缓存时被取消
+                        if (Thread.currentThread().isInterrupted) {
+                            throw CancellationException("任务被取消")
+                        }
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                             sourceLastModified = smaliFile.lastModified(),
                             sourceLength = smaliFile.length(),
@@ -2722,6 +2779,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     val javaFile2 = File(javaSrcDir, relativePath)
                     if (javaFile2.exists() && javaFile2.canRead()) {
                         val content = Files.readString(javaFile2.toPath())
+                        // 再次检查是否被中断，避免在写入缓存时被取消
+                        if (Thread.currentThread().isInterrupted) {
+                            throw CancellationException("任务被取消")
+                        }
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                             sourceLastModified = smaliFile.lastModified(),
                             sourceLength = smaliFile.length(),
@@ -2734,10 +2795,18 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
 
             // 策略3: 尝试使用 JADX 实时反编译（类似 MT 管理器）
+            // 检查线程是否被中断（任务被取消）
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消")
+            }
             logger.info("策略3: 尝试使用 JADX 实时反编译")
             val decompiledJava = tryDecompileWithJadx(smaliFile)
             if (decompiledJava != null) {
                 logger.info("实时反编译成功")
+                // 再次检查是否被中断，避免在写入缓存时被取消
+                if (Thread.currentThread().isInterrupted) {
+                    throw CancellationException("任务被取消")
+                }
                 smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                     sourceLastModified = smaliFile.lastModified(),
                     sourceLength = smaliFile.length(),
@@ -2747,7 +2816,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             }
             logger.warn("实时反编译失败")
 
-            // 策略4: 如果找不到，显示提示信息
+            // 检查线程是否被中断（任务被取消）
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消")
+            }
+
+            // 策略4: 如果找不到，返回提示信息（不写入缓存，避免任务被取消后缓存错误消息）
+            // 检查线程是否被中断（任务被取消）
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消")
+            }
             val failureMessage = """
                 // 未找到对应的 Java 源码文件
                 // 
@@ -2761,21 +2839,20 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 //
                 // 当前 smali 文件路径: ${smaliFile.absolutePath}
             """.trimIndent()
-            smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                sourceLastModified = smaliFile.lastModified(),
-                sourceLength = smaliFile.length(),
-                javaContent = failureMessage
-            )
+            // 不写入错误缓存，让 scheduleSmaliConversion 决定是否缓存
             return failureMessage
 
+        } catch (e: CancellationException) {
+            // 重新抛出取消异常，让上层处理
+            throw e
         } catch (e: Exception) {
+            // 检查线程是否被中断
+            if (Thread.currentThread().isInterrupted) {
+                throw CancellationException("任务被取消").apply { initCause(e) }
+            }
             logger.warn("获取 Java 代码失败", e)
             val errorMessage = "// 获取 Java 代码时出错: ${e.message}"
-            smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
-                sourceLastModified = smaliFile.lastModified(),
-                sourceLength = smaliFile.length(),
-                javaContent = errorMessage
-            )
+            // 不写入错误缓存，让 scheduleSmaliConversion 决定是否缓存
             return errorMessage
         }
     }
