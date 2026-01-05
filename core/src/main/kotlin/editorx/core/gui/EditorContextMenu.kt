@@ -5,7 +5,7 @@ import java.io.File
 /**
  * 编辑器右键菜单的只读视图上下文
  */
-data class EditorContextMenuView(
+data class EditorMenuView(
     val file: File?,
     val languageId: String?,
     val editable: Boolean,
@@ -19,8 +19,8 @@ data class EditorContextMenuView(
  * 编辑器右键菜单动作执行上下文
  * 由 GUI 实现提供，用于读取/修改当前编辑器内容。
  */
-interface EditorContextMenuHandler {
-    val view: EditorContextMenuView
+interface EditorMenuHandler {
+    val view: EditorMenuView
 
     fun getText(): String
 
@@ -46,11 +46,11 @@ interface EditorContextMenuHandler {
  * @param enabledWhen 控制是否可用
  * @param action 点击后的动作
  */
-data class EditorContextMenuItem(
+data class EditorMenuItem(
     val id: String,
     val text: String,
-    val visibleWhen: (EditorContextMenuView) -> Boolean = { true },
-    val enabledWhen: (EditorContextMenuView) -> Boolean = { true },
-    val action: (EditorContextMenuHandler) -> Unit,
+    val visibleWhen: (EditorMenuView) -> Boolean = { true },
+    val enabledWhen: (EditorMenuView) -> Boolean = { true },
+    val action: (EditorMenuHandler) -> Unit,
 )
 

@@ -1,7 +1,7 @@
 package editorx.gui.core
 
-import editorx.core.gui.EditorContextMenuItem
-import editorx.core.gui.EditorContextMenuView
+import editorx.core.gui.EditorMenuItem
+import editorx.core.gui.EditorMenuView
 
 /**
  * 编辑器右键菜单项注册表
@@ -9,17 +9,17 @@ import editorx.core.gui.EditorContextMenuView
  */
 object EditorContextMenuManager {
     private data class Registration(
-        val item: EditorContextMenuItem,
+        val item: EditorMenuItem,
         val ownerId: String?,
     )
 
     private val registrations: MutableList<Registration> = mutableListOf()
 
-    fun register(item: EditorContextMenuItem) {
+    fun register(item: EditorMenuItem) {
         register(item, ownerId = null)
     }
 
-    fun register(item: EditorContextMenuItem, ownerId: String?) {
+    fun register(item: EditorMenuItem, ownerId: String?) {
         registrations.add(Registration(item = item, ownerId = ownerId))
     }
 
@@ -27,7 +27,7 @@ object EditorContextMenuManager {
         registrations.removeIf { it.ownerId == ownerId }
     }
 
-    fun getItems(view: EditorContextMenuView): List<EditorContextMenuItem> {
+    fun getItems(view: EditorMenuView): List<EditorMenuItem> {
         return registrations.map { it.item }.filter { reg ->
             runCatching { reg.visibleWhen(view) }.getOrDefault(false)
         }

@@ -6,8 +6,8 @@ import editorx.gui.core.FormatterManager
 import editorx.core.filetype.LanguageFileType
 import editorx.core.external.Jadx
 import editorx.core.external.Smali
-import editorx.core.gui.EditorContextMenuHandler
-import editorx.core.gui.EditorContextMenuView
+import editorx.core.gui.EditorMenuHandler
+import editorx.core.gui.EditorMenuView
 import editorx.gui.core.FileHandlerManager
 import editorx.gui.theme.ThemeManager
 import editorx.gui.MainWindow
@@ -1699,7 +1699,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             ?.let { it as? LanguageFileType }
             ?.language
             ?.id
-        val view = EditorContextMenuView(
+        val view = EditorMenuView(
             file = file,
             languageId = languageId,
             editable = textArea.isEditable,
@@ -1708,9 +1708,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         )
         val pluginItems = EditorContextMenuManager.getItems(view)
         if (pluginItems.isNotEmpty()) {
-            val handler = object : EditorContextMenuHandler {
-                override val view: EditorContextMenuView
-                    get() = EditorContextMenuView(
+            val handler = object : EditorMenuHandler {
+                override val view: EditorMenuView
+                    get() = EditorMenuView(
                         file = file,
                         languageId = languageId,
                         editable = textArea.isEditable,

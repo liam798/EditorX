@@ -110,7 +110,7 @@ interface GuiExtension {
     /**
      * 注册编辑器右键菜单项
      */
-    fun registerEditorContextMenuItem(item: EditorContextMenuItem)
+    fun registerEditorMenuItem(item: EditorMenuItem)
 
     /**
      * 取消注册所有编辑器右键菜单项（按插件 ID）

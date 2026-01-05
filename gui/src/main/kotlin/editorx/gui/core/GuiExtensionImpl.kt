@@ -4,7 +4,7 @@ import editorx.core.filetype.FileType
 import editorx.core.filetype.Formatter
 import editorx.core.filetype.Language
 import editorx.core.filetype.SyntaxHighlighter
-import editorx.core.gui.EditorContextMenuItem
+import editorx.core.gui.EditorMenuItem
 import editorx.core.gui.GuiContext
 import editorx.core.plugin.FileHandler
 import editorx.core.gui.GuiExtension
@@ -95,7 +95,7 @@ class GuiExtensionImpl(
         FileHandlerManager.unregisterByOwner(pluginId)
     }
 
-    override fun registerEditorContextMenuItem(item: EditorContextMenuItem) {
+    override fun registerEditorMenuItem(item: EditorMenuItem) {
         EditorContextMenuManager.register(item, ownerId = pluginId)
     }
 
