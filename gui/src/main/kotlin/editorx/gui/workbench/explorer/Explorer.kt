@@ -45,6 +45,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     private val treeRoot = DefaultMutableTreeNode()
     private val treeModel = DefaultTreeModel(treeRoot)
     private val tree = JTree(treeModel)
+    private var scrollPane: JScrollPane? = null
     private var locateButton: JButton? = null
     private var refreshButton: JButton? = null
     private var collapseButton: JButton? = null
@@ -87,6 +88,8 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         )
         // 刷新文件树以更新文本颜色
         tree.updateUI()
+        // 重新设置 scrollPane 的边框，防止主题切换后边框重新出现
+        scrollPane?.border = null
     }
 
     private fun loadSavedViewMode(): ExplorerViewMode {
@@ -246,11 +249,12 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
         // 监听编辑器标签页变化
         setupEditorTabChangeListener()
 
-        val scrollPane = JScrollPane(tree)
-        scrollPane.border = null
-        scrollPane.isOpaque = false  // 使滚动面板透明，显示 SideBar 背景色
-        scrollPane.viewport.isOpaque = false  // 使视口透明
-        add(scrollPane, BorderLayout.CENTER)
+        scrollPane = JScrollPane(tree).apply {
+            border = null
+            isOpaque = false  // 使滚动面板透明，显示 SideBar 背景色
+            viewport.isOpaque = false  // 使视口透明
+        }
+        add(scrollPane!!, BorderLayout.CENTER)
     }
 
     private fun buildToolBar(): JToolBar {
