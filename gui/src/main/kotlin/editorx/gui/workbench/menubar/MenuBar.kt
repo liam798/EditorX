@@ -6,7 +6,10 @@ import editorx.gui.MainWindow
 import editorx.gui.core.FileHandlerManager
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
+import java.io.File
 import javax.swing.*
+import javax.swing.event.MenuEvent
+import javax.swing.event.MenuListener
 
 class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
     private val i18nListener: () -> Unit = {
@@ -48,6 +51,8 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
                 addActionListener { openFolder() }
             })
 
+            add(createRecentProjectsMenu())
+
             addSeparator()
 
             add(JMenuItem(I18n.translate(I18nKeys.Action.SAVE)).apply {
@@ -67,6 +72,45 @@ class MenuBar(private val mainWindow: MainWindow) : JMenuBar() {
                 accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Q, shortcut)
                 addActionListener { System.exit(0) }
             })
+        }
+    }
+
+    private fun createRecentProjectsMenu(): JMenu {
+        return JMenu(I18n.translate(I18nKeys.Welcome.RECENT_PROJECTS)).apply {
+            mnemonic = KeyEvent.VK_R
+            addMenuListener(
+                object : MenuListener {
+                    override fun menuSelected(e: MenuEvent?) {
+                        populateRecentProjectsMenu(this@apply)
+                    }
+
+                    override fun menuDeselected(e: MenuEvent?) {
+                        // nop
+                    }
+
+                    override fun menuCanceled(e: MenuEvent?) {
+                        // nop
+                    }
+                }
+            )
+            populateRecentProjectsMenu(this)
+        }
+    }
+
+    private fun populateRecentProjectsMenu(menu: JMenu) {
+        menu.removeAll()
+        val recentWorkspaces: List<File> = mainWindow.guiContext.getWorkspace().recentWorkspaces()
+        if (recentWorkspaces.isEmpty()) {
+            menu.add(JMenuItem(I18n.translate(I18nKeys.Welcome.NO_RECENT_PROJECTS)).apply { isEnabled = false })
+            return
+        }
+
+        recentWorkspaces.take(20).forEachIndexed { idx, workspace ->
+            val item = JMenuItem("${idx + 1}. ${workspace.name}").apply {
+                toolTipText = workspace.absolutePath
+                addActionListener { mainWindow.openWorkspace(workspace) }
+            }
+            menu.add(item)
         }
     }
 
