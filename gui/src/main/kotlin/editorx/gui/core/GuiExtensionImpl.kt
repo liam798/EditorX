@@ -109,7 +109,7 @@ class GuiExtensionImpl(
         EditorContextMenuManager.register(item, ownerId = pluginId)
     }
 
-    override fun unregisterAllEditorContextMenuItems() {
+    override fun unregisterAllEditorMenuItems() {
         EditorContextMenuManager.unregisterByOwner(pluginId)
     }
 

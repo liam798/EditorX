@@ -68,7 +68,7 @@ class StringFogDecryptPlugin : Plugin {
     }
 
     override fun deactivate() {
-        pluginContext?.gui()?.unregisterAllEditorContextMenuItems()
+        pluginContext?.gui()?.unregisterAllEditorMenuItems()
         pluginContext = null
     }
 
