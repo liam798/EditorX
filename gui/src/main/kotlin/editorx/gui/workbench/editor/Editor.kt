@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import java.awt.*
 import java.awt.dnd.*
 import java.awt.event.AdjustmentListener
+import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -1491,7 +1492,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val file = getCurrentFile() ?: return
         val findBar = getFindBar(file)
         attachFindBar(file, findBar)
-        val initial = getCurrentTextArea()?.selectedText
+        val initial = getVisibleTextArea(file)?.selectedText
             ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
         findBar.open(FindReplaceBar.Mode.FIND, initial)
     }
@@ -1500,7 +1501,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         val file = getCurrentFile() ?: return
         val findBar = getFindBar(file)
         attachFindBar(file, findBar)
-        val initial = getCurrentTextArea()?.selectedText
+        val initial = getVisibleTextArea(file)?.selectedText
             ?.takeIf { it.isNotBlank() && !it.contains('\n') && !it.contains('\r') }
         findBar.open(FindReplaceBar.Mode.REPLACE, initial)
     }
@@ -2310,11 +2311,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 KeyStroke.getKeyStroke(KeyEvent.VK_F, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
             addActionListener { showFindBar() }
         })
-        menu.add(JMenuItem("替换...").apply {
-            accelerator =
-                KeyStroke.getKeyStroke(KeyEvent.VK_R, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
-            addActionListener { showReplaceBar() }
-        })
+        // Code 视图为只读：仅支持查找，不展示替换入口
+        if (textArea.isEditable) {
+            menu.add(JMenuItem("替换...").apply {
+                accelerator =
+                    KeyStroke.getKeyStroke(KeyEvent.VK_R, java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+                addActionListener { showReplaceBar() }
+            })
+        }
 
         if (hasFormatter) {
             menu.addSeparator()
@@ -2907,6 +2911,61 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             background = theme.editorBackground
             foreground = theme.onSurface
         }
+        // Code 视图快捷键：仅查找（Code 视图为只读，不提供替换）
+        runCatching {
+            val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+            area.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_F, shortcutMask),
+                "editor.find"
+            )
+            area.actionMap.put("editor.find", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    this@Editor.showFindBar()
+                }
+            })
+        }
+        // Code 视图下执行了会改动 Smali 的操作（例如 StringFog 解密）时，
+        // 用户期望在 Code 视图内 Cmd+Z/Cmd+Shift+Z 也能撤销/还原 Smali 的修改
+        runCatching {
+            val shortcutMask = java.awt.Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+            val undoKey = KeyStroke.getKeyStroke(KeyEvent.VK_Z, shortcutMask)
+            val redoKey = KeyStroke.getKeyStroke(KeyEvent.VK_Z, shortcutMask or InputEvent.SHIFT_DOWN_MASK)
+            val redoKeyAlt = KeyStroke.getKeyStroke(KeyEvent.VK_Y, shortcutMask)
+
+            area.getInputMap(JComponent.WHEN_FOCUSED).put(undoKey, "editor.smaliProxyUndo")
+            area.actionMap.put("editor.smaliProxyUndo", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    val index = fileToTab[file] ?: return
+                    val smaliTextArea = tabTextAreas[index] ?: return
+                    runCatching { smaliTextArea.undoLastAction() }
+                    val tabs = smaliViewTabs ?: return
+                    if (smaliFile != file) return
+                    if (tabs.getTitleAt(tabs.selectedIndex) != CODE_TAB_TITLE) return
+                    showSmaliLoadingIndicator()
+                    showSmaliLoadingOverlay(file)
+                    scheduleSmaliConversion(file, tabs.selectedIndex, area, smaliTextArea.text)
+                }
+            })
+
+            fun installRedo(key: KeyStroke) {
+                area.getInputMap(JComponent.WHEN_FOCUSED).put(key, "editor.smaliProxyRedo")
+            }
+            installRedo(redoKey)
+            installRedo(redoKeyAlt)
+            area.actionMap.put("editor.smaliProxyRedo", object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                    val index = fileToTab[file] ?: return
+                    val smaliTextArea = tabTextAreas[index] ?: return
+                    runCatching { smaliTextArea.redoLastAction() }
+                    val tabs = smaliViewTabs ?: return
+                    if (smaliFile != file) return
+                    if (tabs.getTitleAt(tabs.selectedIndex) != CODE_TAB_TITLE) return
+                    showSmaliLoadingIndicator()
+                    showSmaliLoadingOverlay(file)
+                    scheduleSmaliConversion(file, tabs.selectedIndex, area, smaliTextArea.text)
+                }
+            })
+        }
         // Code 视图也需要右键菜单（例如 StringFog 解密）
         val textAreaForMenu = area
         area.addMouseListener(object : MouseAdapter() {
@@ -2943,10 +3002,26 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         tabContent.repaint()
     }
 
+    private fun getVisibleTextArea(file: File): TextArea? {
+        val index = fileToTab[file] ?: return null
+        val base = tabTextAreas[index]
+
+        val isSmali = file.name.endsWith(".smali", ignoreCase = true)
+        if (!isSmali) return base
+
+        // Smali 的 Code 视图是独立 TextArea，需要在底部 tab 为 CODE 时返回它
+        if (smaliFile != file) return base
+        val tabs = smaliViewTabs ?: return base
+        val selected = tabs.selectedIndex
+        if (selected < 0) return base
+        if (tabs.getTitleAt(selected) != CODE_TAB_TITLE) return base
+        return smaliCodeTextAreas[file] ?: base
+    }
+
     private fun getFindBar(file: File): FindReplaceBar {
         return findReplaceBars.getOrPut(file) {
             FindReplaceBar {
-                fileToTab[file]?.let { index -> tabTextAreas[index] }
+                getVisibleTextArea(file)
             }
         }
     }
@@ -3239,6 +3314,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     smaliTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
                     smaliTextArea.requestFocusInWindow()
                 }
+                // 查找条：切换视图后同步高亮目标
+                val bar = findReplaceBars[currentFile]
+                if (bar?.isVisible == true) {
+                    attachFindBar(currentFile, bar)
+                    bar.onActiveEditorChanged()
+                }
             }
 
             CODE_TAB_TITLE -> {
@@ -3260,6 +3341,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         codeTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
                         codeTextArea.requestFocusInWindow()
                     }
+                    // 查找条：切换视图后同步高亮目标
+                    val bar = findReplaceBars[currentFile]
+                    if (bar?.isVisible == true) {
+                        attachFindBar(currentFile, bar)
+                        bar.onActiveEditorChanged()
+                    }
                 } else {
                     codeTextArea.putClientProperty("suppressDirty", true)
                     codeTextArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
@@ -3270,6 +3357,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     showSmaliLoadingIndicator()
                     showSmaliLoadingOverlay(currentFile)
                     scheduleSmaliConversion(currentFile, tabIndex, codeTextArea, smaliSnapshot)
+                    // 查找条：切换视图后同步高亮目标（异步结果回来也会更新）
+                    val bar = findReplaceBars[currentFile]
+                    if (bar?.isVisible == true) {
+                        attachFindBar(currentFile, bar)
+                        bar.onActiveEditorChanged()
+                    }
                 }
             }
         }
@@ -3310,6 +3403,12 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         SwingUtilities.invokeLater {
                             fallbackTextArea.caretPosition = 0
                             fallbackTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                        }
+                        // 查找条：Code 文本刷新后同步高亮/计数
+                        val bar = findReplaceBars[file]
+                        if (bar?.isVisible == true) {
+                            attachFindBar(file, bar)
+                            bar.onActiveEditorChanged()
                         }
                     }
                     // 只有当任务仍然活跃且成功获取到内容时，才写入缓存
