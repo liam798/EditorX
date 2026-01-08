@@ -7,6 +7,7 @@ import editorx.core.filetype.SyntaxHighlighter
 import editorx.core.plugin.FileHandler
 import editorx.core.util.IconRef
 import java.awt.Color
+import java.awt.Component
 import java.io.File
 
 interface GuiExtension {
@@ -16,6 +17,12 @@ interface GuiExtension {
      * 返回当前打开的工作区根目录，如果未打开工作区则返回 null
      */
     fun getWorkspaceRoot(): File?
+
+    /**
+     * 显示文件选择对话框
+     * 返回选中的文件，如果用户取消则返回 null
+     */
+    fun showFileChooser(callback: (File?) -> Unit)
 
     /**
      * 打开工作区
@@ -28,6 +35,41 @@ interface GuiExtension {
      * @param file 要打开的文件
      */
     fun openFile(file: File)
+
+    /**
+     * 在编辑器中打开一个自定义标签页（例如 Diff 视图、预览面板等）。
+     *
+     * 注意：id 应在同一插件内保持稳定，便于重复打开时复用/刷新同一标签页。
+     *
+     * @param id 标签页唯一标识（建议在插件内稳定）
+     * @param title 标签页标题
+     * @param component 要显示的 UI 组件
+     * @param iconRef 标签页图标（可选）
+     */
+    fun openEditorTab(id: String, title: String, component: Component, iconRef: IconRef? = null)
+
+    /**
+     * 在编辑器中打开一个 Diff 标签页（左右对比视图）。
+     *
+     * @param id 标签页唯一标识（建议在插件内稳定）
+     * @param title 标签页标题
+     * @param file 用于语法高亮检测的文件（可选）
+     * @param leftTitle 左侧标题（例如：HEAD/暂存区）
+     * @param leftText 左侧内容
+     * @param rightTitle 右侧标题（例如：工作区/暂存区）
+     * @param rightText 右侧内容
+     * @param hunks 变更片段列表（用于高亮变更行）
+     */
+    fun openDiffTab(
+        id: String,
+        title: String,
+        file: File?,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk> = emptyList(),
+    )
 
     /**
      * 显示进度

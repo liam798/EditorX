@@ -4,6 +4,7 @@ import editorx.core.filetype.FileType
 import editorx.core.filetype.Formatter
 import editorx.core.filetype.Language
 import editorx.core.filetype.SyntaxHighlighter
+import editorx.core.gui.DiffHunk
 import editorx.core.gui.EditorMenuItem
 import editorx.core.gui.GuiContext
 import editorx.core.gui.GuiExtension
@@ -13,6 +14,7 @@ import editorx.core.util.IconRef
 import editorx.gui.MainWindow
 import editorx.gui.theme.ThemeManager
 import editorx.gui.workbench.explorer.Explorer
+import java.awt.Component
 import java.io.File
 
 class GuiExtensionImpl(
@@ -23,6 +25,15 @@ class GuiExtensionImpl(
 
     override fun getWorkspaceRoot(): File? {
         return guiContext.getWorkspace().getWorkspaceRoot()
+    }
+
+    override fun showFileChooser(callback: (File?) -> Unit) {
+        val window = mainWindow
+        if (window == null) {
+            callback.invoke(null)
+            return
+        }
+        window.showFileChooser(callback)
     }
 
     override fun openWorkspace(workspaceDir: File) {
@@ -46,6 +57,33 @@ class GuiExtensionImpl(
 
     override fun openFile(file: File) {
         mainWindow?.editor?.openFile(file)
+    }
+
+    override fun openEditorTab(id: String, title: String, component: Component, iconRef: IconRef?) {
+        mainWindow?.editor?.openCustomTab(pluginId, id, title, iconRef, component)
+    }
+
+    override fun openDiffTab(
+        id: String,
+        title: String,
+        file: File?,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk>
+    ) {
+        mainWindow?.editor?.openDiffTab(
+            ownerId = pluginId,
+            tabId = id,
+            title = title,
+            file = file,
+            leftTitle = leftTitle,
+            leftText = leftText,
+            rightTitle = rightTitle,
+            rightText = rightText,
+            hunks = hunks
+        )
     }
 
     override fun showProgress(

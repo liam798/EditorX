@@ -180,6 +180,8 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
                         activityBar.removeItems(pluginId)
                         // 移除 ToolBar items
                         toolBar.removeItems(pluginId)
+                        // 关闭该插件打开的自定义编辑器标签页（例如 Diff 视图）
+                        editor.closeCustomTabs(pluginId)
                         // 移除编辑器右键菜单项
                         EditorContextMenuManager.unregisterByOwner(pluginId)
                     }

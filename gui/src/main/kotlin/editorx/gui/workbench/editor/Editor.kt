@@ -6,12 +6,15 @@ import editorx.gui.core.FormatterManager
 import editorx.core.filetype.LanguageFileType
 import editorx.core.external.Jadx
 import editorx.core.external.Smali
+import editorx.core.gui.DiffHunk
 import editorx.core.gui.EditorMenuHandler
 import editorx.core.gui.EditorMenuView
 import editorx.gui.core.FileHandlerManager
 import editorx.gui.theme.ThemeManager
 import editorx.gui.MainWindow
 import editorx.gui.workbench.explorer.ExplorerIcons
+import editorx.core.util.IconLoader
+import editorx.core.util.IconRef
 import editorx.core.util.IconUtils
 import editorx.gui.shortcut.ShortcutIds
 import editorx.gui.shortcut.ShortcutManager
@@ -19,6 +22,7 @@ import org.fife.ui.rtextarea.RTextScrollPane
 import org.slf4j.LoggerFactory
 import java.awt.*
 import java.awt.dnd.*
+import java.awt.event.AdjustmentListener
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -97,6 +101,39 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private val editorContentPanel = JPanel(BorderLayout()).apply {
         add(tabbedPane, BorderLayout.CENTER)
         add(bottomContainer, BorderLayout.SOUTH)
+    }
+
+    private data class CustomTabKey(val ownerId: String, val tabId: String)
+
+    private class CustomTabContent(val key: CustomTabKey, component: Component) : JPanel(BorderLayout()) {
+        init {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            add(component, BorderLayout.CENTER)
+        }
+
+        fun setContent(component: Component) {
+            removeAll()
+            add(component, BorderLayout.CENTER)
+            revalidate()
+            repaint()
+        }
+    }
+
+    private class DiffTabContent(
+        val key: CustomTabKey,
+        val file: File,
+        val leftHeader: JLabel,
+        val rightHeader: JLabel,
+        val leftArea: TextArea,
+        val rightArea: TextArea,
+    ) : JPanel(BorderLayout()) {
+        init {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        }
+
+        val baseTitle: String get() = "Diff · ${file.name}"
     }
 
     private class TabContent(val scrollPane: RTextScrollPane) : JPanel(BorderLayout()) {
@@ -372,6 +409,370 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         updateEditorContent()
     }
 
+    fun openCustomTab(ownerId: String, tabId: String, title: String, iconRef: IconRef?, component: Component) {
+        val key = CustomTabKey(ownerId, tabId)
+        val icon = iconRef?.let { IconLoader.getIcon(it, 16) }
+
+        val existingIndex = (0 until tabbedPane.tabCount).firstOrNull { idx ->
+            val content = tabbedPane.getComponentAt(idx)
+            (content as? CustomTabContent)?.key == key
+        }
+
+        if (existingIndex != null) {
+            val content = tabbedPane.getComponentAt(existingIndex) as? CustomTabContent ?: return
+            content.setContent(component)
+            tabbedPane.setTitleAt(existingIndex, title)
+            tabbedPane.setIconAt(existingIndex, icon)
+
+            val header = tabbedPane.getTabComponentAt(existingIndex) as? JComponent
+            val titleLabel = header?.getClientProperty("titleLabel") as? JLabel
+            titleLabel?.text = title
+            if (icon != null) titleLabel?.icon = icon
+
+            tabbedPane.selectedIndex = existingIndex
+            showEditorContent()
+            return
+        }
+
+        val content = CustomTabContent(key, component)
+        tabbedPane.addTab(title, icon, content, null)
+        val index = tabbedPane.indexOfComponent(content)
+        val header = createCustomTabHeader(title, icon)
+        tabbedPane.setTabComponentAt(index, header)
+        attachPopupToHeader(header)
+        tabbedPane.selectedIndex = index
+        showEditorContent()
+    }
+
+    fun closeCustomTabs(ownerId: String) {
+        for (idx in tabbedPane.tabCount - 1 downTo 0) {
+            when (val content = tabbedPane.getComponentAt(idx)) {
+                is CustomTabContent -> if (content.key.ownerId == ownerId) closeTab(idx)
+                is DiffTabContent -> if (content.key.ownerId == ownerId) closeTab(idx)
+            }
+        }
+    }
+
+    fun openDiffTab(
+        ownerId: String,
+        tabId: String,
+        title: String,
+        file: File?,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk>,
+    ) {
+        if (file == null) {
+            val diffView = createDiffViewReadOnly(null, leftTitle, leftText, rightTitle, rightText, hunks)
+            openCustomTab(ownerId, tabId, title, iconRef = null, component = diffView)
+            return
+        }
+
+        openDiffFileTab(ownerId, tabId, title, file, leftTitle, leftText, rightTitle, rightText, hunks)
+    }
+
+    private fun openDiffFileTab(
+        ownerId: String,
+        tabId: String,
+        title: String,
+        file: File,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk>,
+    ) {
+        val key = CustomTabKey(ownerId, tabId)
+
+        // 若该文件已以普通方式打开，优先关闭普通 tab（避免同一文件多个 tab 导致保存/脏标记冲突）
+        fileToTab[file]?.let { existingIdx ->
+            val existing = tabbedPane.getComponentAt(existingIdx)
+            if (existing !is DiffTabContent) {
+                closeTab(existingIdx)
+                if (fileToTab.containsKey(file)) return
+            }
+        }
+
+        // 复用已有 Diff tab
+        val existingIdx = fileToTab[file]
+        if (existingIdx != null) {
+            val existing = tabbedPane.getComponentAt(existingIdx) as? DiffTabContent
+            if (existing != null && existing.key == key) {
+                existing.leftHeader.text = leftTitle
+                existing.rightHeader.text = rightTitle
+
+                existing.leftArea.isEditable = false
+                existing.leftArea.text = leftText
+                existing.leftArea.caretPosition = 0
+                runCatching { existing.leftArea.detectSyntax(file) }
+
+                // 右侧若未修改，允许刷新；避免覆盖用户正在编辑的内容
+                val dirty = dirtyTabs.contains(existingIdx)
+                if (!dirty) {
+                    existing.rightArea.putClientProperty("suppressDirty", true)
+                    existing.rightArea.text = rightText
+                    existing.rightArea.caretPosition = 0
+                    runCatching { existing.rightArea.detectSyntax(file) }
+                    originalTextByIndex[existingIdx] = existing.rightArea.text
+                    dirtyTabs.remove(existingIdx)
+                    existing.rightArea.putClientProperty("suppressDirty", false)
+                }
+
+                applyDiffHighlights(existing.leftArea, existing.rightArea, hunks)
+                tabbedPane.selectedIndex = existingIdx
+                showEditorContent()
+                updateTabTitle(existingIdx)
+                updateTabHeaderStyles()
+                return
+            }
+        }
+
+        val view = createDiffViewEditableRight(key, file, leftTitle, leftText, rightTitle, rightText, hunks)
+
+        tabbedPane.addTab(title, resolveTabIcon(file), view, null)
+        val index = tabbedPane.indexOfComponent(view)
+
+        val header = createCustomTabHeader("Diff · ${file.name}", resolveTabIcon(file))
+        tabbedPane.setTabComponentAt(index, header)
+        attachPopupToHeader(header)
+
+        // 作为“文件 tab”注册，复用保存/脏标记逻辑（右侧可编辑）
+        fileToTab[file] = index
+        tabToFile[index] = file
+        tabTextAreas[index] = view.rightArea
+        originalTextByIndex[index] = view.rightArea.text
+        dirtyTabs.remove(index)
+
+        tabbedPane.selectedIndex = index
+        showEditorContent()
+        updateTabTitle(index)
+        updateTabHeaderStyles()
+        updateNavigation(file)
+    }
+
+    private fun createDiffViewReadOnly(
+        file: File?,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk>,
+    ): JComponent {
+        val leftArea = createReadOnlyTextArea(file, leftText)
+        val rightArea = createReadOnlyTextArea(file, rightText)
+
+        applyDiffHighlights(leftArea, rightArea, hunks)
+
+        val leftScroll = RTextScrollPane(leftArea).apply {
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            // RTextScrollPane 的 viewport 可能不支持 setBorder（会抛异常），避免直接设置 viewport.border
+            viewport.background = ThemeManager.currentTheme.editorBackground
+        }
+        val rightScroll = RTextScrollPane(rightArea).apply {
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            viewport.background = ThemeManager.currentTheme.editorBackground
+        }
+
+        // 同步滚动（避免一侧滚动另一侧不动）
+        syncScrollBars(leftScroll.verticalScrollBar, rightScroll.verticalScrollBar)
+        syncScrollBars(leftScroll.horizontalScrollBar, rightScroll.horizontalScrollBar)
+
+        fun side(title: String, scroll: JComponent): JComponent {
+            val header = JLabel(title).apply {
+                border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                foreground = ThemeManager.currentTheme.onSurfaceVariant
+                font = font.deriveFont(Font.PLAIN, 11f)
+            }
+            return JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                add(header, BorderLayout.NORTH)
+                add(scroll, BorderLayout.CENTER)
+            }
+        }
+
+        val split = JSplitPane(
+            JSplitPane.HORIZONTAL_SPLIT,
+            side(leftTitle, leftScroll),
+            side(rightTitle, rightScroll)
+        ).apply {
+            resizeWeight = 0.5
+            isContinuousLayout = true
+            dividerSize = 6
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        }
+
+        return JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            add(split, BorderLayout.CENTER)
+        }
+    }
+
+    private fun createDiffViewEditableRight(
+        key: CustomTabKey,
+        file: File,
+        leftTitle: String,
+        leftText: String,
+        rightTitle: String,
+        rightText: String,
+        hunks: List<DiffHunk>,
+    ): DiffTabContent {
+        val leftArea = createReadOnlyTextArea(file, leftText)
+        val rightArea = createEditableTextArea(file, rightText)
+
+        applyDiffHighlights(leftArea, rightArea, hunks)
+
+        val leftScroll = RTextScrollPane(leftArea).apply {
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            viewport.background = ThemeManager.currentTheme.editorBackground
+        }
+        val rightScroll = RTextScrollPane(rightArea).apply {
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            viewport.background = ThemeManager.currentTheme.editorBackground
+        }
+
+        syncScrollBars(leftScroll.verticalScrollBar, rightScroll.verticalScrollBar)
+        syncScrollBars(leftScroll.horizontalScrollBar, rightScroll.horizontalScrollBar)
+
+        fun headerLabel(text: String): JLabel = JLabel(text).apply {
+            border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
+            foreground = ThemeManager.currentTheme.onSurfaceVariant
+            font = font.deriveFont(Font.PLAIN, 11f)
+        }
+
+        val leftHeader = headerLabel(leftTitle)
+        val rightHeader = headerLabel(rightTitle)
+
+        fun side(header: JLabel, scroll: JComponent): JComponent {
+            return JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                add(header, BorderLayout.NORTH)
+                add(scroll, BorderLayout.CENTER)
+            }
+        }
+
+        val split = JSplitPane(
+            JSplitPane.HORIZONTAL_SPLIT,
+            side(leftHeader, leftScroll),
+            side(rightHeader, rightScroll)
+        ).apply {
+            resizeWeight = 0.5
+            isContinuousLayout = true
+            dividerSize = 6
+            border = BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        }
+
+        return DiffTabContent(
+            key = key,
+            file = file,
+            leftHeader = leftHeader,
+            rightHeader = rightHeader,
+            leftArea = leftArea,
+            rightArea = rightArea
+        ).apply {
+            add(split, BorderLayout.CENTER)
+        }
+    }
+
+    private fun createReadOnlyTextArea(file: File?, text: String): TextArea {
+        return TextArea().apply {
+            isEditable = false
+            isCodeFoldingEnabled = false
+            background = ThemeManager.currentTheme.editorBackground
+            foreground = ThemeManager.currentTheme.onSurface
+            this.text = text
+            caretPosition = 0
+            if (file != null) {
+                detectSyntax(file)
+            }
+        }
+    }
+
+    private fun createEditableTextArea(file: File, text: String): TextArea {
+        return TextArea().apply {
+            isEditable = true
+            background = ThemeManager.currentTheme.editorBackground
+            foreground = ThemeManager.currentTheme.onSurface
+            caretColor = ThemeManager.currentTheme.onSurface
+            this.text = text
+            caretPosition = 0
+            runCatching { detectSyntax(file) }
+
+            addCaretListener {
+                val caretPos = caretPosition
+                val line = try {
+                    getLineOfOffset(caretPos) + 1
+                } catch (_: Exception) {
+                    1
+                }
+                val col = caretPos - getLineStartOffsetOfCurrentLine(this) + 1
+                mainWindow.statusBar.setLineColumn(line, col)
+            }
+            document.addDocumentListener(object : javax.swing.event.DocumentListener {
+                override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = recomputeDirty()
+                private fun recomputeDirty() {
+                    if (getClientProperty("suppressDirty") == true) return
+                    val scrollComp = this@apply.parent?.parent as? java.awt.Component ?: return
+                    val index = getTabIndexForComponent(scrollComp)
+                    if (index < 0) return
+                    val original = originalTextByIndex[index]
+                    val isDirty = original != this@apply.text
+                    if (isDirty) dirtyTabs.add(index) else dirtyTabs.remove(index)
+                    updateTabTitle(index)
+                    updateTabHeaderStyles()
+                    mainWindow.titleBar.updateTitle()
+                }
+            })
+        }
+    }
+
+    private fun applyDiffHighlights(left: TextArea, right: TextArea, hunks: List<DiffHunk>) {
+        // 颜色以“轻提示”为主，避免遮挡文本
+        val addColor = Color(46, 160, 67, 45)
+        val delColor = Color(248, 81, 73, 45)
+
+        runCatching { left.removeAllLineHighlights() }
+        runCatching { right.removeAllLineHighlights() }
+
+        hunks.forEach { h ->
+            if (h.leftCount > 0) {
+                val start = (h.leftStart - 1).coerceAtLeast(0)
+                for (i in 0 until h.leftCount) {
+                    runCatching { left.addLineHighlight(start + i, delColor) }
+                }
+            }
+            if (h.rightCount > 0) {
+                val start = (h.rightStart - 1).coerceAtLeast(0)
+                for (i in 0 until h.rightCount) {
+                    runCatching { right.addLineHighlight(start + i, addColor) }
+                }
+            }
+        }
+    }
+
+    private fun syncScrollBars(a: JScrollBar, b: JScrollBar) {
+        var syncing = false
+        val listener = AdjustmentListener { e ->
+            if (syncing) return@AdjustmentListener
+            syncing = true
+            try {
+                val src = e.adjustable as JScrollBar
+                val dst = if (src === a) b else a
+                dst.value = src.value
+            } finally {
+                syncing = false
+            }
+        }
+        a.addAdjustmentListener(listener)
+        b.addAdjustmentListener(listener)
+    }
+
     // VSCode 风格的 Tab 头：固定槽位 + hover/选中显示 close 按钮
     private fun createVSCodeTabHeader(file: File): JPanel = JPanel().apply {
         layout = java.awt.BorderLayout(); isOpaque = true; background = ThemeManager.currentTheme.surface
@@ -552,6 +953,196 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 hovering = true
                 val idx = tabbedPane.indexOfTabComponent(header)
                 if (idx >= 0 && idx != tabbedPane.selectedIndex) (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+            }
+        })
+
+    }
+
+    private fun createCustomTabHeader(title: String, icon: Icon?): JPanel = JPanel().apply {
+        layout = BorderLayout(); isOpaque = true; background = ThemeManager.currentTheme.surface
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        val header = this
+        var hovering = false
+
+        val titleLabel = JLabel(title).apply {
+            border = BorderFactory.createEmptyBorder(0, 8, 0, 6)
+            horizontalAlignment = JLabel.LEFT
+            this.icon = icon
+            iconTextGap = 6
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        }
+        add(titleLabel, BorderLayout.CENTER)
+
+        val closeSlot = object : JPanel(CardLayout()) {
+            var highlight = false
+            override fun paintComponent(g: Graphics) {
+                if (highlight) {
+                    val g2 = g.create() as Graphics2D
+                    try {
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                        g2.color = Color(255, 255, 255, 20)
+                        g2.fillRoundRect(0, 0, width, height, 6, 6)
+                        g2.color = ThemeManager.currentTheme.outline
+                        g2.stroke = BasicStroke(1f)
+                        g2.drawRoundRect(1, 1, width - 2, height - 2, 6, 6)
+                    } finally {
+                        g2.dispose()
+                    }
+                }
+                super.paintComponent(g)
+            }
+        }.apply {
+            isOpaque = false
+            preferredSize = Dimension(18, 18)
+            minimumSize = Dimension(18, 18)
+            maximumSize = Dimension(18, 18)
+        }
+
+        val empty = JPanel().apply { isOpaque = false }
+        val closeBtn = JLabel("×").apply {
+            font = font.deriveFont(Font.PLAIN, 13f)
+            foreground = ThemeManager.editorTabCloseDefault
+            horizontalAlignment = JLabel.CENTER
+            verticalAlignment = JLabel.CENTER
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) {
+                    hovering = true
+                    closeSlot.highlight = true
+                    closeSlot.repaint()
+                    foreground = ThemeManager.editorTabCloseSelected
+                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                }
+
+                override fun mouseExited(e: MouseEvent) {
+                    closeSlot.highlight = false
+                    closeSlot.repaint()
+                    hovering = false
+                    val idxLocal = tabbedPane.indexOfTabComponent(header)
+                    val selected = (idxLocal == tabbedPane.selectedIndex)
+                    foreground = if (selected) ThemeManager.editorTabCloseSelected else ThemeManager.editorTabCloseDefault
+                    cursor = Cursor.getDefaultCursor()
+                    val inside = header.mousePosition != null
+                    if (idxLocal >= 0 && idxLocal != tabbedPane.selectedIndex && !inside && !hovering) {
+                        (closeSlot.layout as CardLayout).show(closeSlot, "empty")
+                    }
+                }
+
+                override fun mousePressed(e: MouseEvent) {
+                    val idx = tabbedPane.indexOfTabComponent(header)
+                    if (idx >= 0) {
+                        closeTab(idx)
+                        e.consume()
+                    }
+                }
+            })
+        }
+        closeSlot.add(empty, "empty")
+        closeSlot.add(closeBtn, "btn")
+        (closeSlot.layout as CardLayout).show(closeSlot, "empty")
+        add(closeSlot, BorderLayout.EAST)
+
+        closeSlot.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (closeBtn.isShowing) {
+                    val idx = tabbedPane.indexOfTabComponent(header)
+                    if (idx >= 0) {
+                        closeTab(idx)
+                        e.consume()
+                    }
+                }
+            }
+
+            override fun mouseEntered(e: MouseEvent) {
+                hovering = true
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+                }
+                closeSlot.highlight = true
+                closeSlot.repaint()
+            }
+
+            override fun mouseExited(e: MouseEvent) {
+                hovering = false
+                closeSlot.highlight = false
+                closeSlot.repaint()
+                val idx = tabbedPane.indexOfTabComponent(header)
+                val inside = header.mousePosition != null
+                if (idx >= 0 && idx != tabbedPane.selectedIndex && !inside && !hovering) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "empty")
+                }
+            }
+        })
+
+        putClientProperty("titleLabel", titleLabel)
+        putClientProperty("closeSlot", closeSlot)
+        putClientProperty("closeLabel", closeBtn)
+
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) {
+                hovering = true
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+                }
+            }
+
+            override fun mouseExited(e: MouseEvent) {
+                hovering = false
+                val idx = tabbedPane.indexOfTabComponent(header)
+                val inside = header.mousePosition != null
+                if (idx >= 0 && idx != tabbedPane.selectedIndex && !inside && !hovering) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "empty")
+                }
+            }
+
+            override fun mousePressed(e: MouseEvent) {
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0) tabbedPane.selectedIndex = idx
+            }
+        })
+
+        addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseMoved(e: MouseEvent) {
+                hovering = true
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+                }
+            }
+        })
+
+        titleLabel.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0) tabbedPane.selectedIndex = idx
+            }
+
+            override fun mouseEntered(e: MouseEvent) {
+                hovering = true
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+                }
+            }
+
+            override fun mouseExited(e: MouseEvent) {
+                hovering = false
+                val idx = tabbedPane.indexOfTabComponent(header)
+                val inside = header.mousePosition != null
+                if (idx >= 0 && idx != tabbedPane.selectedIndex && !inside && !hovering) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "empty")
+                }
+            }
+        })
+
+        titleLabel.addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseMoved(e: MouseEvent) {
+                hovering = true
+                val idx = tabbedPane.indexOfTabComponent(header)
+                if (idx >= 0 && idx != tabbedPane.selectedIndex) {
+                    (closeSlot.layout as CardLayout).show(closeSlot, "btn")
+                }
             }
         })
 
@@ -1352,7 +1943,10 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
     private fun updateTabTitle(index: Int) {
         val file = tabToFile[index]
-        val base = file?.name ?: "Untitled"
+        val base = when (val content = tabbedPane.getComponentAt(index)) {
+            is DiffTabContent -> content.baseTitle
+            else -> file?.name ?: "Untitled"
+        }
         val dirty = if (dirtyTabs.contains(index)) "*" else ""
         val component = tabbedPane.getTabComponentAt(index) as? JPanel
         if (component != null) {
