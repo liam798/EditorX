@@ -67,13 +67,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private var smaliViewTabs: JTabbedPane? = null
     private var isSmaliMode = false
     private var smaliFile: File? = null
-    private var smaliOriginalContent: String? = null
     private val smaliTabState = mutableMapOf<File, Int>()
+    private val smaliCodeTextAreas = mutableMapOf<File, TextArea>()
+    private val smaliCodeScrollPanes = mutableMapOf<File, RTextScrollPane>()
 
     private data class SmaliJavaCacheEntry(
         val sourceLastModified: Long,
         val sourceLength: Long,
         val javaContent: String,
+        val sourceTextHash: Int? = null,
+        val sourceTextLength: Int? = null,
         // Java 内容来源（可选）：用于在 JADX 全量产物就绪后覆盖旧缓存
         val javaSourcePath: String? = null,
         val javaSourceLastModified: Long? = null,
@@ -1750,6 +1753,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 fileToTab.remove(it)
                 smaliTabState.remove(it)
                 smaliJavaContentCache.remove(it)
+                smaliCodeTextAreas.remove(it)
+                smaliCodeScrollPanes.remove(it)
                 cancelSmaliConversion(it)
                 findReplaceBars.remove(it)?.let { bar ->
                     (bar.parent as? Container)?.remove(bar)
@@ -2852,12 +2857,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         }
     }
 
-    private fun getCachedJavaIfFresh(smaliFile: File): String? {
+    private fun getCachedJavaIfFresh(smaliFile: File, smaliTextSnapshot: String?): String? {
         val cached = smaliJavaContentCache[smaliFile] ?: return null
-        val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
-        val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
-        if (cached.sourceLastModified != lm || cached.sourceLength != len) {
-            return null
+        if (smaliTextSnapshot != null) {
+            val hash = smaliTextSnapshot.hashCode()
+            val len = smaliTextSnapshot.length
+            if (cached.sourceTextHash != hash || cached.sourceTextLength != len) return null
+        } else {
+            val lm = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
+            val len = runCatching { smaliFile.length() }.getOrDefault(-1L)
+            if (cached.sourceLastModified != lm || cached.sourceLength != len) return null
         }
         // 如果缓存的是错误消息，返回 null 以触发重新加载
         // 这样即使之前加载失败，用户切换视图后也能重新尝试
@@ -2867,6 +2876,38 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             return null
         }
         return content
+    }
+
+    private fun ensureSmaliCodeView(file: File): Pair<TextArea, RTextScrollPane> {
+        val existingArea = smaliCodeTextAreas[file]
+        val existingScroll = smaliCodeScrollPanes[file]
+        if (existingArea != null && existingScroll != null) return existingArea to existingScroll
+
+        val theme = ThemeManager.currentTheme
+        val area = createReadOnlyTextArea(null, "").apply {
+            syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
+            background = theme.editorBackground
+            foreground = theme.onSurface
+        }
+        val scroll = RTextScrollPane(area).apply {
+            border = javax.swing.BorderFactory.createEmptyBorder()
+            background = theme.editorBackground
+            viewport.background = theme.editorBackground
+            verticalScrollBar.background = theme.editorBackground
+            horizontalScrollBar.background = theme.editorBackground
+        }
+        smaliCodeTextAreas[file] = area
+        smaliCodeScrollPanes[file] = scroll
+        return area to scroll
+    }
+
+    private fun setTabCenter(tabContent: TabContent, center: Component) {
+        val top = tabContent.topSlot
+        tabContent.removeAll()
+        tabContent.add(top, BorderLayout.NORTH)
+        tabContent.add(center, BorderLayout.CENTER)
+        tabContent.revalidate()
+        tabContent.repaint()
     }
 
     private fun getFindBar(file: File): FindReplaceBar {
@@ -2978,10 +3019,8 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             // 读取并保存上一次的视图状态（每个文件独立）
             val savedTabIndex = smaliTabState[file] ?: 0
 
-            // 保存文件引用和原始内容
+            // 保存文件引用
             smaliFile = file
-            val content = Files.readString(file.toPath())
-            smaliOriginalContent = content
 
             // 创建底部标签面板（简洁样式）
             val theme = ThemeManager.currentTheme
@@ -3147,8 +3186,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun switchSmaliView(tabIndex: Int) {
         // 获取当前 smali 文件的编辑器索引
         val fileIndex = smaliFile?.let { fileToTab[it] } ?: return
-        val textArea = tabTextAreas[fileIndex] ?: return
+        val smaliTextArea = tabTextAreas[fileIndex] ?: return
         val currentFile = smaliFile ?: return
+        val tabContent = (tabbedPane.getComponentAt(fileIndex) as? TabContent) ?: return
 
         // 保存当前选择的 tab 状态（用于在切换文件后恢复）
         smaliTabState[currentFile] = tabIndex
@@ -3157,42 +3197,46 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
         when (smaliViewTabs!!.getTitleAt(tabIndex)) {
             SMALI_TAB_TITLE -> {
                 cancelSmaliConversion(currentFile)
-                textArea.putClientProperty("suppressDirty", true)
-                textArea.text = smaliOriginalContent ?: ""
-                textArea.isEditable = true
-                textArea.detectSyntax(currentFile)
-                textArea.putClientProperty("suppressDirty", false)
+                setTabCenter(tabContent, tabContent.scrollPane)
+                smaliTextArea.isEditable = true
+                smaliTextArea.detectSyntax(currentFile)
                 hideSmaliLoadingIndicatorIfIdle()
                 SwingUtilities.invokeLater {
-                    textArea.caretPosition = 0
-                    textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                    smaliTextArea.caretPosition = 0
+                    smaliTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                    smaliTextArea.requestFocusInWindow()
                 }
             }
 
             CODE_TAB_TITLE -> {
-                // 切换到 Code 前，先保存当前 Smali 视图文本（否则切回 Smali 会回到旧内容）
-                // 注意：这里保存的是编辑器当前文本，不依赖磁盘文件是否已保存。
-                smaliOriginalContent = textArea.text
+                val (codeTextArea, codeScroll) = ensureSmaliCodeView(currentFile)
+                setTabCenter(tabContent, codeScroll)
 
-                textArea.putClientProperty("suppressDirty", true)
-                textArea.isEditable = false
-                val cached = getCachedJavaIfFresh(currentFile)
+                val smaliSnapshot = smaliTextArea.text
+                val cached = getCachedJavaIfFresh(currentFile, smaliSnapshot)
                 if (cached != null) {
-                    textArea.text = cached
-                    textArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
-                    textArea.putClientProperty("suppressDirty", false)
+                    codeTextArea.putClientProperty("suppressDirty", true)
+                    codeTextArea.text = cached
+                    codeTextArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
+                    codeTextArea.isEditable = false
+                    codeTextArea.discardAllEdits()
+                    codeTextArea.putClientProperty("suppressDirty", false)
                     hideSmaliLoadingIndicatorIfIdle()
                     SwingUtilities.invokeLater {
-                        textArea.caretPosition = 0
-                        textArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                        codeTextArea.caretPosition = 0
+                        codeTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                        codeTextArea.requestFocusInWindow()
                     }
                 } else {
-                    textArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
-                    textArea.text = ""
-                    textArea.putClientProperty("suppressDirty", false)
+                    codeTextArea.putClientProperty("suppressDirty", true)
+                    codeTextArea.syntaxEditingStyle = org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
+                    codeTextArea.text = ""
+                    codeTextArea.isEditable = false
+                    codeTextArea.discardAllEdits()
+                    codeTextArea.putClientProperty("suppressDirty", false)
                     showSmaliLoadingIndicator()
                     showSmaliLoadingOverlay(currentFile)
-                    scheduleSmaliConversion(currentFile, tabIndex, textArea)
+                    scheduleSmaliConversion(currentFile, tabIndex, codeTextArea, smaliSnapshot)
                 }
             }
         }
@@ -3201,13 +3245,14 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     private fun scheduleSmaliConversion(
         file: File,
         expectedTabIndex: Int,
-        fallbackTextArea: TextArea
+        fallbackTextArea: TextArea,
+        smaliTextSnapshot: String,
     ) {
         smaliConversionTasks.remove(file)?.cancel(true)
 
         val future = smaliExecutor.submit {
             try {
-                val javaContent = getJavaCodeForSmali(file)
+                val javaContent = getJavaCodeForSmali(file, smaliTextSnapshot)
                 runOnEdt {
                     // 检查任务是否还在 smaliConversionTasks 中（可能已被取消）
                     // 如果任务被取消，cancelSmaliConversion 会将其从 smaliConversionTasks 中移除
@@ -3222,17 +3267,16 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                             currentTabs.getTitleAt(expectedTabIndex) == CODE_TAB_TITLE
 
                     if (shouldUpdateTextArea) {
-                        val idx = fileToTab[file]
-                        val activeTextArea = idx?.let { tabTextAreas[it] } ?: fallbackTextArea
-                        activeTextArea.putClientProperty("suppressDirty", true)
-                        activeTextArea.text = javaContent
-                        activeTextArea.syntaxEditingStyle =
+                        fallbackTextArea.putClientProperty("suppressDirty", true)
+                        fallbackTextArea.text = javaContent
+                        fallbackTextArea.syntaxEditingStyle =
                             org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JAVA
-                        activeTextArea.isEditable = false
-                        activeTextArea.putClientProperty("suppressDirty", false)
+                        fallbackTextArea.isEditable = false
+                        fallbackTextArea.discardAllEdits()
+                        fallbackTextArea.putClientProperty("suppressDirty", false)
                         SwingUtilities.invokeLater {
-                            activeTextArea.caretPosition = 0
-                            activeTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
+                            fallbackTextArea.caretPosition = 0
+                            fallbackTextArea.scrollRectToVisible(Rectangle(0, 0, 1, 1))
                         }
                     }
                     // 只有当任务仍然活跃且成功获取到内容时，才写入缓存
@@ -3276,6 +3320,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         fallbackTextArea.syntaxEditingStyle =
                             org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE
                         fallbackTextArea.isEditable = false
+                        fallbackTextArea.discardAllEdits()
                         fallbackTextArea.putClientProperty("suppressDirty", false)
                     }
                     hideSmaliLoadingIndicatorIfIdle()
@@ -3287,15 +3332,17 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
     }
 
     // 获取 Smali 文件对应的 Java 代码
-    private fun getJavaCodeForSmali(smaliFile: File): String {
+    private fun getJavaCodeForSmali(smaliFile: File, smaliTextSnapshot: String): String {
         logger.info("开始获取 Java 代码，smali 文件: ${smaliFile.absolutePath}")
 
         val smaliLastModified = runCatching { smaliFile.lastModified() }.getOrDefault(0L)
         val smaliLength = runCatching { smaliFile.length() }.getOrDefault(-1L)
+        val smaliTextHash = smaliTextSnapshot.hashCode()
+        val smaliTextLen = smaliTextSnapshot.length
 
-        // 如果已经缓存了 Java 内容且源文件未变化，直接返回（文件级缓存）
+        // 如果已经缓存了 Java 内容且源文本未变化，直接返回
         val cached = smaliJavaContentCache[smaliFile]
-        if (cached != null && cached.sourceLastModified == smaliLastModified && cached.sourceLength == smaliLength) {
+        if (cached != null && cached.sourceTextHash == smaliTextHash && cached.sourceTextLength == smaliTextLen) {
             logger.info("使用缓存的 Java 内容（文件: ${smaliFile.name}）")
             return cached.javaContent
         }
@@ -3306,7 +3353,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 throw CancellationException("任务被取消")
             }
             logger.info("策略1: 尝试使用实时反编译")
-            val decompiledJava = tryDecompileWithJadx(smaliFile)
+            val decompiledJava = tryDecompileWithJadx(smaliFile, smaliTextSnapshot)
             if (decompiledJava != null) {
                 logger.info("实时反编译成功")
                 if (Thread.currentThread().isInterrupted) {
@@ -3315,7 +3362,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                 smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                     sourceLastModified = smaliLastModified,
                     sourceLength = smaliLength,
-                    javaContent = decompiledJava
+                    javaContent = decompiledJava,
+                    sourceTextHash = smaliTextHash,
+                    sourceTextLength = smaliTextLen,
                 )
                 return decompiledJava
             }
@@ -3346,7 +3395,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                         sourceLastModified = smaliLastModified,
                         sourceLength = smaliLength,
-                        javaContent = content
+                        javaContent = content,
+                        sourceTextHash = smaliTextHash,
+                        sourceTextLength = smaliTextLen,
                     )
                     return content
                 }
@@ -3369,7 +3420,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                     smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                         sourceLastModified = smaliLastModified,
                         sourceLength = smaliLength,
-                        javaContent = content
+                        javaContent = content,
+                        sourceTextHash = smaliTextHash,
+                        sourceTextLength = smaliTextLen,
                     )
                     return content
                 }
@@ -3388,7 +3441,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                             sourceLastModified = smaliLastModified,
                             sourceLength = smaliLength,
-                            javaContent = content
+                            javaContent = content,
+                            sourceTextHash = smaliTextHash,
+                            sourceTextLength = smaliTextLen,
                         )
                         return content
                     }
@@ -3407,7 +3462,9 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
                         smaliJavaContentCache[smaliFile] = SmaliJavaCacheEntry(
                             sourceLastModified = smaliLastModified,
                             sourceLength = smaliLength,
-                            javaContent = content
+                            javaContent = content,
+                            sourceTextHash = smaliTextHash,
+                            sourceTextLength = smaliTextLen,
                         )
                         return content
                     }
@@ -3449,7 +3506,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
 
     // 尝试使用 JADX 实时反编译 smali 文件（类似 MT 管理器）
     // 策略：先将单个 smali 文件编译成 DEX，然后用 jadx 反编译
-    private fun tryDecompileWithJadx(smaliFile: File): String? {
+    private fun tryDecompileWithJadx(smaliFile: File, smaliTextSnapshot: String?): String? {
         try {
             logger.info("开始实时反编译 smali 文件: ${smaliFile.absolutePath}")
 
@@ -3490,7 +3547,7 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             System.out.println("输入文件: ${smaliFile.absolutePath}")
             System.out.println("输出文件: ${tempDexFile.absolutePath}")
 
-            val assembleResult = Smali.assemble(smaliFile, tempDexFile)
+            val assembleResult = Smali.assemble(smaliFile, tempDexFile, smaliText = smaliTextSnapshot)
 
             if (assembleResult.status != Smali.Status.SUCCESS) {
                 logger.error("smali 编译失败 (status=${assembleResult.status}, exitCode=${assembleResult.exitCode})")
@@ -3657,7 +3714,6 @@ class Editor(private val mainWindow: MainWindow) : JPanel() {
             smaliViewTabs = null
             isSmaliMode = false
             smaliFile = null
-            smaliOriginalContent = null
             revalidate()
             repaint()
         }
