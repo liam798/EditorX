@@ -600,7 +600,7 @@ class Explorer(private val mainWindow: MainWindow) : JPanel(BorderLayout()) {
     }
 
 
-    private fun refreshRootPreserveSelection() {
+    fun refreshRootPreserveSelection() {
         refreshRootInternal(preserveSelection = true)
     }
 

@@ -10,6 +10,7 @@ import editorx.gui.MainWindow
 import editorx.gui.search.SearchDialog
 import editorx.gui.settings.SettingsDialog
 import editorx.gui.theme.ThemeManager
+import editorx.gui.workbench.explorer.Explorer
 import java.awt.Font
 import java.awt.Insets
 import java.awt.event.ActionListener
@@ -333,6 +334,7 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
                         BuildStatus.SUCCESS -> {
                             val outputFile = buildResult.outputFile
                             if (outputFile != null) {
+                                (mainWindow.sideBar.getView("explorer") as? Explorer)?.refreshRootPreserveSelection()
                                 mainWindow.statusBar.showSuccess(
                                     I18n.translate(I18nKeys.ToolbarMessage.COMPILE_SUCCESS)
                                         .format(outputFile.name)
@@ -403,4 +405,3 @@ class TitleBar(private val mainWindow: MainWindow) : JToolBar() {
     }
 
 }
-
