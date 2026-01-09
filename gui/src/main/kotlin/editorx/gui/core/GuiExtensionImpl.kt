@@ -120,6 +120,11 @@ class GuiExtensionImpl(
         bar.endProgressTask(handle)
     }
 
+    override fun refreshExplorer(preserveSelection: Boolean) {
+        val explorer = mainWindow?.sideBar?.getView("explorer") as? Explorer ?: return
+        if (preserveSelection) explorer.refreshRootPreserveSelection() else explorer.refreshRoot()
+    }
+
     override fun addToolBarItem(id: String, iconRef: IconRef?, text: String, action: () -> Unit) {
         mainWindow?.toolBar?.addItem(pluginId, id, iconRef, text, action)
     }
