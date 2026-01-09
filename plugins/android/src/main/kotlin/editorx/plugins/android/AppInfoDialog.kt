@@ -10,6 +10,7 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
 import java.io.File
+import java.awt.KeyboardFocusManager
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JLabel
@@ -308,9 +309,24 @@ object AppInfoDialog {
      * @return 0=取消/关闭，1=仅保存，2=保存并构建
      */
     private fun showDialogWithButtons(title: String, content: JPanel): Int {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            var r = 0
+            SwingUtilities.invokeAndWait { r = showDialogWithButtons(title, content) }
+            return r
+        }
+
         var result = 0
 
-        val dialog = JDialog(null as java.awt.Frame?, title, true).apply {
+        val owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
+        val dialog =
+            when (owner) {
+                is java.awt.Frame -> JDialog(owner, title, true)
+                is java.awt.Dialog -> JDialog(owner, title, true)
+                else -> JDialog(null as java.awt.Frame?, title, true)
+            }
+
+        dialog.apply {
+            var saveButtonRef: JButton? = null
             isResizable = false
             contentPane = JPanel(BorderLayout()).apply {
                 add(content, BorderLayout.CENTER)
@@ -319,37 +335,39 @@ object AppInfoDialog {
                 val cancelButton = JButton("取消").apply {
                     addActionListener {
                         result = 0
-                        dispose()
+                        dialog.dispose()
                     }
                 }
                 val saveButton = JButton("仅保存").apply {
                     addActionListener {
                         result = 1
-                        dispose()
+                        dialog.dispose()
                     }
                 }
                 val saveBuildButton = JButton("保存并构建").apply {
                     addActionListener {
                         result = 2
-                        dispose()
+                        dialog.dispose()
                     }
                 }
+                saveButtonRef = saveButton
 
                 // 从左到右：取消 / 仅保存 / 保存并构建
                 footer.add(cancelButton)
                 footer.add(saveButton)
                 footer.add(saveBuildButton)
                 add(footer, BorderLayout.SOUTH)
-
-                rootPane.defaultButton = saveButton
-                rootPane.registerKeyboardAction(
-                    { dispose() },
-                    javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
-                    javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
-                )
             }
+            rootPane.defaultButton = saveButtonRef
+
+            rootPane.registerKeyboardAction(
+                { dialog.dispose() },
+                javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
+            )
+
             pack()
-            setLocationRelativeTo(null)
+            setLocationRelativeTo(owner)
         }
 
         dialog.isVisible = true
