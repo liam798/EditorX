@@ -18,6 +18,7 @@ import editorx.gui.settings.SettingsDialog
 import editorx.gui.shortcut.ShortcutIds
 import editorx.gui.shortcut.ShortcutManager
 import editorx.gui.theme.ThemeManager
+import editorx.gui.update.UpdateManager
 import org.slf4j.LoggerFactory
 import java.awt.Image
 import java.awt.Taskbar
@@ -194,6 +195,9 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
         mainWindow.isVisible = true
         setupShortcuts(mainWindow)
         startupTimer.mark("gui.ready")
+
+        // 启动时检查更新（异步）
+        UpdateManager.start(mainWindow)
 
         // 触发插件启动
         pluginManager.triggerStartup()
