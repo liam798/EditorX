@@ -30,7 +30,6 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,7 +69,6 @@ jobs:
           echo "Tag: ${TAG}"
 
       - name: Generate changelog
-        id: changelog
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [[ -n "$PREV_TAG" ]]; then
@@ -81,14 +79,15 @@ jobs:
             git log --pretty=format:"- %s (%h)" --no-merges -20 > changelog.txt || echo "- Initial release" > changelog.txt
           fi
 
-          {
-            echo 'changelog<<EOF'
-            cat changelog.txt
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
           echo "Generated changelog:"
           cat changelog.txt
+
+      - name: Upload changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-${{ steps.version.outputs.version }}
+          path: changelog.txt
+          retention-days: 7
 
   build-linux:
     name: Build Linux (zip)
@@ -310,6 +309,12 @@ jobs:
           name: macos-${{ needs.prepare.outputs.version }}
           path: dist/macos
 
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-${{ needs.prepare.outputs.version }}
+          path: dist/changelog
+
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
@@ -321,24 +326,44 @@ jobs:
             platforms: ( . | map({key: .platform, value: {artifact: .artifact, type: .artifactType, sha256: .sha256, buildDate: .buildDate, commit: .commit, runnerOs: .runnerOs, javaVersion: .javaVersion}}) | from_entries )
           }' dist/linux/metadata.json dist/windows/metadata.json dist/macos/metadata.json > dist/manifest.json
 
+      - name: Build release body
+        run: |
+          set -euo pipefail
+          BODY_FILE="dist/release-body.md"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
+
+          {
+            echo "## EditorX ${VERSION}"
+            echo ""
+            echo "### 变更日志"
+            echo ""
+            cat dist/changelog/changelog.txt
+            echo ""
+            echo "### 下载"
+            echo ""
+            echo "- **Linux (ZIP)**: EditorX-${VERSION}-linux.zip"
+            echo "- **Windows (.exe)**: EditorX-${VERSION}-windows.exe"
+            echo "- **macOS (.app.zip)**: EditorX-${VERSION}-macOS.app.zip"
+            echo "- **Manifest**: manifest.json"
+            echo ""
+            echo "### 更新检查（按平台）"
+            echo ""
+            echo "客户端应读取 \`manifest.json\` 并根据当前平台选择对应 \`platforms.<platform>.artifact\`。"
+            echo ""
+            echo "### 版本信息"
+            echo ""
+            echo "- Version: ${VERSION}"
+            echo "- Tag: ${TAG}"
+            echo "- Commit: ${GITHUB_SHA}"
+          } > "${BODY_FILE}"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: Release ${{ needs.prepare.outputs.version }}
-          body: |
-            ## EditorX ${{ needs.prepare.outputs.version }}
-
-            ### 变更日志
-
-            ${{ needs.prepare.outputs.changelog }}
-
-            ### 下载
-
-            - **Linux (ZIP)**: EditorX-${{ needs.prepare.outputs.version }}-linux.zip
-            - **Windows (.exe)**: EditorX-${{ needs.prepare.outputs.version }}-windows.exe
-            - **macOS (.app.zip)**: EditorX-${{ needs.prepare.outputs.version }}-macOS.app.zip
-            - **Manifest**: manifest.json
+          body_path: dist/release-body.md
           files: |
             dist/linux/EditorX-${{ needs.prepare.outputs.version }}-linux.zip
             dist/windows/EditorX-${{ needs.prepare.outputs.version }}-windows.exe
