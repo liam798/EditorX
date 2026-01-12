@@ -197,7 +197,7 @@ private fun initializeMainWindow(startupTimer: StartupTimer) {
         startupTimer.mark("gui.ready")
 
         // 启动时检查更新（异步）
-        UpdateManager.start(mainWindow)
+        UpdateManager.checkUpdate(mainWindow)
 
         // 触发插件启动
         pluginManager.triggerStartup()

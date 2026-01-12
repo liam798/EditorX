@@ -33,10 +33,10 @@ object UpdateManager {
     private val started = AtomicBoolean(false)
     private val http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()
 
-    fun start(mainWindow: MainWindow) {
+    fun checkUpdate(mainWindow: MainWindow) {
         if (!started.compareAndSet(false, true)) return
         Thread {
-            checkAndRender(mainWindow)
+            checkUpdateInternal(mainWindow)
         }.apply {
             isDaemon = true
             name = "UpdateChecker"
@@ -44,7 +44,7 @@ object UpdateManager {
         }
     }
 
-    private fun checkAndRender(mainWindow: MainWindow) {
+    private fun checkUpdateInternal(mainWindow: MainWindow) {
         val current = VersionUtil.currentVersion()
         val latest = GitHubReleaseApi.fetchLatestRelease(REPO) ?: return
 
