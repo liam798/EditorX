@@ -29,6 +29,40 @@ error() {
     exit 1
 }
 
+# 将任意版本号转换为 jpackage 可接受的 app-version（1~3 段整数，且第一段必须 >= 1）
+# - 例：0.0.1 -> 1.0.1（避免 jpackage 报错：第一个数字不能为 0）
+# - 例：1.2.3-beta -> 1.2.3（去掉后缀）
+normalize_jpackage_version() {
+    local input="$1"
+    # 截断到第一个非数字/点字符之前（支持 1.2.3-beta -> 1.2.3）
+    local core
+    core="$(echo "$input" | sed -E 's/^v//' | sed -E 's/[^0-9.].*$//')"
+    if [ -z "$core" ]; then
+        echo ""
+        return 0
+    fi
+
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$core"
+    major="${major:-0}"
+    minor="${minor:-0}"
+    patch="${patch:-0}"
+
+    # 只保留数字，防御性处理
+    major="$(echo "$major" | sed -E 's/[^0-9].*//')"
+    minor="$(echo "$minor" | sed -E 's/[^0-9].*//')"
+    patch="$(echo "$patch" | sed -E 's/[^0-9].*//')"
+    major="${major:-0}"
+    minor="${minor:-0}"
+    patch="${patch:-0}"
+
+    if [ "$major" -lt 1 ]; then
+        major=1
+    fi
+
+    echo "${major}.${minor}.${patch}"
+}
+
 # 检查必要工具
 check_requirements() {
     info "检查构建环境..."
@@ -445,7 +479,14 @@ create_macos_app() {
         --runtime-image "$runtime_home"
     )
     if [ -n "$VERSION" ]; then
-        jpackage_args+=( --app-version "$VERSION" )
+        local app_version
+        app_version="$(normalize_jpackage_version "$VERSION")"
+        if [ -n "$app_version" ]; then
+            if [ "$app_version" != "$VERSION" ]; then
+                warn "jpackage 版本号不兼容（$VERSION），已转换为：$app_version"
+            fi
+            jpackage_args+=( --app-version "$app_version" )
+        fi
     fi
     if [ -n "$icns_file" ] && [ -f "$icns_file" ]; then
         jpackage_args+=( --icon "$icns_file" )

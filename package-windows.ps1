@@ -31,6 +31,26 @@ function Info([string]$msg) { Write-Host "[INFO] $msg" -ForegroundColor Green }
 function Warn([string]$msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 function Fail([string]$msg) { throw $msg }
 
+function ConvertTo-JPackageVersion([string]$v) {
+  # jpackage 要求 app-version：1~3 段整数，且第一段必须 >= 1
+  # 例：0.0.1 -> 1.0.1，1.2.3-beta -> 1.2.3
+  if ([string]::IsNullOrWhiteSpace($v)) { return $null }
+
+  $core = ($v -replace '^v', '') -replace '[^0-9\.].*$', ''
+  if ([string]::IsNullOrWhiteSpace($core)) { return $null }
+
+  $parts = $core.Split('.', [System.StringSplitOptions]::RemoveEmptyEntries)
+  $major = 0
+  $minor = 0
+  $patch = 0
+  if ($parts.Count -ge 1) { [void][int]::TryParse($parts[0], [ref]$major) }
+  if ($parts.Count -ge 2) { [void][int]::TryParse($parts[1], [ref]$minor) }
+  if ($parts.Count -ge 3) { [void][int]::TryParse($parts[2], [ref]$patch) }
+
+  if ($major -lt 1) { $major = 1 }
+  return "$major.$minor.$patch"
+}
+
 Info "Repo 根目录: $Root"
 
 if (-not (Test-Path "$Root\\gradlew.bat")) {
@@ -91,13 +111,23 @@ $DestDir = "$Root\\gui\\build\\distributions"
 New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
 
 Info "运行 jpackage..."
-& jpackage `
-  --type $Type `
-  --name "EditorX" `
-  --app-version $Version `
-  --dest $DestDir `
-  --input $InputDir `
-  --main-jar "gui.jar" `
-  --main-class "editorx.gui.GuiAppKt" | Out-Host
+$JPackageVersion = ConvertTo-JPackageVersion $Version
+if ($null -ne $JPackageVersion -and $JPackageVersion -ne $Version) {
+  Warn "jpackage 版本号不兼容（$Version），已转换为：$JPackageVersion"
+}
+$jpackageArgs = @(
+  "--type", $Type,
+  "--name", "EditorX",
+  "--dest", $DestDir,
+  "--input", $InputDir,
+  "--main-jar", "gui.jar",
+  "--main-class", "editorx.gui.GuiAppKt"
+)
+if ($null -ne $JPackageVersion) {
+  $jpackageArgs += @("--app-version", $JPackageVersion)
+} else {
+  Warn "跳过 --app-version（无法解析版本号：$Version）"
+}
+& jpackage @jpackageArgs | Out-Host
 
 Info "完成：请检查输出目录：$DestDir"

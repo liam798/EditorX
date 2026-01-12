@@ -21,7 +21,6 @@ permissions:
 
 env:
   JAVA_VERSION: '21'
-  GRADLE_VERSION: '8.5'
 
 jobs:
   prepare:
@@ -106,12 +105,6 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
-          cache: gradle
-
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y zip jq
@@ -170,7 +163,6 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
-          cache: gradle
 
       - name: Install WiX Toolset (for jpackage exe)
         shell: pwsh
@@ -240,7 +232,6 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
-          cache: gradle
 
       - name: Build macOS app bundle
         run: |
