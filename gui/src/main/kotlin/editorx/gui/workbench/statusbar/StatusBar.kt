@@ -5,6 +5,7 @@ import editorx.core.i18n.I18nKeys
 import editorx.gui.theme.ThemeManager
 import editorx.gui.MainWindow
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.event.MouseAdapter
@@ -43,6 +44,15 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         toolTipText = "后台任务"
         addActionListener { showTasksPopup() }
     }
+
+    private val updateLabel = JLabel("").apply {
+        font = font.deriveFont(Font.PLAIN, 11f)
+        isVisible = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        foreground = Color(0x0A84FF)
+        toolTipText = "点击查看更新"
+    }
+    private var onUpdateClick: (() -> Unit)? = null
 
     private val progressBar = JProgressBar().apply {
         isStringPainted = true
@@ -135,6 +145,8 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         fileInfoLabel.foreground = theme.statusBarSecondaryForeground
         progressLabel.foreground = theme.statusBarSecondaryForeground
         lineColumnLabel.foreground = theme.statusBarSecondaryForeground
+        // 更新提示使用固定高亮色，避免与背景对比不足
+        updateLabel.foreground = Color(0x0A84FF)
         revalidate()
         repaint()
     }
@@ -153,6 +165,37 @@ class StatusBar(private val mainWindow: MainWindow) : JPanel() {
         add(progressCancelButton)
         add(Box.createHorizontalStrut(8))
         add(lineColumnLabel)
+        add(Box.createHorizontalStrut(10))
+        add(updateLabel)
+    }
+
+    fun setUpdateHint(text: String?, onClick: (() -> Unit)?) {
+        val t = text?.trim().orEmpty()
+        onUpdateClick = onClick
+        if (t.isEmpty()) {
+            updateLabel.isVisible = false
+            updateLabel.text = ""
+            updateLabel.toolTipText = null
+            updateLabel.cursor = Cursor.getDefaultCursor()
+            updateLabel.removeMouseListener(updateClickListener)
+            revalidate()
+            repaint()
+            return
+        }
+        updateLabel.text = t
+        updateLabel.toolTipText = "点击查看更新"
+        updateLabel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        updateLabel.isVisible = true
+        updateLabel.removeMouseListener(updateClickListener)
+        updateLabel.addMouseListener(updateClickListener)
+        revalidate()
+        repaint()
+    }
+
+    private val updateClickListener = object : MouseAdapter() {
+        override fun mouseClicked(e: MouseEvent) {
+            onUpdateClick?.invoke()
+        }
     }
 
     fun setMessage(msg: String) {
