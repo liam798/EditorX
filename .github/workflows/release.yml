@@ -3,8 +3,8 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'  # 当推送 v 开头的标签时触发（如 v1.0.0）
-  workflow_dispatch:  # 允许手动触发
+      - 'v*'
+  workflow_dispatch:
     inputs:
       version:
         description: '版本号（如 1.0.0）'
@@ -16,166 +16,345 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+
 env:
   JAVA_VERSION: '21'
   GRADLE_VERSION: '8.5'
 
 jobs:
-  release:
-    name: Build and Release
+  prepare:
+    name: Prepare Release Metadata
     runs-on: ubuntu-latest
-    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录（用于生成 changelog）
-      
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'gradle'
-      
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: ${{ env.GRADLE_VERSION }}
-      
+          fetch-depth: 0
+
       - name: Determine version
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             VERSION="${{ github.event.inputs.version }}"
+            if [[ -z "${VERSION}" ]]; then
+              echo "版本号不能为空"
+              exit 1
+            fi
             TAG="v${VERSION}"
-            
-            # 如果用户选择了创建标签，则创建 Git 标签
+
             if [[ "${{ github.event.inputs.tag }}" == "true" ]]; then
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
-              git tag -a "${TAG}" -m "Release ${VERSION}"
-              git push origin "${TAG}" || echo "Tag push failed (may already exist)"
+              git tag -a "${TAG}" -m "Release ${VERSION}" || true
+              git push origin "${TAG}" || echo "Tag push failed (may already exist / permission denied)"
             fi
           else
-            # 从标签提取版本号
             TAG="${{ github.ref_name }}"
-            VERSION="${TAG#v}"  # 移除 v 前缀
+            VERSION="${TAG#v}"
           fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+          if [[ -z "${VERSION}" ]]; then
+            echo "无法解析版本号"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "Version: ${VERSION}"
           echo "Tag: ${TAG}"
-      
-      - name: Install zip utility
-        run: sudo apt-get update && sudo apt-get install -y zip
-      
-      - name: Grant execute permission for gradlew and package.sh
-        run: |
-          chmod +x gradlew
-          chmod +x package.sh
-      
-      - name: Run package script
-        run: ./package.sh -v "${{ steps.version.outputs.version }}" --clean
-      
-      - name: Prepare release artifacts
-        run: |
-          mkdir -p release
-          # package.sh 会将 zip 放到 release/editorx-${version}/ 目录
-          if [ -f "release/editorx-${{ steps.version.outputs.version }}/gui.zip" ]; then
-            cp release/editorx-${{ steps.version.outputs.version }}/gui.zip release/
-          else
-            # 如果 package.sh 的 release 目录不存在，从 distributions 目录复制
-            cp gui/build/distributions/gui.zip release/
-          fi
-          
-          # 复制版本信息
-          if [ -f "release/editorx-${{ steps.version.outputs.version }}/VERSION" ]; then
-            cp release/editorx-${{ steps.version.outputs.version }}/VERSION release/
-          else
-            echo "${{ steps.version.outputs.version }}" > release/VERSION
-          fi
-          
-          echo "${{ steps.version.outputs.tag }}" > release/TAG
-          
-          # 创建构建信息
-          cat > release/BUILD_INFO << EOF
-          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          Build Commit: ${{ github.sha }}
-          Build Ref: ${{ github.ref }}
-          Java Version: ${{ env.JAVA_VERSION }}
-          Gradle Version: ${{ env.GRADLE_VERSION }}
-          Runner OS: ${{ runner.os }}
-          EOF
-      
+
       - name: Generate changelog
         id: changelog
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
+          if [[ -n "$PREV_TAG" ]]; then
             echo "Previous tag: $PREV_TAG"
-            git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges > changelog.txt || echo "- Initial release" > changelog.txt
+            git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges > changelog.txt || echo "- Initial release" > changelog.txt
           else
             echo "No previous tag found, using recent commits"
             git log --pretty=format:"- %s (%h)" --no-merges -20 > changelog.txt || echo "- Initial release" > changelog.txt
           fi
-          
-          # 使用 heredoc 方式输出多行内容到 GITHUB_OUTPUT
+
           {
             echo 'changelog<<EOF'
             cat changelog.txt
             echo 'EOF'
-          } >> $GITHUB_OUTPUT
-          
-          # 显示生成的 changelog（用于调试）
+          } >> "$GITHUB_OUTPUT"
+
           echo "Generated changelog:"
           cat changelog.txt
-      
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+
+  build-linux:
+    name: Build Linux (zip)
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.version }}
-          body: |
-            ## EditorX ${{ steps.version.outputs.version }}
-            
-            ### 变更日志
-            
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ### 下载
-            
-            - **ZIP 包**: [gui.zip](gui.zip)
-            
-            ### 构建信息
-            
-            构建日期: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-            提交: ${{ github.sha }}
-          files: |
-            release/gui.zip
-            release/VERSION
-            release/BUILD_INFO
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Upload artifacts
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y zip jq
+
+      - name: Build Linux distribution
+        run: |
+          chmod +x gradlew
+          chmod +x package.sh
+          ./package.sh -v "${VERSION}" --clean
+
+      - name: Collect Linux artifacts
+        run: |
+          set -euo pipefail
+          RELEASE_DIR="release/editorx-${VERSION}"
+          ZIP_SRC="${RELEASE_DIR}/gui.zip"
+          if [[ ! -f "${ZIP_SRC}" ]]; then
+            echo "未找到 Linux ZIP 产物: ${ZIP_SRC}"
+            exit 1
+          fi
+
+          mkdir -p artifacts/linux
+          cp "${ZIP_SRC}" "artifacts/linux/EditorX-${VERSION}-linux.zip"
+
+          SHA256=$(sha256sum "artifacts/linux/EditorX-${VERSION}-linux.zip" | awk '{print $1}')
+          BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          printf '{\n  "platform": "linux",\n  "artifact": "%s",\n  "artifactType": "zip",\n  "sha256": "%s",\n  "buildDate": "%s",\n  "commit": "%s",\n  "runnerOs": "%s",\n  "javaVersion": "%s"\n}\n' \
+            "EditorX-${VERSION}-linux.zip" \
+            "${SHA256}" \
+            "${BUILD_DATE}" \
+            "${GITHUB_SHA}" \
+            "${RUNNER_OS}" \
+            "${JAVA_VERSION}" \
+            > artifacts/linux/metadata.json
+
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: editorx-${{ steps.version.outputs.version }}
-          path: |
-            release/gui.zip
-            release/VERSION
-            release/BUILD_INFO
+          name: linux-${{ env.VERSION }}
+          path: artifacts/linux
           retention-days: 30
-      
+
+  build-windows:
+    name: Build Windows (.exe)
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Install WiX Toolset (for jpackage exe)
+        shell: pwsh
+        run: |
+          choco install wixtoolset -y
+
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+          & .\package-windows.ps1 -Type exe -Version $env:VERSION
+
+      - name: Collect Windows artifacts
+        shell: pwsh
+        run: |
+          $dist = Join-Path $PWD "gui/build/distributions"
+          if (-not (Test-Path $dist)) {
+            throw "未找到 distributions 目录: $dist"
+          }
+
+          $exe = Get-ChildItem $dist -Filter "EditorX*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $exe) {
+            throw "未找到生成的 EXE 产物"
+          }
+
+          $targetDir = "artifacts/windows"
+          New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+
+          $artifactName = "EditorX-$env:VERSION-windows.exe"
+          $artifactPath = Join-Path $targetDir $artifactName
+          Copy-Item $exe.FullName -Destination $artifactPath -Force
+
+          $hash = (Get-FileHash -Path $artifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          $metadata = @{
+            platform = "windows"
+            artifact = $artifactName
+            artifactType = "exe"
+            sha256 = $hash
+            buildDate = (Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ")
+            commit = $env:GITHUB_SHA
+            runnerOs = $env:RUNNER_OS
+            javaVersion = $env:JAVA_VERSION
+          } | ConvertTo-Json -Depth 3
+          Set-Content -Path (Join-Path $targetDir "metadata.json") -Value $metadata -NoNewline
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ env.VERSION }}
+          path: artifacts/windows
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS (.app)
+    needs: prepare
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Build macOS app bundle
+        run: |
+          chmod +x gradlew
+          chmod +x package.sh
+          ./package.sh -v "${VERSION}" --clean --mac-app
+
+      - name: Collect macOS artifacts
+        run: |
+          set -euo pipefail
+          RELEASE_DIR="release/editorx-${VERSION}"
+          APP_ZIP="${RELEASE_DIR}/EditorX-macOS.app.zip"
+          if [[ ! -f "${APP_ZIP}" ]]; then
+            APP_ZIP="gui/build/distributions/EditorX-macOS.app.zip"
+          fi
+          if [[ ! -f "${APP_ZIP}" ]]; then
+            echo "未找到 macOS .app 压缩包（EditorX-macOS.app.zip）"
+            exit 1
+          fi
+
+          mkdir -p artifacts/macos
+          cp "${APP_ZIP}" "artifacts/macos/EditorX-${VERSION}-macOS.app.zip"
+
+          SHA256=$(shasum -a 256 "artifacts/macos/EditorX-${VERSION}-macOS.app.zip" | awk '{print $1}')
+          BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          printf '{\n  "platform": "macos",\n  "artifact": "%s",\n  "artifactType": "app.zip",\n  "sha256": "%s",\n  "buildDate": "%s",\n  "commit": "%s",\n  "runnerOs": "%s",\n  "javaVersion": "%s"\n}\n' \
+            "EditorX-${VERSION}-macOS.app.zip" \
+            "${SHA256}" \
+            "${BUILD_DATE}" \
+            "${GITHUB_SHA}" \
+            "${RUNNER_OS}" \
+            "${JAVA_VERSION}" \
+            > artifacts/macos/metadata.json
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ env.VERSION }}
+          path: artifacts/macos
+          retention-days: 30
+
+  release:
+    name: Publish Release
+    needs:
+      - prepare
+      - build-linux
+      - build-windows
+      - build-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-${{ needs.prepare.outputs.version }}
+          path: dist/linux
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-${{ needs.prepare.outputs.version }}
+          path: dist/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-${{ needs.prepare.outputs.version }}
+          path: dist/macos
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build manifest.json
+        run: |
+          jq -s '{
+            version: "${{ needs.prepare.outputs.version }}",
+            tag: "${{ needs.prepare.outputs.tag }}",
+            platforms: ( . | map({key: .platform, value: {artifact: .artifact, type: .artifactType, sha256: .sha256, buildDate: .buildDate, commit: .commit, runnerOs: .runnerOs, javaVersion: .javaVersion}}) | from_entries )
+          }' dist/linux/metadata.json dist/windows/metadata.json dist/macos/metadata.json > dist/manifest.json
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Release ${{ needs.prepare.outputs.version }}
+          body: |
+            ## EditorX ${{ needs.prepare.outputs.version }}
+
+            ### 变更日志
+
+            ${{ needs.prepare.outputs.changelog }}
+
+            ### 下载
+
+            - **Linux (ZIP)**: EditorX-${{ needs.prepare.outputs.version }}-linux.zip
+            - **Windows (.exe)**: EditorX-${{ needs.prepare.outputs.version }}-windows.exe
+            - **macOS (.app.zip)**: EditorX-${{ needs.prepare.outputs.version }}-macOS.app.zip
+            - **Manifest**: manifest.json
+          files: |
+            dist/linux/EditorX-${{ needs.prepare.outputs.version }}-linux.zip
+            dist/windows/EditorX-${{ needs.prepare.outputs.version }}-windows.exe
+            dist/macos/EditorX-${{ needs.prepare.outputs.version }}-macOS.app.zip
+            dist/linux/metadata.json
+            dist/windows/metadata.json
+            dist/macos/metadata.json
+            dist/manifest.json
+          draft: false
+          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Summary
         run: |
-          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag**: ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release**: [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
-
+          echo "## Release Created Successfully" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: ${{ needs.prepare.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: ${{ needs.prepare.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
