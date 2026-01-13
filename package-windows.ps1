@@ -129,12 +129,23 @@ $jpackageArgs = @(
   "--dest", $DestDir,
   "--input", $InputDir,
   "--main-jar", "gui.jar",
-  "--main-class", "editorx.gui.GuiAppKt"
+  "--main-class", "editorx.gui.GuiAppKt",
+  "--java-options", "-Deditorx.version=$Version"
 )
 if ($null -ne $JPackageVersion) {
   $jpackageArgs += @("--app-version", $JPackageVersion)
 } else {
   Warn "跳过 --app-version（无法解析版本号：$Version）"
+}
+
+if ($Type -eq "exe") {
+  # 让安装后的应用更容易被找到（开始菜单/桌面快捷方式），并默认按用户安装避免管理员权限问题
+  $jpackageArgs += @(
+    "--win-per-user-install",
+    "--win-menu",
+    "--win-menu-group", "EditorX",
+    "--win-shortcut"
+  )
 }
 & jpackage @jpackageArgs | Out-Host
 
