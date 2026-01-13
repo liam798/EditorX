@@ -2,10 +2,6 @@ plugins {
     id("buildsrc.convention.kotlin-jvm")
 }
 
-repositories {
-    mavenCentral()
-}
-
 sourceSets {
     main {
         java {
