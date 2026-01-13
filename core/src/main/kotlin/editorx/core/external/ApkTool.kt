@@ -88,8 +88,12 @@ object ApkTool {
     private fun javaBin(): String {
         val home = System.getProperty("java.home").orEmpty()
         if (home.isNotBlank()) {
-            val candidate = File(home, "bin/java")
-            if (candidate.exists() && candidate.canExecute()) return candidate.absolutePath
+            val candidates = listOf(
+                File(home, "bin/java"),
+                File(home, "bin/java.exe"),
+                File(home, "bin/javaw.exe"),
+            )
+            candidates.firstOrNull { it.exists() && it.canExecute() }?.let { return it.absolutePath }
         }
         return "java"
     }

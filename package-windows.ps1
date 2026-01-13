@@ -115,6 +115,18 @@ New-Item -ItemType Directory -Force -Path "$InputDir\\plugins" | Out-Null
 Copy-Item -Path "$LibDir\\*.jar" -Destination $InputDir -Force
 Copy-Item -Path "$PluginsDir\\*.jar" -Destination "$InputDir\\plugins" -Force -ErrorAction SilentlyContinue
 
+# 拷贝内置工具（apktool.jar / smali.jar 等）
+$toolsSrc = Join-Path $InstallDir "tools"
+if (-not (Test-Path $toolsSrc)) {
+  $toolsSrc = Join-Path $Root "tools"
+}
+if (Test-Path $toolsSrc) {
+  Copy-Item -Path $toolsSrc -Destination $InputDir -Recurse -Force
+  Info "已内置 tools/（apktool.jar 等）"
+} else {
+  Warn "未找到 tools/ 目录：apktool 等内置工具可能不可用"
+}
+
 $DestDir = "$Root\\gui\\build\\distributions"
 New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
 
