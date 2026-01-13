@@ -81,8 +81,16 @@ New-Item -ItemType Directory -Force -Path $PluginsDir | Out-Null
 
 Info "从 settings.gradle.kts 检测插件模块，并移动 JAR 到 plugins/..."
 $Settings = Get-Content "$Root\\settings.gradle.kts" -Raw
-$Matches = [regex]::Matches($Settings, 'include\\(\\":plugins:([^\\"]+)\\"\\)')
-if ($Matches.Count -le 0) { Fail "未能从 settings.gradle.kts 检测到任何插件模块" }
+$PluginRegex = 'include\(\s*["'']\:plugins:([^"'']+)["'']\s*\)'
+$Matches = [regex]::Matches($Settings, $PluginRegex)
+if ($Matches.Count -le 0) {
+  $includeLines = ($Settings -split "`r?`n" | Where-Object { $_ -match 'include\(' })
+  if ($includeLines.Count -gt 0) {
+    Warn "检测到 include 行："
+    $includeLines | ForEach-Object { Warn "  $_" }
+  }
+  Fail "未能从 settings.gradle.kts 检测到任何插件模块"
+}
 
 foreach ($m in $Matches) {
   $name = $m.Groups[1].Value
