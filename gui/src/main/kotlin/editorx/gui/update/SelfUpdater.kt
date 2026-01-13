@@ -25,10 +25,20 @@ object SelfUpdater {
             ?: return ApplyResult(false, "当前不是从 macOS .app 运行，无法自动替换自身（已下载：${zipFile.absolutePathString()}）")
 
         val parentDir = bundlePath.parent
-        if (parentDir == null || !Files.isWritable(parentDir)) {
+        if (parentDir == null) {
             return ApplyResult(
                 false,
-                "应用目录不可写，无法自动更新。\n已下载更新包：${zipFile.absolutePathString()}\n请手动解压并替换当前应用。"
+                "无法确定应用目录，无法自动更新。\n已下载更新包：${zipFile.absolutePathString()}\n请手动解压并替换当前应用。"
+            )
+        }
+
+        val targetApp = resolveTargetApp(bundlePath, parentDir) ?: run {
+            return ApplyResult(
+                false,
+                "应用目录不可写，无法自动更新。\n已下载更新包：${zipFile.absolutePathString()}\n" +
+                    "你可以：\n" +
+                    "1) 将 EditorX.app 放到 ~/Applications（推荐，自动更新可用）\n" +
+                    "2) 或手动解压并替换当前应用（若在 /Applications 可能需要管理员权限）。"
             )
         }
 
@@ -55,7 +65,7 @@ object SelfUpdater {
             return ApplyResult(false, "解压后未找到 .app 目录")
         }
 
-        val helper = writeHelperScript(extractDir, currentPid, bundlePath, newApp)
+        val helper = writeHelperScript(extractDir, currentPid, targetApp, newApp)
         runCatching {
             ProcessBuilder("/bin/bash", helper.absolutePathString())
                 .directory(extractDir.toFile())
@@ -65,17 +75,35 @@ object SelfUpdater {
             return ApplyResult(false, "启动更新脚本失败：${e.message}")
         }
 
-        return ApplyResult(true, "正在更新并重启…")
+        val msg = if (targetApp == bundlePath) {
+            "正在更新并重启…"
+        } else {
+            "应用目录不可写，已将新版本安装到：${targetApp.absolutePathString()}\n正在重启…"
+        }
+        return ApplyResult(true, msg)
     }
 
-    private fun writeHelperScript(extractDir: Path, pid: Long, currentApp: Path, newApp: Path): Path {
+    private fun resolveTargetApp(currentApp: Path, currentParent: Path): Path? {
+        if (Files.isWritable(currentParent)) return currentApp
+
+        val home = System.getProperty("user.home")?.trim().orEmpty()
+        if (home.isEmpty()) return null
+
+        val userApplications = Path.of(home, "Applications")
+        runCatching { Files.createDirectories(userApplications) }
+        if (!Files.isWritable(userApplications)) return null
+
+        return userApplications.resolve(currentApp.fileName.toString())
+    }
+
+    private fun writeHelperScript(extractDir: Path, pid: Long, targetApp: Path, newApp: Path): Path {
         val script = extractDir.resolve("apply_update.sh")
         val content = """
             #!/bin/bash
             set -e
             
             PID="${pid}"
-            CURRENT_APP="${currentApp.absolutePathString()}"
+            TARGET_APP="${targetApp.absolutePathString()}"
             NEW_APP="${newApp.absolutePathString()}"
             
             # 等待旧进程退出
@@ -84,16 +112,18 @@ object SelfUpdater {
             done
             
             TS="$(date +%s)"
-            BACKUP="${'$'}{CURRENT_APP}.bak.${'$'}{TS}"
+            BACKUP="${'$'}{TARGET_APP}.bak.${'$'}{TS}"
             
             # 尝试替换
-            mv "${'$'}CURRENT_APP" "${'$'}BACKUP" || true
-            /usr/bin/ditto "${'$'}NEW_APP" "${'$'}CURRENT_APP"
+            if [ -e "${'$'}TARGET_APP" ]; then
+              mv "${'$'}TARGET_APP" "${'$'}BACKUP" || true
+            fi
+            /usr/bin/ditto "${'$'}NEW_APP" "${'$'}TARGET_APP"
             
             # 清理解压产物（失败也无所谓）
             rm -rf "${'$'}NEW_APP" || true
             
-            open "${'$'}CURRENT_APP" || true
+            open "${'$'}TARGET_APP" || true
         """.trimIndent()
         Files.writeString(script, content)
         script.toFile().setExecutable(true)

@@ -313,7 +313,7 @@ object UpdateManager {
             SwingUtilities.invokeLater {
                 JOptionPane.showMessageDialog(
                     mainWindow,
-                    "下载完成，正在更新并重启…",
+                    apply.message,
                     "更新",
                     JOptionPane.INFORMATION_MESSAGE
                 )

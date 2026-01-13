@@ -558,6 +558,17 @@ EOF
         chmod +x "$contents_dir/tools/apktool" 2>/dev/null || true
     fi
 
+    # jpackage 要求 --app-version 的第一个数字 >= 1（因此 0.x.y 会被归一化为 1.x.y），
+    # 但我们希望在 Info.plist 中展示用户传入的版本号（用于 UI 展示与更新比较）。
+    if [ -n "$VERSION" ] && [ -f "$contents_dir/Info.plist" ]; then
+        local display_version
+        display_version="$(echo "$VERSION" | sed -E 's/^[vV]//')"
+        if [ -n "$display_version" ] && [ -x "/usr/bin/plutil" ]; then
+            /usr/bin/plutil -replace CFBundleShortVersionString -string "$display_version" "$contents_dir/Info.plist" || true
+            /usr/bin/plutil -replace CFBundleVersion -string "$display_version" "$contents_dir/Info.plist" || true
+        fi
+    fi
+
     # 修改过 bundle 内容后需要重新签名，否则可能提示“已损坏”
     if [ -x "/usr/bin/codesign" ]; then
         /usr/bin/codesign -s - --force --deep "$out_dir/EditorX.app"
